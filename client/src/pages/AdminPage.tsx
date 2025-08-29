@@ -40,15 +40,7 @@ export function AdminPage() {
   const storage = useStorage();
 
   useEffect(() => {
-    // Force cleanup of old data and reload
-    const initializeData = async () => {
-      // Check if localStorage adapter has clearAllData method
-      if ('clearAllData' in storage) {
-        await (storage as any).clearAllData();
-      }
-      await loadUsers();
-    };
-    initializeData();
+    loadUsers();
   }, []);
 
   const loadUsers = async () => {
