@@ -10,7 +10,7 @@ import { PhoneInput } from "../components/forms/PhoneInput";
 import { useStorage } from "../hooks/useStorage";
 import { User, Role } from "../config/types";
 import { uuid } from "../utils/calc";
-import { UserPlus, Edit, UserX } from "lucide-react";
+import { UserPlus, Edit, UserX, Users } from "lucide-react";
 
 export function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -210,7 +210,7 @@ export function AdminPage() {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestão de Usuários</h1>
         <p className="text-lg text-muted-foreground">
-          Sistema completo para administração e controle de usuários do sistema
+          Painel de controle de usuários do sistema
         </p>
       </div>
       
@@ -323,7 +323,10 @@ export function AdminPage() {
         {/* Users List */}
         <Card>
           <CardHeader>
-            <CardTitle>Usuários Cadastrados</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Usuários Cadastrados
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -365,7 +368,7 @@ export function AdminPage() {
                       variant="outline"
                       size="sm"
                       data-testid={`button-edit-${user.username}`}
-                      className="px-3 py-1 h-8 min-w-[70px]"
+                      className="px-3 py-1 h-8 min-w-[90px]"
                     >
                       <Edit className="w-4 h-4 mr-1" />
                       Editar
