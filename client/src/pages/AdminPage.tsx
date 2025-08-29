@@ -207,7 +207,12 @@ export function AdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Gestão de Usuários</h1>
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestão de Usuários</h1>
+        <p className="text-lg text-muted-foreground">
+          Sistema completo para administração e controle de usuários do sistema
+        </p>
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
@@ -318,7 +323,7 @@ export function AdminPage() {
         {/* Users List */}
         <Card>
           <CardHeader>
-            <CardTitle>Usuários</CardTitle>
+            <CardTitle>Usuários Cadastrados</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -329,7 +334,7 @@ export function AdminPage() {
                 >
                   {/* Line 1: Name and Deactivate Button */}
                   <div className="flex justify-between items-center mb-2">
-                    <div className="font-medium text-lg text-gray-900">
+                    <div className="font-medium text-lg text-gray-900 flex-1 pr-4">
                       {user.displayName}
                     </div>
                     <Button
