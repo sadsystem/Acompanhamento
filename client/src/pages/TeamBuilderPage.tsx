@@ -11,7 +11,7 @@ import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam } from ".
 import { toDateRefBR } from "../utils/time";
 import { uuid } from "../utils/calc";
 import { searchCities } from "../data/cities-pe";
-import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle } from "lucide-react";
+import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle } from "lucide-react";
 
 interface NewRouteForm {
   cities: string[];
@@ -38,6 +38,25 @@ export function TeamBuilderPage() {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<TravelRouteWithTeam | null>(null);
   const [pendingAction, setPendingAction] = useState<'finish' | 'delete' | null>(null);
+
+  const handleConfirmRoute = async (route: TravelRouteWithTeam) => {
+    try {
+      await storage.updateTravelRoute(route.id, {
+        status: "active",
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Update state
+      setRoutes(prev => prev.map(r => 
+        r.id === route.id 
+          ? { ...r, status: "active" as const }
+          : r
+      ));
+    } catch (error) {
+      console.error("Error confirming route:", error);
+      alert("Erro ao confirmar rota. Tente novamente.");
+    }
+  };
 
   const storage = useStorage();
 
@@ -342,7 +361,7 @@ export function TeamBuilderPage() {
         city: finalRouteTitle,
         teamId: newTeam.id,
         startDate: newRoute.startDate,
-        status: "active"
+        status: "formation"
       };
 
       await storage.createTravelRoute(routeData);
@@ -695,11 +714,11 @@ export function TeamBuilderPage() {
           {/* Teams with City Names */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Equipes por Rota</CardTitle>
+              <CardTitle className="text-lg">Formação de Rota</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {routes.filter(r => r.status === "active").map((route) => (
+                {routes.filter(r => r.status === "formation").map((route) => (
                   <div key={route.id} className="border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div>
@@ -719,6 +738,15 @@ export function TeamBuilderPage() {
                           size="sm"
                         >
                           <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => handleConfirmRoute(route)}
+                          variant="default"
+                          size="sm"
+                          className="text-green-600 hover:text-green-800 hover:bg-green-50 mr-1"
+                          disabled={!route.team?.driver?.username || route.team.assistantUsers.length === 0}
+                        >
+                          <CheckCircle className="w-4 h-4" />
                         </Button>
                         <Button
                           onClick={() => openRouteActionModal(route)}
@@ -797,7 +825,7 @@ export function TeamBuilderPage() {
                   </div>
                 ))}
                 
-                {routes.filter(r => r.status === "active").length === 0 && (
+                {routes.filter(r => r.status === "formation").length === 0 && (
                   <div className="text-sm text-muted-foreground text-center py-8">
                     Clique em "Nova Equipe" para criar uma rota
                   </div>

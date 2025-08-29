@@ -79,7 +79,7 @@ export type TravelRoute = {
   teamId?: string;
   startDate: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD when completed
-  status: "active" | "completed";
+  status: "formation" | "active" | "completed";
   createdAt?: string;
   updatedAt?: string;
 };

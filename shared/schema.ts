@@ -55,7 +55,7 @@ export const routes = pgTable("routes", {
   teamId: varchar("team_id").references(() => teams.id),
   startDate: text("start_date").notNull(), // YYYY-MM-DD
   endDate: text("end_date"), // YYYY-MM-DD when route is finished
-  status: text("status").notNull().default("active"), // "active" | "completed"
+  status: text("status").notNull().default("formation"), // "formation" | "active" | "completed"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
