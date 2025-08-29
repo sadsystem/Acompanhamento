@@ -762,10 +762,15 @@ export function TeamBuilderPage() {
               <div className="space-y-4">
                 {routes.filter(r => r.status === "formation").map((route) => (
                   <div key={route.id} className="border rounded-lg p-4">
-                    {/* Cidades - Todas com mesmo formato */}
-                    <div className="text-center mb-3">
-                      <div className="flex items-center justify-center gap-2 mb-3">
-                        <MapPin className="w-4 h-4" />
+                    <div className="text-center">
+                      {/* Data no topo */}
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mb-3">
+                        <Calendar className="w-3 h-3" />
+                        {route.startDate}
+                      </p>
+                      
+                      {/* Cidades - Todas com mesmo formato, sem ícone */}
+                      <div className="mb-3">
                         <h4 className="font-medium text-base">{getAllCitiesFormatted(route)}</h4>
                       </div>
                       
@@ -780,9 +785,9 @@ export function TeamBuilderPage() {
                         </Button>
                         <Button
                           onClick={() => handleConfirmRoute(route)}
-                          variant="default"
+                          variant="ghost"
                           size="sm"
-                          className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                          className="hover:bg-blue-500 hover:text-white"
                           disabled={!route.team?.driver?.username || route.team.assistantUsers.length === 0}
                         >
                           <CheckCircle className="w-4 h-4" />
@@ -796,12 +801,6 @@ export function TeamBuilderPage() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                      
-                      {/* Data centralizada */}
-                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {route.startDate}
-                      </p>
                     </div>
                     
                     {route.team && (
@@ -944,17 +943,7 @@ export function TeamBuilderPage() {
                 <div key={route.id} className="border rounded-lg p-3">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      {(() => {
-                        const routeInfo = getDetailedRouteTitle(route);
-                        return (
-                          <div>
-                            <h4 className="font-medium">{routeInfo.main}</h4>
-                            {routeInfo.subtitle && (
-                              <p className="text-xs text-blue-600 font-medium">{routeInfo.subtitle}</p>
-                            )}
-                          </div>
-                        );
-                      })()}
+                      <h4 className="font-medium">{getAllCitiesFormatted(route)}</h4>
                       <p className="text-xs text-muted-foreground">
                         Início: {route.startDate}
                       </p>
@@ -1009,17 +998,7 @@ export function TeamBuilderPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {routes.filter(r => r.status === "completed").map((route) => (
                 <div key={route.id} className="border rounded-lg p-3 bg-muted/30">
-                  {(() => {
-                    const routeInfo = getDetailedRouteTitle(route);
-                    return (
-                      <div>
-                        <h4 className="font-medium">{routeInfo.main}</h4>
-                        {routeInfo.subtitle && (
-                          <p className="text-xs text-blue-600 font-medium">{routeInfo.subtitle}</p>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  <h4 className="font-medium">{getAllCitiesFormatted(route)}</h4>
                   <p className="text-sm text-muted-foreground">
                     {route.startDate} - {route.endDate}
                   </p>
