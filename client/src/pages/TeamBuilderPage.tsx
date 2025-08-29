@@ -758,10 +758,20 @@ export function TeamBuilderPage() {
                   <div key={route.id} className="border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <h4 className="font-medium flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4" />
-                          {getRouteTitle(route)}
-                        </h4>
+                          {(() => {
+                            const routeInfo = getDetailedRouteTitle(route);
+                            return (
+                              <div>
+                                <h4 className="font-medium">{routeInfo.main}</h4>
+                                {routeInfo.subtitle && (
+                                  <p className="text-xs text-blue-600 font-medium">{routeInfo.subtitle}</p>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           {route.startDate}
