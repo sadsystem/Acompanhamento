@@ -359,7 +359,9 @@ export function TeamBuilderPage() {
                         snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
                       }`}
                     >
-                      {availableDrivers.map((driver, index) => (
+                      {availableDrivers
+                        .filter(driver => driver.id && driver.id.trim() !== "")
+                        .map((driver, index) => (
                         <Draggable key={driver.id} draggableId={driver.id} index={index}>
                           {(provided, snapshot) => (
                             <div
@@ -399,7 +401,9 @@ export function TeamBuilderPage() {
                         snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
                       }`}
                     >
-                      {availableAssistants.map((assistant, index) => (
+                      {availableAssistants
+                        .filter(assistant => assistant.id && assistant.id.trim() !== "")
+                        .map((assistant, index) => (
                         <Draggable key={assistant.id} draggableId={assistant.id} index={index}>
                           {(provided, snapshot) => (
                             <div
@@ -462,7 +466,7 @@ export function TeamBuilderPage() {
                             snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
                           }`}
                         >
-                          {team.driver && team.driver.username && (
+                          {team.driver && team.driver.username && team.driver.id && (
                             <Draggable draggableId={team.driver.id} index={0}>
                               {(provided, snapshot) => (
                                 <div
@@ -480,7 +484,9 @@ export function TeamBuilderPage() {
                             </Draggable>
                           )}
                           
-                          {team.assistantUsers.map((assistant, assistantIndex) => (
+                          {team.assistantUsers
+                            .filter(assistant => assistant.id && assistant.id.trim() !== "")
+                            .map((assistant, assistantIndex) => (
                             <Draggable key={assistant.id} draggableId={assistant.id} index={assistantIndex + 1}>
                               {(provided, snapshot) => (
                                 <div

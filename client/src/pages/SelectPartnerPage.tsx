@@ -3,9 +3,11 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { useStorage } from "../hooks/useStorage";
-import { User } from "../config/types";
+import { User, TravelRouteWithTeam } from "../config/types";
 import { toDateRefBR } from "../utils/time";
+import { Users } from "lucide-react";
 
 interface SelectPartnerPageProps {
   currentUser: User;
@@ -16,6 +18,8 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [alreadyEvaluated, setAlreadyEvaluated] = useState<Set<string>>(new Set());
+  const [currentRoute, setCurrentRoute] = useState<TravelRouteWithTeam | null>(null);
+  const [hasActiveRoute, setHasActiveRoute] = useState<boolean | null>(null);
   
   const storage = useStorage();
   const today = toDateRefBR();
@@ -25,23 +29,79 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
   }, []);
 
   const loadData = async () => {
-    // Get available partners
-    const allUsers = await storage.getUsers();
-    const partners = allUsers.filter(
-      u => u.active && 
-           u.role === "colaborador" && 
-           u.username !== currentUser.username
-    );
-    setUsers(partners);
+    try {
+      const [allUsers, routes, teams, evaluations] = await Promise.all([
+        storage.getUsers(),
+        storage.getTravelRoutes(),
+        storage.getTeams(),
+        storage.getEvaluations({
+          evaluator: currentUser.username,
+          dateFrom: today,
+          dateTo: today
+        })
+      ]);
 
-    // Get already evaluated partners today
-    const evaluations = await storage.getEvaluations({
-      evaluator: currentUser.username,
-      dateFrom: today,
-      dateTo: today
-    });
-    
-    setAlreadyEvaluated(new Set(evaluations.map(e => e.evaluated)));
+      // Find user's current active route
+      const activeRoutes = routes.filter(r => r.status === "active");
+      let userRoute: TravelRouteWithTeam | null = null;
+      let teammates: User[] = [];
+
+      // Check if user is a driver in any active route
+      for (const route of activeRoutes) {
+        const team = teams.find(t => t.id === route.teamId);
+        if (team?.driverUsername === currentUser.username) {
+          userRoute = {
+            ...route,
+            team: {
+              ...team,
+              driver: allUsers.find(u => u.username === team.driverUsername) || {} as User,
+              assistantUsers: team.assistants
+                .map(username => allUsers.find(u => u.username === username))
+                .filter(u => u !== undefined) as User[]
+            }
+          };
+          teammates = userRoute.team?.assistantUsers || [];
+          break;
+        }
+        
+        // Check if user is an assistant in any active route
+        if (team?.assistants.includes(currentUser.username)) {
+          userRoute = {
+            ...route,
+            team: {
+              ...team,
+              driver: allUsers.find(u => u.username === team.driverUsername) || {} as User,
+              assistantUsers: team.assistants
+                .map(username => allUsers.find(u => u.username === username))
+                .filter(u => u !== undefined) as User[]
+            }
+          };
+          // Include driver and other assistants as teammates
+          teammates = userRoute.team ? [
+            userRoute.team.driver,
+            ...userRoute.team.assistantUsers.filter(u => u.username !== currentUser.username)
+          ].filter(u => u && u.username) : [];
+          break;
+        }
+      }
+
+      setCurrentRoute(userRoute);
+      setHasActiveRoute(userRoute !== null);
+      
+      // Filter users to only show teammates from same active route
+      const partners = teammates.filter(
+        u => u.active && 
+             u.role === "colaborador" && 
+             u.username !== currentUser.username
+      );
+      
+      setUsers(partners);
+      setAlreadyEvaluated(new Set(evaluations.map(e => e.evaluated)));
+    } catch (error) {
+      console.error("Error loading partner data:", error);
+      setHasActiveRoute(false);
+      setUsers([]);
+    }
   };
 
   const filteredUsers = users.filter(u => 
@@ -69,6 +129,26 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
               />
             </div>
           </div>
+          
+          {hasActiveRoute === false && (
+            <Alert className="mb-4">
+              <Users className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Aguardando definição de rota...</strong><br />
+                Você ainda não foi designado para nenhuma rota ativa. Entre em contato com o administrador para ser incluído em uma equipe.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {currentRoute && (
+            <Alert className="mb-4">
+              <Users className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Rota Ativa:</strong> {currentRoute.city} (desde {currentRoute.startDate})<br />
+                Você pode avaliar apenas os colegas da sua equipe atual.
+              </AlertDescription>
+            </Alert>
+          )}
           
           <div className="grid grid-cols-1 gap-2">
             {filteredUsers.map(user => (
@@ -100,9 +180,15 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
               </div>
             ))}
             
-            {filteredUsers.length === 0 && (
-              <div className="text-sm text-gray-600" data-testid="no-partners">
-                Nenhum colaborador encontrado.
+            {hasActiveRoute === true && filteredUsers.length === 0 && (
+              <div className="text-sm text-gray-600 text-center py-4" data-testid="no-partners">
+                Nenhum colega de equipe encontrado para avaliar.
+              </div>
+            )}
+            
+            {hasActiveRoute === false && (
+              <div className="text-sm text-gray-600 text-center py-8" data-testid="no-partners">
+                Aguarde ser designado para uma rota para poder avaliar colegas de equipe.
               </div>
             )}
           </div>

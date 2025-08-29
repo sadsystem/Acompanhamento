@@ -17,7 +17,7 @@ import { SelectPartnerPage } from "./pages/SelectPartnerPage";
 import { ChecklistPage } from "./pages/ChecklistPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AdminPage } from "./pages/AdminPage";
-import { TeamBuilderPage } from "./pages/TeamBuilderPage";
+import { TeamBuilderPage } from "./pages/TeamBuilderPage.tsx";
 import NotFound from "@/pages/not-found";
 
 // Create storage adapter instance
@@ -211,6 +211,12 @@ function AppContent() {
           <AdminPage />
         )}
       </main>
+      
+      <footer className="border-t bg-muted/30 py-4 mt-8">
+        <div className="max-w-7xl mx-auto px-4 text-center text-sm text-muted-foreground">
+          Sistema de Acompanhamento Diário © 2025. Criado por Jucélio Verissimo.
+        </div>
+      </footer>
       
       <Toaster />
     </div>
