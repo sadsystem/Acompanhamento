@@ -1,0 +1,227 @@
+import { useState, useEffect } from "react";
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { StorageProvider } from "./context/StorageContext";
+import { LocalStorageAdapter } from "./storage/localStorage";
+import { AuthService } from "./auth/service";
+import { seedUsers } from "./storage/seeds";
+import { User, Route as AppRoute } from "./config/types";
+import { CONFIG } from "./config/constants";
+
+// Pages
+import { LoginPage } from "./pages/LoginPage";
+import { SelectPartnerPage } from "./pages/SelectPartnerPage";
+import { ChecklistPage } from "./pages/ChecklistPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { AdminPage } from "./pages/AdminPage";
+import NotFound from "@/pages/not-found";
+
+// Create storage adapter instance
+const storageAdapter = new LocalStorageAdapter();
+
+function AppContent() {
+  const [currentRoute, setCurrentRoute] = useState<AppRoute>("login");
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedPartner, setSelectedPartner] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const authService = new AuthService(storageAdapter);
+
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
+  const initializeApp = async () => {
+    try {
+      // Seed initial data
+      await seedUsers(storageAdapter);
+      
+      // Check for remembered session
+      await authService.ensureFirstLogin();
+      
+      // Check current user
+      const user = await authService.getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        setCurrentRoute(user.role === "admin" ? "dashboard" : "selectPartner");
+      }
+    } catch (error) {
+      console.error("App initialization error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoggedIn = async () => {
+    const user = await authService.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      setCurrentRoute(user.role === "admin" ? "dashboard" : "selectPartner");
+    }
+  };
+
+  const handlePartnerSelected = async (username: string) => {
+    const users = await storageAdapter.getUsers();
+    const partner = users.find(u => u.username === username);
+    if (partner) {
+      setSelectedPartner(partner);
+      setCurrentRoute("checklist");
+    }
+  };
+
+  const handleEvaluationSaved = () => {
+    setSelectedPartner(null);
+    setCurrentRoute("selectPartner");
+  };
+
+  const handleLogout = async () => {
+    await authService.logout();
+    setCurrentUser(null);
+    setSelectedPartner(null);
+    setCurrentRoute("login");
+  };
+
+  const navigateTo = (route: AppRoute) => {
+    setCurrentRoute(route);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 rounded-full border-2 border-gray-300 border-t-transparent animate-spin mx-auto mb-2" />
+          <div className="text-sm text-gray-600">Carregando...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      {currentUser && (
+        <header className="bg-card border-b border-border sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                    <span className="text-primary-foreground font-bold text-sm">OV</span>
+                  </div>
+                  <h1 className="text-lg font-semibold text-foreground">
+                    {CONFIG.appName}
+                  </h1>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-muted-foreground">
+                  {currentUser.displayName}
+                </span>
+                
+                {currentUser.role === "admin" && (
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => navigateTo("dashboard")}
+                      className={`px-3 py-1 text-sm rounded-md ${
+                        currentRoute === "dashboard" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                      data-testid="nav-dashboard"
+                    >
+                      Dashboard
+                    </button>
+                    <button
+                      onClick={() => navigateTo("admin")}
+                      className={`px-3 py-1 text-sm rounded-md ${
+                        currentRoute === "admin" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                      data-testid="nav-admin"
+                    >
+                      Admin
+                    </button>
+                  </div>
+                )}
+                
+                {currentUser.role === "colaborador" && currentRoute !== "selectPartner" && (
+                  <button
+                    onClick={() => navigateTo("selectPartner")}
+                    className="px-3 py-1 text-sm rounded-md hover:bg-muted"
+                    data-testid="nav-back"
+                  >
+                    Voltar
+                  </button>
+                )}
+                
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1 text-sm rounded-md hover:bg-muted text-destructive"
+                  data-testid="button-logout"
+                >
+                  Sair
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1">
+        {currentRoute === "login" && (
+          <LoginPage onLoggedIn={handleLoggedIn} />
+        )}
+        
+        {currentRoute === "selectPartner" && currentUser && (
+          <SelectPartnerPage 
+            currentUser={currentUser} 
+            onSelected={handlePartnerSelected} 
+          />
+        )}
+        
+        {currentRoute === "checklist" && currentUser && selectedPartner && (
+          <ChecklistPage
+            currentUser={currentUser}
+            evaluatedUser={selectedPartner}
+            onSaved={handleEvaluationSaved}
+          />
+        )}
+        
+        {currentRoute === "dashboard" && currentUser && (
+          <DashboardPage />
+        )}
+        
+        {currentRoute === "admin" && currentUser && (
+          <AdminPage />
+        )}
+      </main>
+      
+      <Toaster />
+    </div>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={AppContent} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <StorageProvider adapter={storageAdapter}>
+          <Router />
+        </StorageProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;
