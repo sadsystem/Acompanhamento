@@ -221,7 +221,7 @@ export function AdminPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5" />
-              Registrar Colaborador
+              Registrar Usuário
             </CardTitle>
           </CardHeader>
           <CardContent>
