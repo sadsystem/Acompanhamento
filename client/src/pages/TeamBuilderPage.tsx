@@ -11,10 +11,10 @@ import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam } from ".
 import { toDateRefBR } from "../utils/time";
 import { uuid } from "../utils/calc";
 import { searchCities } from "../data/cities-pe";
-import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon } from "lucide-react";
+import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X } from "lucide-react";
 
 interface NewRouteForm {
-  city: string;
+  cities: string[];
   startDate: string;
 }
 
@@ -30,7 +30,7 @@ export function TeamBuilderPage() {
   const [showNewRouteModal, setShowNewRouteModal] = useState(false);
   const [citySearch, setCitySearch] = useState("");
   const [filteredCities, setFilteredCities] = useState<string[]>([]);
-  const [newRoute, setNewRoute] = useState<NewRouteForm>({ city: "", startDate: toDateRefBR() });
+  const [newRoute, setNewRoute] = useState<NewRouteForm>({ cities: [], startDate: toDateRefBR() });
   const [editingRoute, setEditingRoute] = useState<TravelRouteWithTeam | null>(null);
 
   const storage = useStorage();
@@ -232,25 +232,30 @@ export function TeamBuilderPage() {
   };
 
   const handleCreateRoute = async () => {
-    if (!newRoute.city.trim()) {
-      alert("Por favor, selecione uma cidade");
+    if (newRoute.cities.length === 0) {
+      alert("Por favor, selecione pelo menos uma cidade");
       return;
     }
 
     try {
-      // Check if city already has an active route
-      const existingRoute = routes.find(r => r.city === newRoute.city && r.status === "active");
-      let routeTitle = newRoute.city;
+      // Create route title with multiple cities
+      const routeTitle = newRoute.cities.length === 1 
+        ? newRoute.cities[0]
+        : `${newRoute.cities[0]} + ${newRoute.cities.length - 1} cidades`;
+      
+      // Check if similar route already exists
+      const existingRoute = routes.find(r => r.city === routeTitle && r.status === "active");
+      let finalRouteTitle = routeTitle;
       
       if (existingRoute) {
-        // Find the highest "Parte" number for this city
-        const cityRoutes = routes.filter(r => r.city === newRoute.city);
-        const parts = cityRoutes.map(r => {
+        // Find the highest "Parte" number for this route
+        const similarRoutes = routes.filter(r => r.city.startsWith(routeTitle));
+        const parts = similarRoutes.map(r => {
           const match = r.city.match(/- Parte (\d+)$/);
           return match ? parseInt(match[1]) : 1;
         });
         const nextPart = Math.max(...parts) + 1;
-        routeTitle = `${newRoute.city} - Parte ${nextPart}`;
+        finalRouteTitle = `${routeTitle} - Parte ${nextPart}`;
       }
 
       // Create new team for this route
@@ -274,7 +279,7 @@ export function TeamBuilderPage() {
       // Create route
       const routeData: TravelRoute = {
         id: uuid(),
-        city: routeTitle,
+        city: finalRouteTitle,
         teamId: newTeam.id,
         startDate: newRoute.startDate,
         status: "active"
@@ -292,7 +297,7 @@ export function TeamBuilderPage() {
       setRoutes(prev => [...prev, newRouteWithTeam]);
 
       // Reset form and close modal
-      setNewRoute({ city: "", startDate: toDateRefBR() });
+      setNewRoute({ cities: [], startDate: toDateRefBR() });
       setCitySearch("");
       setShowNewRouteModal(false);
     } catch (error) {
@@ -303,17 +308,23 @@ export function TeamBuilderPage() {
 
   const handleEditRoute = (route: TravelRouteWithTeam) => {
     setEditingRoute(route);
-    setNewRoute({ city: route.city.replace(/^(.+?)( - Parte \d+)?$/, '$1'), startDate: route.startDate });
-    setCitySearch(route.city.replace(/^(.+?)( - Parte \d+)?$/, '$1'));
+    // For editing, convert back to single city (simplified approach)
+    const cityName = route.city.replace(/^(.+?)( - Parte \d+)?$/, '$1').split(' + ')[0];
+    setNewRoute({ cities: [cityName], startDate: route.startDate });
+    setCitySearch("");
     setShowNewRouteModal(true);
   };
 
   const handleUpdateRoute = async () => {
-    if (!editingRoute || !newRoute.city.trim()) return;
+    if (!editingRoute || newRoute.cities.length === 0) return;
 
     try {
+      const routeTitle = newRoute.cities.length === 1 
+        ? newRoute.cities[0]
+        : `${newRoute.cities[0]} + ${newRoute.cities.length - 1} cidades`;
+        
       await storage.updateTravelRoute(editingRoute.id, {
-        city: newRoute.city,
+        city: routeTitle,
         startDate: newRoute.startDate,
         updatedAt: new Date().toISOString()
       });
@@ -321,13 +332,13 @@ export function TeamBuilderPage() {
       // Update state
       setRoutes(prev => prev.map(r => 
         r.id === editingRoute.id 
-          ? { ...r, city: newRoute.city, startDate: newRoute.startDate }
+          ? { ...r, city: routeTitle, startDate: newRoute.startDate }
           : r
       ));
 
       // Reset and close
       setEditingRoute(null);
-      setNewRoute({ city: "", startDate: toDateRefBR() });
+      setNewRoute({ cities: [], startDate: toDateRefBR() });
       setCitySearch("");
       setShowNewRouteModal(false);
     } catch (error) {
@@ -378,14 +389,23 @@ export function TeamBuilderPage() {
   };
 
   const selectCity = (city: string) => {
-    setNewRoute(prev => ({ ...prev, city }));
-    setCitySearch(city);
+    if (!newRoute.cities.includes(city)) {
+      setNewRoute(prev => ({ ...prev, cities: [...prev.cities, city] }));
+    }
+    setCitySearch("");
+  };
+
+  const removeCity = (cityToRemove: string) => {
+    setNewRoute(prev => ({
+      ...prev,
+      cities: prev.cities.filter(city => city !== cityToRemove)
+    }));
   };
 
   const closeModal = () => {
     setShowNewRouteModal(false);
     setEditingRoute(null);
-    setNewRoute({ city: "", startDate: toDateRefBR() });
+    setNewRoute({ cities: [], startDate: toDateRefBR() });
     setCitySearch("");
   };
 
@@ -420,17 +440,17 @@ export function TeamBuilderPage() {
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="city">Cidade de Destino</Label>
+              <Label htmlFor="city">Cidades de Destino</Label>
               <Input
                 id="city"
                 value={citySearch}
                 onChange={(e) => setCitySearch(e.target.value)}
-                placeholder="Digite para buscar cidade..."
+                placeholder="Digite para buscar e adicionar cidades..."
                 className="mb-2"
               />
               
               {citySearch && filteredCities.length > 0 && (
-                <div className="max-h-32 overflow-y-auto border rounded-lg">
+                <div className="max-h-32 overflow-y-auto border rounded-lg mb-2">
                   {filteredCities.map(city => (
                     <div
                       key={city}
@@ -443,9 +463,29 @@ export function TeamBuilderPage() {
                 </div>
               )}
               
-              {newRoute.city && (
-                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                  <strong>Selecionado:</strong> {newRoute.city}
+              {newRoute.cities.length > 0 && (
+                <div className="mt-2">
+                  <Label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Cidades Selecionadas:
+                  </Label>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {newRoute.cities.map(city => (
+                      <div
+                        key={city}
+                        className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded text-sm"
+                      >
+                        <span>{city}</span>
+                        <Button
+                          onClick={() => removeCity(city)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-800"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -467,7 +507,7 @@ export function TeamBuilderPage() {
             </Button>
             <Button 
               onClick={editingRoute ? handleUpdateRoute : handleCreateRoute}
-              disabled={!newRoute.city.trim()}
+              disabled={newRoute.cities.length === 0}
             >
               {editingRoute ? "Atualizar" : "Criar Rota"}
             </Button>
