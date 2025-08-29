@@ -554,6 +554,32 @@ export function TeamBuilderPage() {
     return route.city || "Equipe Sem Rota";
   };
 
+  const getDetailedRouteTitle = (route: TravelRouteWithTeam) => {
+    const cityName = route.city || "Equipe Sem Rota";
+    
+    // Verifica se é uma rota com múltiplas cidades
+    if (cityName.includes(" + ") && cityName.includes(" cidades")) {
+      // Extrai o número de cidades do formato "Cidade + X cidades"
+      const match = cityName.match(/(.+) \+ (\d+) cidades(.*)/);
+      if (match) {
+        const firstCity = match[1];
+        const additionalCount = parseInt(match[2]);
+        const suffix = match[3] || "";
+        return {
+          main: firstCity,
+          subtitle: `+ ${additionalCount} cidade${additionalCount > 1 ? 's' : ''} adiciona${additionalCount > 1 ? 'is' : 'l'}${suffix}`,
+          isMultiple: true
+        };
+      }
+    }
+    
+    return {
+      main: cityName,
+      subtitle: null,
+      isMultiple: false
+    };
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4">
       <div className="text-center mb-8">
@@ -827,7 +853,7 @@ export function TeamBuilderPage() {
                 
                 {routes.filter(r => r.status === "formation").length === 0 && (
                   <div className="text-sm text-muted-foreground text-center py-8">
-                    Clique em "Criar Rota" para começar a formação.
+                    Clique em "Criar Rota" para começar.
                   </div>
                 )}
               </div>
@@ -899,7 +925,17 @@ export function TeamBuilderPage() {
                 <div key={route.id} className="border rounded-lg p-3">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-medium">{route.city}</h4>
+                      {(() => {
+                        const routeInfo = getDetailedRouteTitle(route);
+                        return (
+                          <div>
+                            <h4 className="font-medium">{routeInfo.main}</h4>
+                            {routeInfo.subtitle && (
+                              <p className="text-xs text-blue-600 font-medium">{routeInfo.subtitle}</p>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <p className="text-xs text-muted-foreground">
                         Início: {route.startDate}
                       </p>
@@ -954,7 +990,17 @@ export function TeamBuilderPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {routes.filter(r => r.status === "completed").map((route) => (
                 <div key={route.id} className="border rounded-lg p-3 bg-muted/30">
-                  <h4 className="font-medium">{route.city}</h4>
+                  {(() => {
+                    const routeInfo = getDetailedRouteTitle(route);
+                    return (
+                      <div>
+                        <h4 className="font-medium">{routeInfo.main}</h4>
+                        {routeInfo.subtitle && (
+                          <p className="text-xs text-blue-600 font-medium">{routeInfo.subtitle}</p>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <p className="text-sm text-muted-foreground">
                     {route.startDate} - {route.endDate}
                   </p>
@@ -969,7 +1015,17 @@ export function TeamBuilderPage() {
                       </div>
                     </div>
                   )}
-                  <Badge variant="secondary" className="mt-2">Finalizada</Badge>
+                  <div className="flex justify-between items-center mt-2">
+                    <Badge variant="secondary">Finalizada</Badge>
+                    <Button 
+                      onClick={() => openRouteActionModal(route)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
