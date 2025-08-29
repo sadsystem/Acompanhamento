@@ -116,12 +116,22 @@ export function TeamBuilderPage() {
   const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
-    if (!destination) return;
+    console.log('Drag result:', { destination, source, draggableId });
+
+    if (!destination) {
+      console.log('No destination, returning');
+      return;
+    }
 
     const sourceId = source.droppableId;
     const destId = destination.droppableId;
 
-    if (sourceId === destId && source.index === destination.index) return;
+    console.log('Source ID:', sourceId, 'Dest ID:', destId);
+
+    if (sourceId === destId && source.index === destination.index) {
+      console.log('Same position, returning');
+      return;
+    }
 
     // Handle dragging from available users to teams
     if (sourceId === "available-drivers" && destId.startsWith("team-")) {
@@ -129,10 +139,14 @@ export function TeamBuilderPage() {
       const draggedDriver = availableDrivers.find(d => d.id === draggableId);
       const targetRoute = routes.find(r => r.team?.id === teamId);
       
+      console.log('Driver drag - Team ID:', teamId, 'Driver:', draggedDriver, 'Target route:', targetRoute);
+      
       if (draggedDriver && targetRoute && targetRoute.team) {
+        console.log('Processing driver assignment');
+        
         // Remove current driver from team if exists
         if (targetRoute.team.driver && targetRoute.team.driver.username) {
-          setAvailableDrivers(prev => [...prev, targetRoute.team.driver]);
+          setAvailableDrivers(prev => [...prev, targetRoute.team!.driver]);
         }
         
         // Update team with new driver
@@ -141,6 +155,8 @@ export function TeamBuilderPage() {
           driverUsername: draggedDriver.username,
           driver: draggedDriver
         };
+        
+        console.log('Updated team:', updatedTeam);
         
         // Update routes state
         setRoutes(prev => prev.map(r => 
@@ -158,6 +174,9 @@ export function TeamBuilderPage() {
         
         setAvailableDrivers(prev => prev.filter(d => d.id !== draggableId));
         saveTeam(updatedTeam);
+        console.log('Driver assignment completed');
+      } else {
+        console.log('Driver assignment failed - missing data');
       }
     }
 
@@ -166,13 +185,19 @@ export function TeamBuilderPage() {
       const draggedAssistant = availableAssistants.find(a => a.id === draggableId);
       const targetRoute = routes.find(r => r.team?.id === teamId);
       
+      console.log('Assistant drag - Team ID:', teamId, 'Assistant:', draggedAssistant, 'Target route:', targetRoute);
+      
       if (draggedAssistant && targetRoute && targetRoute.team && targetRoute.team.assistants.length < 2) {
+        console.log('Processing assistant assignment');
+        
         // Update team with new assistant
         const updatedTeam = {
           ...targetRoute.team,
           assistants: [...targetRoute.team.assistants, draggedAssistant.username],
           assistantUsers: [...targetRoute.team.assistantUsers, draggedAssistant]
         };
+        
+        console.log('Updated team with assistant:', updatedTeam);
         
         // Update routes state
         setRoutes(prev => prev.map(r => 
@@ -190,6 +215,9 @@ export function TeamBuilderPage() {
         
         setAvailableAssistants(prev => prev.filter(a => a.id !== draggableId));
         saveTeam(updatedTeam);
+        console.log('Assistant assignment completed');
+      } else {
+        console.log('Assistant assignment failed - missing data or team full');
       }
     }
 
