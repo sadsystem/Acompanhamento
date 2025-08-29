@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { maskPhone, validatePhone } from "../../utils/validation";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 
@@ -17,7 +16,7 @@ export function PhoneInput({
   value, 
   onChange, 
   label = "Telefone", 
-  placeholder = "(11) 99999-9999",
+  placeholder = "(87) 9 XXXX-XXXX",
   required = false,
   error,
   id = "phone"
@@ -26,20 +25,59 @@ export function PhoneInput({
   const [isValid, setIsValid] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setDisplayValue(maskPhone(value));
+    if (value) {
+      setDisplayValue(formatPhone(value));
+    } else {
+      setDisplayValue("(87) 9 ");
+    }
   }, [value]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const masked = maskPhone(e.target.value);
-    setDisplayValue(masked);
-    onChange(masked);
+  const formatPhone = (phone: string) => {
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, '');
     
-    // Validate if phone appears complete
-    if (masked.length >= 14) {
-      const valid = validatePhone(masked);
+    // Always ensure it starts with 879
+    let cleanDigits = digits;
+    if (!cleanDigits.startsWith('879')) {
+      cleanDigits = '879' + cleanDigits.substring(cleanDigits.startsWith('87') ? 2 : 0);
+    }
+    
+    // Format: (87) 9 XXXX-XXXX
+    if (cleanDigits.length <= 3) {
+      return "(87) 9 ";
+    } else if (cleanDigits.length <= 7) {
+      return `(87) 9 ${cleanDigits.slice(3)}`;
+    } else {
+      return `(87) 9 ${cleanDigits.slice(3, 7)}-${cleanDigits.slice(7, 11)}`;
+    }
+  };
+
+  const validatePEPhone = (phone: string): boolean => {
+    const phoneRegex = /^\(87\) 9 \d{4}-\d{4}$/;
+    return phoneRegex.test(phone);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const formatted = formatPhone(rawValue);
+    
+    setDisplayValue(formatted);
+    onChange(formatted);
+    
+    // Validate phone
+    if (formatted.length >= 15) {
+      const valid = validatePEPhone(formatted);
       setIsValid(valid);
     } else {
       setIsValid(null);
+    }
+  };
+
+  const handleFocus = () => {
+    if (!displayValue || displayValue === "(87) 9 ") {
+      const defaultValue = "(87) 9 ";
+      setDisplayValue(defaultValue);
+      onChange(defaultValue);
     }
   };
 

@@ -6,12 +6,14 @@ import { z } from "zod";
 // Users table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  username: text("username").notNull().unique(), // Now phone number for login
+  phone: text("phone").notNull(), // Phone in format: (87) 9 XXXX-XXXX
   password: text("password").notNull(),
   displayName: text("display_name").notNull(),
-  role: text("role").notNull(), // "admin" | "colaborador"
+  role: text("role").notNull(), // "admin" | "colaborador" | "gestor"
+  permission: text("permission").notNull().default("Colaborador"), // "ADM" | "Colaborador" | "Gestor"
   active: boolean("active").notNull().default(true),
-  cargo: text("cargo"), // "Motorista" | "Ajudante" | "Gestor"
+  cargo: text("cargo"), // "Motorista" | "Ajudante" | "ADM"
   cpf: text("cpf"),
   createdAt: timestamp("created_at").defaultNow(),
 });

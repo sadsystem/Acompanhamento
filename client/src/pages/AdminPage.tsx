@@ -4,25 +4,39 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { CPFInput } from "../components/forms/CPFInput";
-import { Modal } from "../components/ui/Modal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Badge } from "../components/ui/badge";
+import { PhoneInput } from "../components/forms/PhoneInput";
 import { useStorage } from "../hooks/useStorage";
 import { User, Role } from "../config/types";
-import { validateCPF, digitsOnly, maskCPF } from "../utils/validation";
 import { uuid } from "../utils/calc";
+import { UserPlus, Edit, UserX } from "lucide-react";
 
 export function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const [name, setName] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [password, setPassword] = useState("");
-  const [cargo, setCargo] = useState("");
+  const [formData, setFormData] = useState({
+    displayName: "",
+    phone: "(87) 9 ",
+    password: "",
+    confirmPassword: "",
+    cargo: "",
+    permission: "Colaborador"
+  });
   
-  // Password reset modal
-  const [resetTarget, setResetTarget] = useState<User | null>(null);
-  const [newPassword, setNewPassword] = useState("");
-  const [passwordSaved, setPasswordSaved] = useState(false);
+  // Edit modal states
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    displayName: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    cargo: "",
+    permission: "",
+    active: true
+  });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const storage = useStorage();
 
   useEffect(() => {
@@ -34,186 +48,323 @@ export function AdminPage() {
     setUsers(allUsers);
   };
 
-  const addUser = async () => {
-    if (!name.trim()) {
-      alert("Preencha o nome completo");
-      return;
-    }
-    
-    if (!validateCPF(cpf)) {
-      alert("CPF inválido");
-      return;
-    }
-    
-    if (!password) {
-      alert("Informe a senha");
-      return;
-    }
-    
-    if (!cargo) {
-      alert("Selecione o cargo");
-      return;
-    }
-
-    const username = digitsOnly(cpf);
-    if (users.some(u => u.username === username)) {
-      alert("Já existe colaborador com este CPF");
-      return;
-    }
-
-    const role: Role = cargo === 'Admin' ? 'admin' : 'colaborador';
-    const newUser: User = {
-      id: uuid(),
-      displayName: name.trim(),
-      username,
-      password,
-      role,
-      active: true,
-      cargo,
-      cpf: username
-    };
-
-    await storage.createUser(newUser);
-    await loadUsers();
-
-    // Clear form
-    setName("");
-    setCpf("");
-    setPassword("");
-    setCargo("");
+  const phoneToUsername = (phone: string): string => {
+    return phone.replace(/\D/g, '');
   };
 
-  const toggleActive = async (user: User) => {
-    await storage.updateUser(user.id, { active: !user.active });
-    await loadUsers();
+  const validateForm = (data: typeof formData, isEdit = false) => {
+    const newErrors: Record<string, string> = {};
+
+    if (!data.displayName.trim()) {
+      newErrors.displayName = "Nome completo é obrigatório";
+    }
+
+    if (!data.phone || data.phone === "(87) 9 ") {
+      newErrors.phone = "Telefone é obrigatório";
+    } else if (!/^\(87\) 9 \d{4}-\d{4}$/.test(data.phone)) {
+      newErrors.phone = "Telefone deve ter o formato (87) 9 XXXX-XXXX";
+    }
+
+    if (!isEdit && !data.password.trim()) {
+      newErrors.password = "Senha é obrigatória";
+    }
+
+    if (data.password !== data.confirmPassword) {
+      newErrors.confirmPassword = "Senhas não coincidem";
+    }
+
+    if (!data.cargo) {
+      newErrors.cargo = "Cargo é obrigatório";
+    }
+
+    // Check if phone already exists (except for current user in edit mode)
+    const phoneUsername = phoneToUsername(data.phone);
+    const existingUser = users.find(u => u.username === phoneUsername);
+    if (existingUser && (!isEdit || existingUser.id !== editUser?.id)) {
+      newErrors.phone = "Este telefone já está cadastrado";
+    }
+
+    return newErrors;
   };
 
-  const resetPassword = (user: User) => {
-    setResetTarget(user);
-    setNewPassword("");
-  };
-
-  const saveNewPassword = async () => {
-    if (!resetTarget) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (!newPassword) {
-      alert('Informe a nova senha');
+    const validationErrors = validateForm(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    await storage.updateUser(resetTarget.id, { password: newPassword });
-    await loadUsers();
-    
-    setResetTarget(null);
-    setPasswordSaved(true);
-    setTimeout(() => setPasswordSaved(false), 1000);
+    try {
+      const username = phoneToUsername(formData.phone);
+      const role: Role = formData.permission === "ADM" ? "admin" : 
+                        formData.permission === "Gestor" ? "gestor" : "colaborador";
+
+      const newUser: User = {
+        id: uuid(),
+        username,
+        phone: formData.phone,
+        password: formData.password,
+        displayName: formData.displayName.trim(),
+        role,
+        permission: formData.permission as "ADM" | "Colaborador" | "Gestor",
+        active: true,
+        cargo: formData.cargo
+      };
+
+      await storage.createUser(newUser);
+      await loadUsers();
+      
+      // Reset form
+      setFormData({
+        displayName: "",
+        phone: "(87) 9 ",
+        password: "",
+        confirmPassword: "",
+        cargo: "",
+        permission: "Colaborador"
+      });
+      setErrors({});
+      
+      alert("Usuário cadastrado com sucesso!");
+    } catch (error) {
+      console.error("Error creating user:", error);
+      alert("Erro ao cadastrar usuário");
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditUser(user);
+    setEditFormData({
+      displayName: user.displayName,
+      phone: user.phone,
+      password: "",
+      confirmPassword: "",
+      cargo: user.cargo || "",
+      permission: user.permission,
+      active: user.active
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async () => {
+    const validationErrors = validateForm(editFormData, true);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    if (!editUser) return;
+
+    try {
+      const username = phoneToUsername(editFormData.phone);
+      const role: Role = editFormData.permission === "ADM" ? "admin" : 
+                        editFormData.permission === "Gestor" ? "gestor" : "colaborador";
+
+      const updatedUser: User = {
+        ...editUser,
+        username,
+        phone: editFormData.phone,
+        displayName: editFormData.displayName.trim(),
+        role,
+        permission: editFormData.permission as "ADM" | "Colaborador" | "Gestor",
+        active: editFormData.active,
+        cargo: editFormData.cargo
+      };
+
+      if (editFormData.password.trim()) {
+        updatedUser.password = editFormData.password;
+      }
+
+      await storage.updateUser(editUser.id, updatedUser);
+      await loadUsers();
+      
+      setShowEditModal(false);
+      setEditUser(null);
+      setErrors({});
+      
+      alert("Usuário atualizado com sucesso!");
+    } catch (error) {
+      console.error("Error updating user:", error);
+      alert("Erro ao atualizar usuário");
+    }
+  };
+
+  const handleToggleUser = async (user: User) => {
+    try {
+      const updatedUser = { ...user, active: !user.active };
+      await storage.updateUser(user.id, updatedUser);
+      await loadUsers();
+      
+      const action = user.active ? "desativado" : "reativado";
+      alert(`Usuário ${action} com sucesso!`);
+    } catch (error) {
+      console.error("Error toggling user:", error);
+      alert("Erro ao alterar status do usuário");
+    }
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* Register User Form */}
+    <div className="max-w-7xl mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">Gestão de Usuários</h1>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Registration Form */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm text-gray-500">
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
               Registrar Colaborador
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <Input
-                placeholder="Nome completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                data-testid="input-name"
-              />
+            <form onSubmit={handleSubmit} className="space-y-4">
               
-              <CPFInput
-                value={cpf}
-                onChange={setCpf}
-                data-testid="input-cpf"
-              />
-              
-              <Input
-                type="password"
-                placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                data-testid="input-password"
-              />
-              
-              <Select value={cargo} onValueChange={setCargo}>
-                <SelectTrigger data-testid="select-cargo">
-                  <SelectValue placeholder="Selecione o cargo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Motorista">Motorista</SelectItem>
-                  <SelectItem value="Ajudante">Ajudante</SelectItem>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <div className="flex justify-center">
-                <Button onClick={addUser} data-testid="button-register">
-                  Registrar
-                </Button>
+              <div>
+                <Label htmlFor="displayName">Nome Completo *</Label>
+                <Input
+                  id="displayName"
+                  value={formData.displayName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
+                  placeholder="Nome completo do colaborador"
+                  data-testid="input-name"
+                />
+                {errors.displayName && (
+                  <span className="text-sm text-red-600">{errors.displayName}</span>
+                )}
               </div>
-            </div>
+
+              <div>
+                <PhoneInput
+                  value={formData.phone}
+                  onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+                  label="Telefone *"
+                  error={errors.phone}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="password">Senha *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Senha do usuário"
+                  data-testid="input-password"
+                />
+                {errors.password && (
+                  <span className="text-sm text-red-600">{errors.password}</span>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="confirmPassword">Repetir Senha *</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  placeholder="Confirme a senha"
+                  data-testid="input-confirm-password"
+                />
+                {errors.confirmPassword && (
+                  <span className="text-sm text-red-600">{errors.confirmPassword}</span>
+                )}
+              </div>
+
+              <div>
+                <Label>Selecionar o Cargo *</Label>
+                <Select value={formData.cargo} onValueChange={(value) => setFormData(prev => ({ ...prev, cargo: value }))}>
+                  <SelectTrigger data-testid="select-cargo">
+                    <SelectValue placeholder="Selecione o cargo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Motorista">Motorista</SelectItem>
+                    <SelectItem value="Ajudante">Ajudante</SelectItem>
+                    <SelectItem value="ADM">ADM</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.cargo && (
+                  <span className="text-sm text-red-600">{errors.cargo}</span>
+                )}
+              </div>
+
+              <div>
+                <Label>Nível de Permissão *</Label>
+                <Select value={formData.permission} onValueChange={(value) => setFormData(prev => ({ ...prev, permission: value }))}>
+                  <SelectTrigger data-testid="select-permission">
+                    <SelectValue placeholder="Selecione a permissão..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ADM">ADM</SelectItem>
+                    <SelectItem value="Colaborador">Colaborador</SelectItem>
+                    <SelectItem value="Gestor">Gestor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button type="submit" className="w-full" data-testid="button-register">
+                Registrar
+              </Button>
+            </form>
           </CardContent>
         </Card>
 
         {/* Users List */}
-        <Card className="md:col-span-2">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-sm text-gray-500">Usuários</CardTitle>
+            <CardTitle>Usuários</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {users.map(user => (
-                <div
-                  key={user.username}
-                  className="flex items-center justify-between border rounded-xl px-4 py-3"
-                  data-testid={`user-card-${user.username}`}
+                <div 
+                  key={user.id} 
+                  className={`p-3 border rounded-lg ${!user.active ? 'bg-gray-100 opacity-60' : ''}`}
                 >
-                  <div>
-                    <div className="font-medium">
-                      <span data-testid={`user-name-${user.username}`}>
-                        {user.displayName}
-                      </span>
-                      {user.cargo && (
-                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full border">
-                          {user.cargo}
-                        </span>
-                      )}
-                      {user.role === 'admin' && (
-                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full border">
-                          admin
-                        </span>
-                      )}
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="font-medium">{user.displayName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        Telefone: {user.phone}
+                      </div>
+                      <div className="flex gap-2 mt-1">
+                        <Badge variant="outline">{user.permission}</Badge>
+                        <Badge variant="secondary">{user.cargo}</Badge>
+                        {!user.active && (
+                          <Badge variant="destructive">Desativado</Badge>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-600">
-                      Login: {user.cpf ? maskCPF(user.cpf) : user.username}
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleToggleUser(user)}
+                        variant={user.active ? "destructive" : "default"}
+                        size="sm"
+                        data-testid={`button-toggle-${user.username}`}
+                      >
+                        {user.active ? (
+                          <>
+                            <UserX className="w-4 h-4 mr-1" />
+                            Desativar
+                          </>
+                        ) : (
+                          "Reativar"
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => handleEditUser(user)}
+                        variant="outline"
+                        size="sm"
+                        data-testid={`button-edit-${user.username}`}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Editar
+                      </Button>
                     </div>
-                    {!user.active && (
-                      <div className="text-xs text-red-600">Inativo</div>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => toggleActive(user)}
-                      data-testid={`button-toggle-${user.username}`}
-                    >
-                      {user.active ? "Desativar" : "Ativar"}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => resetPassword(user)}
-                      data-testid={`button-reset-password-${user.username}`}
-                    >
-                      Redefinir Senha
-                    </Button>
                   </div>
                 </div>
               ))}
@@ -222,49 +373,101 @@ export function AdminPage() {
         </Card>
       </div>
 
-      {/* Password Reset Modal */}
-      <Modal
-        isOpen={resetTarget !== null}
-        onClose={() => setResetTarget(null)}
-        title="Redefinir senha"
-      >
-        {resetTarget && (
-          <div>
-            <div className="text-sm text-gray-600 mb-3">
-              Usuário: <strong>{resetTarget.displayName}</strong>
+      {/* Edit User Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-displayName">Nome Completo</Label>
+              <Input
+                id="edit-displayName"
+                value={editFormData.displayName}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, displayName: e.target.value }))}
+              />
             </div>
-            <Input
-              type="password"
-              placeholder="Nova senha"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              data-testid="input-new-password"
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => setResetTarget(null)}
-                data-testid="button-cancel-password-reset"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={saveNewPassword}
-                data-testid="button-save-password"
-              >
-                Salvar
-              </Button>
+
+            <div>
+              <PhoneInput
+                value={editFormData.phone}
+                onChange={(value) => setEditFormData(prev => ({ ...prev, phone: value }))}
+                label="Telefone"
+                error={errors.phone}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-password">Nova Senha (deixe em branco para manter)</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={editFormData.password}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, password: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-confirmPassword">Confirmar Nova Senha</Label>
+              <Input
+                id="edit-confirmPassword"
+                type="password"
+                value={editFormData.confirmPassword}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <Label>Cargo</Label>
+              <Select value={editFormData.cargo} onValueChange={(value) => setEditFormData(prev => ({ ...prev, cargo: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Motorista">Motorista</SelectItem>
+                  <SelectItem value="Ajudante">Ajudante</SelectItem>
+                  <SelectItem value="ADM">ADM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Nível de Permissão</Label>
+              <Select value={editFormData.permission} onValueChange={(value) => setEditFormData(prev => ({ ...prev, permission: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADM">ADM</SelectItem>
+                  <SelectItem value="Colaborador">Colaborador</SelectItem>
+                  <SelectItem value="Gestor">Gestor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="edit-active"
+                checked={editFormData.active}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, active: e.target.checked }))}
+              />
+              <Label htmlFor="edit-active">Usuário ativo</Label>
             </div>
           </div>
-        )}
-      </Modal>
-
-      {/* Password Saved Feedback */}
-      {passwordSaved && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          Senha redefinida com sucesso!
-        </div>
-      )}
+          
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateUser}>
+              Salvar Alterações
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

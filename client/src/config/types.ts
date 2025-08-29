@@ -1,11 +1,13 @@
-export type Role = "admin" | "colaborador";
+export type Role = "admin" | "colaborador" | "gestor";
 
 export type User = {
   id: string;
-  username: string;
+  username: string; // Now phone number without formatting
+  phone: string; // Phone formatted as (87) 9 XXXX-XXXX
   password: string;
   displayName: string;
   role: Role;
+  permission: "ADM" | "Colaborador" | "Gestor";
   active: boolean;
   cargo?: string;
   cpf?: string;

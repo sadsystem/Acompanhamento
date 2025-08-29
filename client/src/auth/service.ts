@@ -5,14 +5,16 @@ export class AuthService {
   constructor(private storage: StorageAdapter) {}
 
   async login(username: string, password: string): Promise<LoginResult> {
-    const user = await this.storage.getUserByUsername(username.trim());
+    // Convert phone to username format for lookup
+    const phoneDigits = username.replace(/\D/g, '');
+    const user = await this.storage.getUserByUsername(phoneDigits);
     
     if (!user) {
-      return { ok: false, error: "Usuário não encontrado/ativo" };
+      return { ok: false, error: "Telefone não encontrado" };
     }
     
     if (!user.active) {
-      return { ok: false, error: "Usuário não encontrado/ativo" };
+      return { ok: false, error: "Seu acesso foi desativado, consulte o seu gestor responsável." };
     }
     
     if (user.password !== password) {

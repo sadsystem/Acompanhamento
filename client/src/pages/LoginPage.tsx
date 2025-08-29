@@ -58,13 +58,13 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
           
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <Label htmlFor="username">Usuário</Label>
+              <Label htmlFor="username">Telefone</Label>
               <Input
                 id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="..."
+                placeholder="(87) 9 XXXX-XXXX"
                 data-testid="input-username"
                 required
               />

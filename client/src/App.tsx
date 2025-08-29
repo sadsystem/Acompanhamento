@@ -152,7 +152,7 @@ function AppContent() {
                       }`}
                       data-testid="nav-admin"
                     >
-                      Admin
+                      Gestão
                     </button>
                   </div>
                 )}
