@@ -321,54 +321,65 @@ export function AdminPage() {
             <CardTitle>Usuários</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {users.map(user => (
                 <div 
                   key={user.id} 
-                  className={`p-3 border rounded-lg ${!user.active ? 'bg-gray-100 opacity-60' : ''}`}
+                  className={`p-4 border rounded-lg shadow-sm ${!user.active ? 'bg-gray-50 opacity-70' : 'bg-white'}`}
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="font-medium">{user.displayName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Telefone: {user.phone}
-                      </div>
-                      <div className="flex gap-2 mt-1">
-                        <Badge variant="outline">{user.permission}</Badge>
-                        <Badge variant="secondary">{user.cargo}</Badge>
-                        {!user.active && (
-                          <Badge variant="destructive">Desativado</Badge>
-                        )}
-                      </div>
+                  {/* Line 1: Name and Deactivate Button */}
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="font-medium text-lg text-gray-900">
+                      {user.displayName}
                     </div>
-                    <div className="flex flex-col gap-1 w-24">
-                      <Button
-                        onClick={() => handleToggleUser(user)}
-                        variant={user.active ? "destructive" : "default"}
-                        size="sm"
-                        data-testid={`button-toggle-${user.username}`}
-                        className="text-xs px-2 py-1 h-7 min-w-0"
-                      >
-                        {user.active ? (
-                          <>
-                            <UserX className="w-3 h-3 mr-1 flex-shrink-0" />
-                            <span className="truncate">Desativar</span>
-                          </>
-                        ) : (
-                          "Reativar"
-                        )}
-                      </Button>
-                      <Button
-                        onClick={() => handleEditUser(user)}
-                        variant="outline"
-                        size="sm"
-                        data-testid={`button-edit-${user.username}`}
-                        className="text-xs px-2 py-1 h-7 min-w-0"
-                      >
-                        <Edit className="w-3 h-3 mr-1 flex-shrink-0" />
-                        <span className="truncate">Editar</span>
-                      </Button>
+                    <Button
+                      onClick={() => handleToggleUser(user)}
+                      variant={user.active ? "destructive" : "default"}
+                      size="sm"
+                      data-testid={`button-toggle-${user.username}`}
+                      className="px-3 py-1 h-8 min-w-[90px]"
+                    >
+                      {user.active ? (
+                        <>
+                          <UserX className="w-4 h-4 mr-1" />
+                          Desativar
+                        </>
+                      ) : (
+                        "Reativar"
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {/* Line 2: Phone and Edit Button */}
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="text-sm text-muted-foreground">
+                      Telefone: <span className="font-medium text-gray-700">{user.phone}</span>
                     </div>
+                    <Button
+                      onClick={() => handleEditUser(user)}
+                      variant="outline"
+                      size="sm"
+                      data-testid={`button-edit-${user.username}`}
+                      className="px-3 py-1 h-8 min-w-[70px]"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Editar
+                    </Button>
+                  </div>
+                  
+                  {/* Line 3: Permission and Position Centered */}
+                  <div className="flex justify-center items-center gap-3 pt-2 border-t border-gray-100">
+                    <Badge variant="outline" className="px-3 py-1">
+                      {user.permission}
+                    </Badge>
+                    <Badge variant="secondary" className="px-3 py-1">
+                      {user.cargo}
+                    </Badge>
+                    {!user.active && (
+                      <Badge variant="destructive" className="px-3 py-1">
+                        Desativado
+                      </Badge>
+                    )}
                   </div>
                 </div>
               ))}
