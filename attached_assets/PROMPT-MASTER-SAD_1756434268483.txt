@@ -1,0 +1,125 @@
+Contexto do projeto
+-------------------
+Nome: Sistema de Acompanhamento Diário - Ouro Verde (SAD Ouro Verde)
+Tecnologia: React (single-file protótipo), Tailwind-like classes (utilitárias no JSX).
+Estado atual: protótipo funcional rodando localmente (UI + armazenamento local em localStorage).
+Arquivos principais: /src/App.tsx (monolítico atualmente). Seeds iniciais criados (admin, teste, colaboradores).
+
+O que já foi implementado (resumo)
+----------------------------------
+- Autenticação local baseada em *users* guardados em localStorage. Seeds: admin, teste, maria, joao, carlos.
+- Login com checkbox "Lembrar login". Session gravada em LS.session. ensureSeedUsers() para repor seeds se faltar.
+- Sistema de seleção de parceiro para o dia (SelectPartnerPage), com flag para impedir avaliar o mesmo parceiro mais de uma vez por dia (com base em dateRef).
+- Checklist (ChecklistPage) com 4 perguntas, validações: todos obrigatórios; quando regra exige motivo, o textarea aparece e passa a ser obrigatório; animação de erro (pulse + ring vermelho).
+- Registro de avaliações em localStorage: `sad_evals`. Cada avaliação contém createdAt (ISO), dateRef, evaluator, evaluated, answers, score, status.
+- Dashboard (DashboardPage): filtros por data, export CSV, simular sync (atualiza `status` para synced), métricas top, alertas.
+- Admin (AdminPage): registrar novo colaborador (CPF validação), listar usuários, ativar/desativar, redefinir senha via modal.
+- UI: componentes atômicos Button, Card, Badge, FieldLabel.
+- Boot/splash screen (3s), footer, cabeçalho com indicador (bolinha) visual.
+- Horário usado: **hora de Brasília** via `toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })` — evita confiar no relógio do dispositivo para a referência de data/hora.
+
+Decisões de projeto e design (importante)
+-----------------------------------------
+- **Tempo/DateRef:** sempre basear dateRef e timestamp no horário de Brasília (server-time substitute). Para produção, obrigatoriamente usar time server (backend) ou NTP para impedir manipulação local.
+- **Login por agora:** é baseado em `username` (admin, teste) até mapear telefones/CPF. UI do login já alterada para melhor UX, mas **autenticação** usa username/password.
+- **Equipe do dia:** atualmente `getAllowedPartnersForDate()` retorna todos colaboradores exceto o próprio. Futuro: integrar com API que fornece *equipe do dia* por usuário/data.
+- **Armazenamento:** protótipo usa localStorage; próximo passo: API REST + banco (Supabase/Postgres recomendado). O front deve migrar para um serviço sync/queue quando offline.
+- **Segurança**: senhas estão em texto (protótipo). Em produção, substituir por backend com hashing (bcrypt/argon2) e autenticação via token JWT/OAuth.
+- **Internationalização/strings:** atualmente hardcoded PT-BR. Em futuro, externalizar strings.
+
+Bugs conhecidos / cuidados (o que aprendemos)
+--------------------------------------------
+- Evitar `return` fora de funções: checar balanceamento de chaves/parenteses em componentes funcionais.
+- Remover chaves/retornos duplicados em componentes (ex.: Button) para evitar `Unexpected token` ou `Missing semicolon`.
+- Evitar fechar um bloco prematuramente em funções (ex.: `ensureSeedUsers`) — revisar código antes de salvar.
+- Ao modificar o layout do login (placeholder/mascara), manter compatibilidade com os `seedUsers` (username atual).
+- Quando criar split de arquivos, garantir exports padrão/nomeados e ajustar imports no bundler.
+
+Próximas tasks sugeridas (prioritárias)
+---------------------------------------
+1. **Refatorar /src/App.tsx para módulos**:
+   - `src/config.ts` — CONFIG, types exportados.
+   - `src/storage.ts` — helpers readLS/writeLS, seeds, ensureSeedUsers.
+   - `src/auth.ts` — login/logout/currentUser, session management.
+   - `src/utils/time.ts` — nowInBrazil, format helpers.
+   - `src/components/*` — Button, Card, Badge, FieldLabel, Modal.
+   - `src/pages/*` — LoginPage, SelectPartnerPage, ChecklistPage, DashboardPage, AdminPage.
+   - Mantém a mesma lógica, mas facilita testes e manutenção.
+
+2. **Adicionar máscara e validação de entrada de telefone no login**:
+   - Usar `libphonenumber-js` ou similar para padrão BR (opcional).
+   - Definir mapping eventual `telefone -> username` nos seeds (campo `phone`) ou aceitar CPF como login.
+
+3. **Converter storage para um adapter de persistência**:
+   - Criar `storageAdapter` com métodos `getUsers() | setUsers() | getEvaluations() | setEvaluations()`; trocar implementação local por supabase/api futuramente mantendo interface.
+
+4. **API mock / contratos**:
+   - Criar pasta `api/` com contratos esperados (endpoints): 
+     - `POST /auth/login` -> { token, user }  
+     - `GET /users?date=YYYY-MM-DD&username=...` -> equipe do dia  
+     - `POST /evaluations` -> grava aval.  
+     - `GET /evaluations?from&to&evaluated` -> lista
+   - Escrever exemplos de payloads (JSON Schema ou TypeScript types).
+
+5. **Testes unitários básicos**:
+   - Testar calcScore, nowInBrazil, CPF validator, ensureSeedUsers.
+   - Usar Jest + Testing Library (component smoke tests).
+
+6. **Melhor UX**:
+   - Feedbacks animados ao enviar (já existem), melhorar transições e estados desabilitados.
+   - Indicar claramente que colaborador já foi avaliado (já implementado no SelectPartnerPage).
+   - Tornar o bloco clicável todo (já parcialmente feito).
+
+Regras e padrões para evitar regressões
+---------------------------------------
+- Sempre rodar `npm run build` / `npm run lint` ao alterar JSX; atenção para parênteses e returns.
+- Ao modificar componentes atômicos, preferir props controladas e não alterar assinatura (para compatibilidade).
+- Separar responsabilidades: UI não deve acessar diretamente o localStorage — usar `storageAdapter`.
+- Para data/hora: **não** usar `new Date()` puro para gerar dateRef; usar `nowInBrazil()` helper até existir server-time.
+
+Sugestões para backend (API & DB)
+---------------------------------
+- Banco: Postgres (Supabase facilita).
+- Tabelas mínimas:
+  - users (id, username, display_name, role, cargo, cpf, phone, password_hash, active)
+  - evaluations (id, created_at, date_ref, evaluator_id, evaluated_id, score, status)
+  - evaluation_answers (id, evaluation_id, question_id, value_boolean, reason_text)
+- Endpoints:
+  - POST /auth/login -> { token, user }
+  - GET /users/team?date=YYYY-MM-DD&username=... -> lista de parceiros
+  - POST /evaluations -> grava avaliação (autenticado)
+  - GET /evaluations -> filtros por date/evaluated
+- Regras: token-based auth, todas as datas geradas no backend para confiabilidade.
+
+Checklist técnico para a próxima sessão
+---------------------------------------
+- [ ] Criar estrutura de arquivos/refactor (módulos).
+- [ ] Implementar adapter de storage e mock de API.
+- [ ] Implementar máscara de telefone (opcional agora).
+- [ ] Adicionar testes unitários para utilitários críticos.
+- [ ] Mapear campos que precisam tradução/externalização.
+
+Informações úteis (comandos / run)
+----------------------------------
+- Ambiente: Node >= 16, React app padrão (Vite / CRA).
+- Rodar local: `npm install` -> `npm run dev` (ou `npm start` conforme setup).
+- Se usar Tailwind: garantir config e import CSS.
+
+Observações finais
+------------------
+- Atualmente o protótipo já protege alguns fluxos: colaborador não acessa Admin/Dashboard, e não pode avaliar o mesmo parceiro mais de uma vez no mesmo dateRef.
+- A lógica de "equipe do dia" é apenas placeholder; integrar com backend é essencial para o fluxo real (equipes dinâmicas).
+- Senhas estão em texto no protótipo — **não** para produção.
+
+Se for continuar com o ChatGPT:
+- Cole este prompt (inteiro) lá e peça por: **refatoração modular** + **adapter storage** + **mocks de API**.
+- Se quiser, eu já consigo gerar os arquivos separados (`config.ts`, `storage.ts`, `auth.ts`, `pages/*.tsx`, `components/*.tsx`) a partir do código atual.
+
+Exemplos de tickets/tarefas para atribuir
+-----------------------------------------
+1. Refatorar `App.tsx` em módulos (alta prioridade).
+2. Criar `storageAdapter` com interface e mocks (média).
+3. Implementar login por telefone/cpf (baixa->média).
+4. Subir versão inicial do backend (Supabase) e migrar persistência (alta).
+5. Escrever testes unitários para `calcScore`, CPF e date helpers (média).
+
