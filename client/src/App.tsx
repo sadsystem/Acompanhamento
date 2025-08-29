@@ -101,7 +101,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       {currentUser && (
         <header className="bg-card border-b border-border sticky top-0 z-50">
@@ -109,10 +109,10 @@ function AppContent() {
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold transition-colors ${
+                  <div className={`w-auto px-2 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold transition-colors ${
                     navigator.onLine ? 'bg-green-600' : 'bg-red-600'
                   }`}>
-                    <span>OV</span>
+                    <span>OURO VERDE</span>
                   </div>
                   <h1 className="text-lg font-semibold text-foreground">
                     Sistema de Acompanhamento Diário

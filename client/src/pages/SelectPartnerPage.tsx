@@ -116,26 +116,13 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
             SELECIONE O PARCEIRO DE EQUIPE
           </h2>
           
-          <div className="flex items-end gap-2 mb-4">
-            <div className="flex-1">
-              <Label htmlFor="search">Buscar</Label>
-              <Input
-                id="search"
-                type="text"
-                placeholder="Nome"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                data-testid="input-search"
-              />
-            </div>
-          </div>
           
           {hasActiveRoute === false && (
             <Alert className="mb-4">
               <Users className="h-4 w-4" />
               <AlertDescription>
                 <strong>Aguardando definição de rota...</strong><br />
-                Você ainda não foi designado para nenhuma rota ativa. Entre em contato com o administrador para ser incluído em uma equipe.
+                Verifique novamente mais tarde.
               </AlertDescription>
             </Alert>
           )}
@@ -188,7 +175,7 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
             
             {hasActiveRoute === false && (
               <div className="text-sm text-gray-600 text-center py-8" data-testid="no-partners">
-                Aguarde ser designado para uma rota para poder avaliar colegas de equipe.
+                Aguarde ser designado para uma rota para poder realizar o acompanhamento dos colegas de equipe.
               </div>
             )}
           </div>
