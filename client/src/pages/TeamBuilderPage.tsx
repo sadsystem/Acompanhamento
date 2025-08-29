@@ -127,83 +127,135 @@ export function TeamBuilderPage() {
     if (sourceId === "available-drivers" && destId.startsWith("team-")) {
       const teamId = destId.split("-")[1];
       const draggedDriver = availableDrivers.find(d => d.id === draggableId);
-      const teamIndex = teams.findIndex(t => t.id === teamId);
+      const targetRoute = routes.find(r => r.team?.id === teamId);
       
-      if (draggedDriver && teamIndex >= 0) {
-        const updatedTeams = [...teams];
+      if (draggedDriver && targetRoute && targetRoute.team) {
         // Remove current driver from team if exists
-        if (updatedTeams[teamIndex].driver && updatedTeams[teamIndex].driver.username) {
-          setAvailableDrivers(prev => [...prev, updatedTeams[teamIndex].driver]);
+        if (targetRoute.team.driver && targetRoute.team.driver.username) {
+          setAvailableDrivers(prev => [...prev, targetRoute.team.driver]);
         }
         
-        updatedTeams[teamIndex] = {
-          ...updatedTeams[teamIndex],
+        // Update team with new driver
+        const updatedTeam = {
+          ...targetRoute.team,
           driverUsername: draggedDriver.username,
           driver: draggedDriver
         };
         
-        setTeams(updatedTeams);
+        // Update routes state
+        setRoutes(prev => prev.map(r => 
+          r.id === targetRoute.id 
+            ? { ...r, team: updatedTeam }
+            : r
+        ));
+        
+        // Update teams state
+        setTeams(prev => prev.map(t => 
+          t.id === teamId 
+            ? updatedTeam
+            : t
+        ));
+        
         setAvailableDrivers(prev => prev.filter(d => d.id !== draggableId));
-        saveTeam(updatedTeams[teamIndex]);
+        saveTeam(updatedTeam);
       }
     }
 
     if (sourceId === "available-assistants" && destId.startsWith("team-")) {
       const teamId = destId.split("-")[1];
       const draggedAssistant = availableAssistants.find(a => a.id === draggableId);
-      const teamIndex = teams.findIndex(t => t.id === teamId);
+      const targetRoute = routes.find(r => r.team?.id === teamId);
       
-      if (draggedAssistant && teamIndex >= 0 && teams[teamIndex].assistants.length < 2) {
-        const updatedTeams = [...teams];
-        updatedTeams[teamIndex] = {
-          ...updatedTeams[teamIndex],
-          assistants: [...updatedTeams[teamIndex].assistants, draggedAssistant.username],
-          assistantUsers: [...updatedTeams[teamIndex].assistantUsers, draggedAssistant]
+      if (draggedAssistant && targetRoute && targetRoute.team && targetRoute.team.assistants.length < 2) {
+        // Update team with new assistant
+        const updatedTeam = {
+          ...targetRoute.team,
+          assistants: [...targetRoute.team.assistants, draggedAssistant.username],
+          assistantUsers: [...targetRoute.team.assistantUsers, draggedAssistant]
         };
         
-        setTeams(updatedTeams);
+        // Update routes state
+        setRoutes(prev => prev.map(r => 
+          r.id === targetRoute.id 
+            ? { ...r, team: updatedTeam }
+            : r
+        ));
+        
+        // Update teams state
+        setTeams(prev => prev.map(t => 
+          t.id === teamId 
+            ? updatedTeam
+            : t
+        ));
+        
         setAvailableAssistants(prev => prev.filter(a => a.id !== draggableId));
-        saveTeam(updatedTeams[teamIndex]);
+        saveTeam(updatedTeam);
       }
     }
 
     // Handle removing users from teams back to available
     if (sourceId.startsWith("team-") && destId === "available-drivers") {
       const teamId = sourceId.split("-")[1];
-      const teamIndex = teams.findIndex(t => t.id === teamId);
-      const team = teams[teamIndex];
+      const targetRoute = routes.find(r => r.team?.id === teamId);
       
-      if (team && team.driver && team.driver.id === draggableId) {
-        const updatedTeams = [...teams];
-        updatedTeams[teamIndex] = {
-          ...updatedTeams[teamIndex],
+      if (targetRoute && targetRoute.team && targetRoute.team.driver && targetRoute.team.driver.id === draggableId) {
+        const driverToRemove = targetRoute.team.driver;
+        
+        // Update team
+        const updatedTeam = {
+          ...targetRoute.team,
           driverUsername: "",
           driver: {} as User
         };
         
-        setTeams(updatedTeams);
-        setAvailableDrivers(prev => [...prev, team.driver]);
-        saveTeam(updatedTeams[teamIndex]);
+        // Update routes state
+        setRoutes(prev => prev.map(r => 
+          r.id === targetRoute.id 
+            ? { ...r, team: updatedTeam }
+            : r
+        ));
+        
+        // Update teams state
+        setTeams(prev => prev.map(t => 
+          t.id === teamId 
+            ? updatedTeam
+            : t
+        ));
+        
+        setAvailableDrivers(prev => [...prev, driverToRemove]);
+        saveTeam(updatedTeam);
       }
     }
 
     if (sourceId.startsWith("team-") && destId === "available-assistants") {
       const teamId = sourceId.split("-")[1];
-      const teamIndex = teams.findIndex(t => t.id === teamId);
-      const team = teams[teamIndex];
-      const draggedAssistant = team?.assistantUsers.find(a => a.id === draggableId);
+      const targetRoute = routes.find(r => r.team?.id === teamId);
+      const draggedAssistant = targetRoute?.team?.assistantUsers.find(a => a.id === draggableId);
       
-      if (draggedAssistant && teamIndex >= 0) {
-        const updatedTeams = [...teams];
-        updatedTeams[teamIndex] = {
-          ...updatedTeams[teamIndex],
-          assistants: updatedTeams[teamIndex].assistants.filter(username => username !== draggedAssistant.username),
-          assistantUsers: updatedTeams[teamIndex].assistantUsers.filter(a => a.id !== draggableId)
+      if (draggedAssistant && targetRoute && targetRoute.team) {
+        // Update team
+        const updatedTeam = {
+          ...targetRoute.team,
+          assistants: targetRoute.team.assistants.filter(username => username !== draggedAssistant.username),
+          assistantUsers: targetRoute.team.assistantUsers.filter(a => a.id !== draggableId)
         };
         
-        setTeams(updatedTeams);
+        // Update routes state
+        setRoutes(prev => prev.map(r => 
+          r.id === targetRoute.id 
+            ? { ...r, team: updatedTeam }
+            : r
+        ));
+        
+        // Update teams state
+        setTeams(prev => prev.map(t => 
+          t.id === teamId 
+            ? updatedTeam
+            : t
+        ));
+        
         setAvailableAssistants(prev => [...prev, draggedAssistant]);
-        saveTeam(updatedTeams[teamIndex]);
+        saveTeam(updatedTeam);
       }
     }
   };
