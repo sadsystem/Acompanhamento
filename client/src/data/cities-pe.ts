@@ -35,11 +35,20 @@ export const citiesPernambucoData = [
   "Xexéu"
 ];
 
+// Function to normalize text by removing accents and diacritics
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
 export function searchCities(query: string): string[] {
   if (!query.trim()) return citiesPernambucoData.slice(0, 10); // Show first 10 if no query
   
-  const normalizedQuery = query.toLowerCase().trim();
+  const normalizedQuery = normalizeText(query);
   return citiesPernambucoData
-    .filter(city => city.toLowerCase().includes(normalizedQuery))
+    .filter(city => normalizeText(city).includes(normalizedQuery))
     .slice(0, 15); // Limit to 15 results
 }
