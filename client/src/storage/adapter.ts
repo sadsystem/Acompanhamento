@@ -1,4 +1,4 @@
-import { User, Evaluation, Session, EvaluationFilters } from '../config/types';
+import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute } from '../config/types';
 
 export interface StorageAdapter {
   // Users
@@ -21,11 +21,27 @@ export interface StorageAdapter {
   // Remember functionality
   setRemember(flag: boolean): Promise<void>;
   getRemember(): Promise<boolean>;
+
+  // Teams
+  getTeams(): Promise<Team[]>;
+  setTeams(teams: Team[]): Promise<void>;
+  createTeam(team: Team): Promise<Team>;
+  updateTeam(id: string, updates: Partial<Team>): Promise<Team>;
+  deleteTeam(id: string): Promise<void>;
+
+  // Travel Routes
+  getTravelRoutes(): Promise<TravelRoute[]>;
+  setTravelRoutes(routes: TravelRoute[]): Promise<void>;
+  createTravelRoute(route: TravelRoute): Promise<TravelRoute>;
+  updateTravelRoute(id: string, updates: Partial<TravelRoute>): Promise<TravelRoute>;
+  deleteTravelRoute(id: string): Promise<void>;
 }
 
 export class MockStorageAdapter implements StorageAdapter {
   private users: User[] = [];
   private evaluations: Evaluation[] = [];
+  private teams: Team[] = [];
+  private travelRoutes: TravelRoute[] = [];
   private session: Session | null = null;
   private remember: boolean = false;
 
@@ -104,5 +120,59 @@ export class MockStorageAdapter implements StorageAdapter {
 
   async getRemember(): Promise<boolean> {
     return this.remember;
+  }
+
+  // Teams methods
+  async getTeams(): Promise<Team[]> {
+    return [...this.teams];
+  }
+
+  async setTeams(teams: Team[]): Promise<void> {
+    this.teams = [...teams];
+  }
+
+  async createTeam(team: Team): Promise<Team> {
+    this.teams.push(team);
+    return team;
+  }
+
+  async updateTeam(id: string, updates: Partial<Team>): Promise<Team> {
+    const index = this.teams.findIndex(t => t.id === id);
+    if (index === -1) throw new Error('Team not found');
+    
+    const updatedTeam = { ...this.teams[index], ...updates };
+    this.teams[index] = updatedTeam;
+    return updatedTeam;
+  }
+
+  async deleteTeam(id: string): Promise<void> {
+    this.teams = this.teams.filter(t => t.id !== id);
+  }
+
+  // Travel Routes methods
+  async getTravelRoutes(): Promise<TravelRoute[]> {
+    return [...this.travelRoutes];
+  }
+
+  async setTravelRoutes(routes: TravelRoute[]): Promise<void> {
+    this.travelRoutes = [...routes];
+  }
+
+  async createTravelRoute(route: TravelRoute): Promise<TravelRoute> {
+    this.travelRoutes.unshift(route);
+    return route;
+  }
+
+  async updateTravelRoute(id: string, updates: Partial<TravelRoute>): Promise<TravelRoute> {
+    const index = this.travelRoutes.findIndex(r => r.id === id);
+    if (index === -1) throw new Error('Travel route not found');
+    
+    const updatedRoute = { ...this.travelRoutes[index], ...updates };
+    this.travelRoutes[index] = updatedRoute;
+    return updatedRoute;
+  }
+
+  async deleteTravelRoute(id: string): Promise<void> {
+    this.travelRoutes = this.travelRoutes.filter(r => r.id !== id);
   }
 }

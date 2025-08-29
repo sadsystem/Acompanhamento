@@ -55,10 +55,38 @@ export type LoginResult = {
   user?: User;
 };
 
-export type Route = "login" | "selectPartner" | "checklist" | "dashboard" | "admin";
+export type AppRoute = "login" | "selectPartner" | "checklist" | "dashboard" | "admin" | "teamBuilder";
 
 export type ChecklistDraft = {
   evaluated?: string;
   answers: Record<string, { value: boolean | null; reason: string }>;
   dateRef: string;
+};
+
+export type Team = {
+  id: string;
+  driverUsername: string;
+  assistants: string[]; // max 2 assistants
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type TravelRoute = {
+  id: string;
+  city: string;
+  teamId?: string;
+  startDate: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD when completed
+  status: "active" | "completed";
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type TeamWithMembers = Team & {
+  driver: User;
+  assistantUsers: User[];
+};
+
+export type TravelRouteWithTeam = TravelRoute & {
+  team?: TeamWithMembers;
 };

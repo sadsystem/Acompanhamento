@@ -37,6 +37,27 @@ export const evaluations = pgTable("evaluations", {
   status: text("status").notNull().default("queued"), // "queued" | "synced"
 });
 
+// Teams table
+export const teams = pgTable("teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  driverUsername: text("driver_username").notNull(),
+  assistants: json("assistants").notNull(), // string[] - usernames of assistants (max 2)
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Routes table
+export const routes = pgTable("routes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  city: text("city").notNull(),
+  teamId: varchar("team_id").references(() => teams.id),
+  startDate: text("start_date").notNull(), // YYYY-MM-DD
+  endDate: text("end_date"), // YYYY-MM-DD when route is finished
+  status: text("status").notNull().default("active"), // "active" | "completed"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -49,6 +70,18 @@ export const insertEvaluationSchema = createInsertSchema(evaluations).omit({
   id: true,
 });
 
+export const insertTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRouteSchema = createInsertSchema(routes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -58,6 +91,12 @@ export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 
 export type Evaluation = typeof evaluations.$inferSelect;
 export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
+
+export type Team = typeof teams.$inferSelect;
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+
+export type Route = typeof routes.$inferSelect;
+export type InsertRoute = z.infer<typeof insertRouteSchema>;
 
 // Additional types for frontend
 export type Role = "admin" | "colaborador";

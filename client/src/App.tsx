@@ -8,7 +8,7 @@ import { StorageProvider } from "./context/StorageContext";
 import { LocalStorageAdapter } from "./storage/localStorage";
 import { AuthService } from "./auth/service";
 import { seedUsers } from "./storage/seeds";
-import { User, Route as AppRoute } from "./config/types";
+import { User, AppRoute } from "./config/types";
 import { CONFIG } from "./config/constants";
 
 // Pages
@@ -17,6 +17,7 @@ import { SelectPartnerPage } from "./pages/SelectPartnerPage";
 import { ChecklistPage } from "./pages/ChecklistPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AdminPage } from "./pages/AdminPage";
+import { TeamBuilderPage } from "./pages/TeamBuilderPage";
 import NotFound from "@/pages/not-found";
 
 // Create storage adapter instance
@@ -134,6 +135,15 @@ function AppContent() {
                       Dashboard
                     </button>
                     <button
+                      onClick={() => navigateTo("teamBuilder")}
+                      className={`px-3 py-1 text-sm rounded-md ${
+                        currentRoute === "teamBuilder" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                      data-testid="nav-team-builder"
+                    >
+                      Montar Equipes
+                    </button>
+                    <button
                       onClick={() => navigateTo("admin")}
                       className={`px-3 py-1 text-sm rounded-md ${
                         currentRoute === "admin" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
@@ -191,6 +201,10 @@ function AppContent() {
         
         {currentRoute === "dashboard" && currentUser && (
           <DashboardPage />
+        )}
+        
+        {currentRoute === "teamBuilder" && currentUser && (
+          <TeamBuilderPage />
         )}
         
         {currentRoute === "admin" && currentUser && (

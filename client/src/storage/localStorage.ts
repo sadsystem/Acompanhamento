@@ -1,5 +1,5 @@
 import { StorageAdapter } from './adapter';
-import { User, Evaluation, Session, EvaluationFilters } from '../config/types';
+import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute } from '../config/types';
 import { LS_KEYS } from '../config/constants';
 
 export class LocalStorageAdapter implements StorageAdapter {
@@ -102,5 +102,71 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async getRemember(): Promise<boolean> {
     return this.readLS<boolean>(LS_KEYS.remember, false);
+  }
+
+  // Teams methods
+  async getTeams(): Promise<Team[]> {
+    return this.readLS<Team[]>(LS_KEYS.teams, []);
+  }
+
+  async setTeams(teams: Team[]): Promise<void> {
+    this.writeLS(LS_KEYS.teams, teams);
+  }
+
+  async createTeam(team: Team): Promise<Team> {
+    const teams = await this.getTeams();
+    teams.push(team);
+    await this.setTeams(teams);
+    return team;
+  }
+
+  async updateTeam(id: string, updates: Partial<Team>): Promise<Team> {
+    const teams = await this.getTeams();
+    const index = teams.findIndex(t => t.id === id);
+    if (index === -1) throw new Error('Team not found');
+    
+    const updatedTeam = { ...teams[index], ...updates };
+    teams[index] = updatedTeam;
+    await this.setTeams(teams);
+    return updatedTeam;
+  }
+
+  async deleteTeam(id: string): Promise<void> {
+    const teams = await this.getTeams();
+    const filteredTeams = teams.filter(t => t.id !== id);
+    await this.setTeams(filteredTeams);
+  }
+
+  // Travel Routes methods
+  async getTravelRoutes(): Promise<TravelRoute[]> {
+    return this.readLS<TravelRoute[]>(LS_KEYS.travelRoutes, []);
+  }
+
+  async setTravelRoutes(routes: TravelRoute[]): Promise<void> {
+    this.writeLS(LS_KEYS.travelRoutes, routes);
+  }
+
+  async createTravelRoute(route: TravelRoute): Promise<TravelRoute> {
+    const routes = await this.getTravelRoutes();
+    routes.unshift(route);
+    await this.setTravelRoutes(routes);
+    return route;
+  }
+
+  async updateTravelRoute(id: string, updates: Partial<TravelRoute>): Promise<TravelRoute> {
+    const routes = await this.getTravelRoutes();
+    const index = routes.findIndex(r => r.id === id);
+    if (index === -1) throw new Error('Travel route not found');
+    
+    const updatedRoute = { ...routes[index], ...updates };
+    routes[index] = updatedRoute;
+    await this.setTravelRoutes(routes);
+    return updatedRoute;
+  }
+
+  async deleteTravelRoute(id: string): Promise<void> {
+    const routes = await this.getTravelRoutes();
+    const filteredRoutes = routes.filter(r => r.id !== id);
+    await this.setTravelRoutes(filteredRoutes);
   }
 }

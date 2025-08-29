@@ -8,6 +8,8 @@ export const LS_KEYS = {
   session: "sad_session",
   evaluations: "sad_evals",
   remember: "sad_remember",
+  teams: "sad_teams",
+  travelRoutes: "sad_travel_routes",
 } as const;
 
 export const ROUTES = {
