@@ -125,10 +125,11 @@ export function TeamBuilderPage() {
 
     // Handle dragging from available users to teams
     if (sourceId === "available-drivers" && destId.startsWith("team-")) {
-      const teamIndex = parseInt(destId.split("-")[1]);
+      const teamId = destId.split("-")[1];
       const draggedDriver = availableDrivers.find(d => d.id === draggableId);
+      const teamIndex = teams.findIndex(t => t.id === teamId);
       
-      if (draggedDriver && teams[teamIndex]) {
+      if (draggedDriver && teamIndex >= 0) {
         const updatedTeams = [...teams];
         // Remove current driver from team if exists
         if (updatedTeams[teamIndex].driver && updatedTeams[teamIndex].driver.username) {
@@ -148,10 +149,11 @@ export function TeamBuilderPage() {
     }
 
     if (sourceId === "available-assistants" && destId.startsWith("team-")) {
-      const teamIndex = parseInt(destId.split("-")[1]);
+      const teamId = destId.split("-")[1];
       const draggedAssistant = availableAssistants.find(a => a.id === draggableId);
+      const teamIndex = teams.findIndex(t => t.id === teamId);
       
-      if (draggedAssistant && teams[teamIndex] && teams[teamIndex].assistants.length < 2) {
+      if (draggedAssistant && teamIndex >= 0 && teams[teamIndex].assistants.length < 2) {
         const updatedTeams = [...teams];
         updatedTeams[teamIndex] = {
           ...updatedTeams[teamIndex],
@@ -167,10 +169,11 @@ export function TeamBuilderPage() {
 
     // Handle removing users from teams back to available
     if (sourceId.startsWith("team-") && destId === "available-drivers") {
-      const teamIndex = parseInt(sourceId.split("-")[1]);
+      const teamId = sourceId.split("-")[1];
+      const teamIndex = teams.findIndex(t => t.id === teamId);
       const team = teams[teamIndex];
       
-      if (team.driver && team.driver.id === draggableId) {
+      if (team && team.driver && team.driver.id === draggableId) {
         const updatedTeams = [...teams];
         updatedTeams[teamIndex] = {
           ...updatedTeams[teamIndex],
@@ -185,11 +188,12 @@ export function TeamBuilderPage() {
     }
 
     if (sourceId.startsWith("team-") && destId === "available-assistants") {
-      const teamIndex = parseInt(sourceId.split("-")[1]);
+      const teamId = sourceId.split("-")[1];
+      const teamIndex = teams.findIndex(t => t.id === teamId);
       const team = teams[teamIndex];
-      const draggedAssistant = team.assistantUsers.find(a => a.id === draggableId);
+      const draggedAssistant = team?.assistantUsers.find(a => a.id === draggableId);
       
-      if (draggedAssistant) {
+      if (draggedAssistant && teamIndex >= 0) {
         const updatedTeams = [...teams];
         updatedTeams[teamIndex] = {
           ...updatedTeams[teamIndex],
@@ -611,7 +615,7 @@ export function TeamBuilderPage() {
                     </div>
                     
                     {route.team && (
-                      <Droppable droppableId={`team-${routes.indexOf(route)}`}>
+                      <Droppable droppableId={`team-${route.team?.id}`}>
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
