@@ -3,6 +3,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { PhoneInput } from "../components/forms/PhoneInput";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { AuthService } from "../auth/service";
 import { useStorage } from "../hooks/useStorage";
@@ -58,14 +59,11 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
           
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <Label htmlFor="username">Telefone</Label>
-              <Input
+              <PhoneInput
                 id="username"
-                type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="(87) 9 XXXX-XXXX"
-                data-testid="input-username"
+                onChange={(value) => setUsername(value)}
+                label="Telefone"
                 required
               />
             </div>
