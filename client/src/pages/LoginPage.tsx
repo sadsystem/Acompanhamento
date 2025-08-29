@@ -49,8 +49,8 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-lg">
         <CardContent className="pt-6">
           <h1 className="text-xl font-semibold mb-4 text-center uppercase tracking-wide">
             ENTRAR
@@ -64,7 +64,7 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin ou teste"
+                placeholder="..."
                 data-testid="input-username"
                 required
               />
@@ -77,7 +77,7 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="admin123 ou teste123"
+                placeholder="..."
                 data-testid="input-password"
                 required
               />

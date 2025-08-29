@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 import { useStorage } from "../hooks/useStorage";
 import { User, TravelRouteWithTeam } from "../config/types";
 import { toDateRefBR } from "../utils/time";
-import { Users } from "lucide-react";
+import { Users, RefreshCw } from "lucide-react";
 
 interface SelectPartnerPageProps {
   currentUser: User;
@@ -119,11 +119,25 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
           
           {hasActiveRoute === false && (
             <Alert className="mb-4">
-              <Users className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Aguardando definição de rota...</strong><br />
-                Verifique novamente mais tarde.
-              </AlertDescription>
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-start gap-2">
+                  <Users className="h-4 w-4 mt-0.5" />
+                  <AlertDescription>
+                    <strong>Aguardando definição de rota...</strong><br />
+                    Verifique novamente mais tarde.
+                  </AlertDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadData}
+                  className="ml-4 flex items-center gap-1"
+                  data-testid="button-refresh"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Atualizar
+                </Button>
+              </div>
             </Alert>
           )}
           
