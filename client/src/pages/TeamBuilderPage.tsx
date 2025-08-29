@@ -391,22 +391,23 @@ export function TeamBuilderPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Montar Equipes</h1>
-        <p className="text-muted-foreground">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Montar Equipes</h1>
+        <p className="text-lg text-muted-foreground">
           Organize equipes de motoristas e ajudantes para suas rotas de forma fácil e dinâmica
         </p>
       </div>
 
-      {/* New Route Modal */}
-      <Dialog open={showNewRouteModal} onOpenChange={setShowNewRouteModal}>
-        <DialogTrigger asChild>
-          <Button className="mb-6">
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Equipe
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-md">
+      <div className="text-center mb-6">
+        {/* New Route Modal */}
+        <Dialog open={showNewRouteModal} onOpenChange={setShowNewRouteModal}>
+          <DialogTrigger asChild>
+            <Button size="lg" className="px-8 py-3">
+              <Plus className="w-4 h-4 mr-2" />
+              Criar Rota
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editingRoute ? "Editar Rota" : "Criar Nova Rota"}
@@ -469,6 +470,7 @@ export function TeamBuilderPage() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
