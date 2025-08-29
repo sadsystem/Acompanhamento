@@ -109,7 +109,7 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
   );
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
+    <div className="flex-1 flex flex-col justify-center max-w-3xl mx-auto p-4">
       <Card>
         <CardContent className="pt-6">
           <h2 className="text-lg font-semibold mb-4 text-center uppercase tracking-wide">

@@ -49,7 +49,7 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardContent className="pt-6">
           <h1 className="text-xl font-semibold mb-4 text-center uppercase tracking-wide">

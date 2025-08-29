@@ -181,7 +181,7 @@ function AppContent() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 flex flex-col">
         {currentRoute === "login" && (
           <LoginPage onLoggedIn={handleLoggedIn} />
         )}
@@ -214,7 +214,7 @@ function AppContent() {
         )}
       </main>
       
-      <footer className="border-t bg-muted/30 py-4 mt-8">
+      <footer className="border-t bg-muted/30 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center text-sm text-muted-foreground">
           Sistema de Acompanhamento Diário © 2025. Criado por Jucélio Verissimo.
         </div>
