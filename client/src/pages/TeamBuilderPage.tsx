@@ -399,9 +399,9 @@ export function TeamBuilderPage() {
       </div>
 
       {/* New Route Modal */}
-      <Dialog open={showNewRouteModal} onOpenChange={closeModal}>
+      <Dialog open={showNewRouteModal} onOpenChange={setShowNewRouteModal}>
         <DialogTrigger asChild>
-          <Button onClick={() => setShowNewRouteModal(true)} className="mb-6">
+          <Button className="mb-6">
             <Plus className="w-4 h-4 mr-2" />
             Nova Equipe
           </Button>
