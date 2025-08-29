@@ -76,6 +76,7 @@ export type Team = {
 export type TravelRoute = {
   id: string;
   city: string;
+  cities: string[]; // lista completa das cidades
   teamId?: string;
   startDate: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD when completed

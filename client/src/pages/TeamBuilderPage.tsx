@@ -97,11 +97,25 @@ export function TeamBuilderPage() {
         };
       });
 
-      // Convert routes to TravelRouteWithTeam
+      // Convert routes to TravelRouteWithTeam e migra rotas antigas
       const routesWithTeam: TravelRouteWithTeam[] = routesData.map(route => {
         const team = teamsWithMembers.find(t => t.id === route.teamId);
+        
+        // Migração: se não tem o campo cities, cria baseado no city
+        let cities = route.cities;
+        if (!cities || !Array.isArray(cities) || cities.length === 0) {
+          if (route.city && route.city.includes(" + ") && route.city.includes(" cidades")) {
+            // Para rotas resumidas, usar apenas a primeira cidade (limitação)
+            const firstCity = route.city.split(" + ")[0];
+            cities = [firstCity];
+          } else {
+            cities = [route.city || "Cidade não definida"];
+          }
+        }
+        
         return {
           ...route,
+          cities,
           team
         };
       });
@@ -359,6 +373,7 @@ export function TeamBuilderPage() {
       const routeData: TravelRoute = {
         id: uuid(),
         city: finalRouteTitle,
+        cities: newRoute.cities, // Salva a lista completa de cidades
         teamId: newTeam.id,
         startDate: newRoute.startDate,
         status: "formation"
@@ -404,6 +419,7 @@ export function TeamBuilderPage() {
         
       await storage.updateTravelRoute(editingRoute.id, {
         city: routeTitle,
+        cities: newRoute.cities, // Atualiza a lista completa de cidades
         startDate: newRoute.startDate,
         updatedAt: new Date().toISOString()
       });
@@ -411,7 +427,7 @@ export function TeamBuilderPage() {
       // Update state
       setRoutes(prev => prev.map(r => 
         r.id === editingRoute.id 
-          ? { ...r, city: routeTitle, startDate: newRoute.startDate }
+          ? { ...r, city: routeTitle, cities: newRoute.cities, startDate: newRoute.startDate }
           : r
       ));
 
@@ -555,28 +571,22 @@ export function TeamBuilderPage() {
   };
 
   const getDetailedRouteTitle = (route: TravelRouteWithTeam) => {
-    const cityName = route.city || "Equipe Sem Rota";
+    // Usa a lista de cidades se disponível, senão usa o campo city
+    const cities = route.cities && route.cities.length > 0 ? route.cities : [route.city || "Equipe Sem Rota"];
     
-    // Verifica se é uma rota com múltiplas cidades
-    if (cityName.includes(" + ") && cityName.includes(" cidades")) {
-      // Extrai o número de cidades do formato "Cidade + X cidades"
-      const match = cityName.match(/(.+) \+ (\d+) cidades(.*)/);
-      if (match) {
-        const firstCity = match[1];
-        const additionalCount = parseInt(match[2]);
-        const suffix = match[3] || "";
-        return {
-          main: firstCity,
-          subtitle: `+ ${additionalCount} cidade${additionalCount > 1 ? 's' : ''} adiciona${additionalCount > 1 ? 'is' : 'l'}${suffix}`,
-          isMultiple: true
-        };
-      }
+    if (cities.length === 1) {
+      return {
+        main: cities[0],
+        subtitle: null,
+        isMultiple: false
+      };
     }
     
+    // Para múltiplas cidades, mostra todas
     return {
-      main: cityName,
-      subtitle: null,
-      isMultiple: false
+      main: cities[0],
+      subtitle: cities.slice(1).join(", "),
+      isMultiple: true
     };
   };
 

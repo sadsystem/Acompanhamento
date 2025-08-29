@@ -52,6 +52,7 @@ export const teams = pgTable("teams", {
 export const routes = pgTable("routes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   city: text("city").notNull(),
+  cities: json("cities").notNull(), // string[] - lista completa das cidades
   teamId: varchar("team_id").references(() => teams.id),
   startDate: text("start_date").notNull(), // YYYY-MM-DD
   endDate: text("end_date"), // YYYY-MM-DD when route is finished
