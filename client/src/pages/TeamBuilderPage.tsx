@@ -11,7 +11,7 @@ import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam } from ".
 import { toDateRefBR } from "../utils/time";
 import { uuid } from "../utils/calc";
 import { searchCities } from "../data/cities-pe";
-import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X } from "lucide-react";
+import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle } from "lucide-react";
 
 interface NewRouteForm {
   cities: string[];
@@ -32,6 +32,12 @@ export function TeamBuilderPage() {
   const [filteredCities, setFilteredCities] = useState<string[]>([]);
   const [newRoute, setNewRoute] = useState<NewRouteForm>({ cities: [], startDate: toDateRefBR() });
   const [editingRoute, setEditingRoute] = useState<TravelRouteWithTeam | null>(null);
+  
+  // Route action modals
+  const [showRouteActionModal, setShowRouteActionModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<TravelRouteWithTeam | null>(null);
+  const [pendingAction, setPendingAction] = useState<'finish' | 'delete' | null>(null);
 
   const storage = useStorage();
 
@@ -401,45 +407,107 @@ export function TeamBuilderPage() {
     }
   };
 
+  const openRouteActionModal = (route: TravelRouteWithTeam) => {
+    setSelectedRoute(route);
+    setShowRouteActionModal(true);
+  };
+
+  const closeRouteActionModal = () => {
+    setShowRouteActionModal(false);
+    setSelectedRoute(null);
+    setPendingAction(null);
+  };
+
+  const handleActionChoice = (action: 'finish' | 'delete') => {
+    setPendingAction(action);
+    setShowRouteActionModal(false);
+    setShowConfirmationModal(true);
+  };
+
+  const closeConfirmationModal = () => {
+    setShowConfirmationModal(false);
+    setSelectedRoute(null);
+    setPendingAction(null);
+  };
+
+  const executeAction = async () => {
+    if (!selectedRoute || !pendingAction) return;
+
+    try {
+      if (pendingAction === 'finish') {
+        await finishRoute(selectedRoute.id);
+      } else if (pendingAction === 'delete') {
+        await deleteRoute(selectedRoute.id);
+      }
+      closeConfirmationModal();
+    } catch (error) {
+      console.error(`Error ${pendingAction}ing route:`, error);
+      alert(`Erro ao ${pendingAction === 'finish' ? 'finalizar' : 'excluir'} rota`);
+    }
+  };
+
   const finishRoute = async (routeId: string) => {
     const route = routes.find(r => r.id === routeId);
     if (!route) return;
 
-    try {
-      // Mark route as completed
-      await storage.updateTravelRoute(routeId, { 
-        status: "completed", 
-        endDate: toDateRefBR(),
-        updatedAt: new Date().toISOString()
-      });
+    // Mark route as completed
+    await storage.updateTravelRoute(routeId, { 
+      status: "completed", 
+      endDate: toDateRefBR(),
+      updatedAt: new Date().toISOString()
+    });
 
-      // Update state
-      const updatedRoutes = routes.map(r => 
-        r.id === routeId 
-          ? { ...r, status: "completed" as const, endDate: toDateRefBR() }
-          : r
-      );
-      
-      setRoutes(updatedRoutes);
-      
-      // Return team to available teams and remove from current teams
-      if (route.team) {
-        if (route.team.driver && route.team.driver.username) {
-          setAvailableDrivers(prev => [...prev, route.team!.driver]);
-        }
-        if (route.team.assistantUsers.length > 0) {
-          setAvailableAssistants(prev => [...prev, ...route.team!.assistantUsers]);
-        }
-        
-        // Remove team from teams list
-        setTeams(prev => prev.filter(t => t.id !== route.teamId));
-        await storage.deleteTeam(route.teamId!);
+    // Update state
+    const updatedRoutes = routes.map(r => 
+      r.id === routeId 
+        ? { ...r, status: "completed" as const, endDate: toDateRefBR() }
+        : r
+    );
+    
+    setRoutes(updatedRoutes);
+    
+    // Return team to available teams and remove from current teams
+    if (route.team) {
+      if (route.team.driver && route.team.driver.username) {
+        setAvailableDrivers(prev => [...prev, route.team!.driver]);
       }
-
-      updateAvailableUsers(drivers, assistants, teams, updatedRoutes);
-    } catch (error) {
-      console.error("Error finishing route:", error);
+      if (route.team.assistantUsers.length > 0) {
+        setAvailableAssistants(prev => [...prev, ...route.team!.assistantUsers]);
+      }
+      
+      // Remove team from teams list
+      setTeams(prev => prev.filter(t => t.id !== route.teamId));
+      await storage.deleteTeam(route.teamId!);
     }
+
+    updateAvailableUsers(drivers, assistants, teams, updatedRoutes);
+  };
+
+  const deleteRoute = async (routeId: string) => {
+    const routeToDelete = routes.find(r => r.id === routeId);
+    if (!routeToDelete) return;
+    
+    // Make team members available again
+    if (routeToDelete.team) {
+      if (routeToDelete.team.driver && routeToDelete.team.driver.username) {
+        setAvailableDrivers(prev => [...prev, routeToDelete.team!.driver]);
+      }
+      if (routeToDelete.team.assistantUsers.length > 0) {
+        setAvailableAssistants(prev => [...prev, ...routeToDelete.team!.assistantUsers]);
+      }
+    }
+
+    // Remove from storage
+    await storage.deleteTravelRoute(routeId);
+    if (routeToDelete.team) {
+      await storage.deleteTeam(routeToDelete.team.id);
+    }
+
+    // Update state
+    setRoutes(prev => prev.filter(r => r.id !== routeId));
+    setTeams(prev => prev.filter(t => t.id !== routeToDelete?.team?.id));
+    
+    updateAvailableUsers(drivers, assistants, teams.filter(t => t.id !== routeToDelete?.team?.id), routes.filter(r => r.id !== routeId));
   };
 
   const selectCity = (city: string) => {
@@ -644,13 +712,23 @@ export function TeamBuilderPage() {
                           {route.startDate}
                         </p>
                       </div>
-                      <Button
-                        onClick={() => handleEditRoute(route)}
-                        variant="ghost"
-                        size="sm"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          onClick={() => handleEditRoute(route)}
+                          variant="ghost"
+                          size="sm"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => openRouteActionModal(route)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                     
                     {route.team && (
@@ -813,14 +891,24 @@ export function TeamBuilderPage() {
                     </div>
                   )}
                   
-                  <Button 
-                    onClick={() => finishRoute(route.id)}
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                  >
-                    Finalizar Rota
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => openRouteActionModal(route)}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      Finalizar Rota
+                    </Button>
+                    <Button 
+                      onClick={() => openRouteActionModal(route)}
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -860,6 +948,113 @@ export function TeamBuilderPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modal de Ação da Rota */}
+      <Dialog open={showRouteActionModal} onOpenChange={setShowRouteActionModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ações da Rota</DialogTitle>
+          </DialogHeader>
+          
+          {selectedRoute && (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                <strong>Rota:</strong> {selectedRoute.city}
+              </div>
+              
+              <div className="space-y-2">
+                <Button
+                  onClick={() => handleActionChoice('finish')}
+                  className="w-full flex items-center gap-2"
+                  variant="default"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Finalizar Rota
+                </Button>
+                
+                <Button
+                  onClick={() => handleActionChoice('delete')}
+                  className="w-full flex items-center gap-2"
+                  variant="destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir Rota
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={closeRouteActionModal}>
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação */}
+      <Dialog open={showConfirmationModal} onOpenChange={setShowConfirmationModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirmar Ação
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedRoute && pendingAction && (
+            <div className="space-y-4">
+              <div className="text-sm">
+                <p className="mb-2">
+                  {pendingAction === 'finish' 
+                    ? 'Tem certeza que deseja finalizar esta rota?' 
+                    : 'Tem certeza que deseja excluir esta rota?'
+                  }
+                </p>
+                <div className="p-3 bg-muted rounded text-xs">
+                  <strong>Rota:</strong> {selectedRoute.city}<br/>
+                  <strong>Data:</strong> {selectedRoute.startDate}
+                  {selectedRoute.team && (
+                    <>
+                      <br/><strong>Motorista:</strong> {selectedRoute.team.driver?.displayName || 'Não definido'}
+                      <br/><strong>Ajudantes:</strong> {selectedRoute.team.assistantUsers?.map(a => a.displayName).join(', ') || 'Nenhum'}
+                    </>
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {pendingAction === 'finish'
+                    ? 'A rota será marcada como finalizada e os funcionários ficarão disponíveis novamente.'
+                    : 'Esta ação não pode ser desfeita. A rota e a equipe serão permanentemente removidas.'
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={closeConfirmationModal}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={executeAction}
+              variant={pendingAction === 'delete' ? 'destructive' : 'default'}
+              className="flex items-center gap-2"
+            >
+              {pendingAction === 'finish' ? (
+                <>
+                  <Calendar className="w-4 h-4" />
+                  Confirmar Finalização
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Confirmar Exclusão
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
