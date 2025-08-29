@@ -5,11 +5,18 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { useStorage } from "../hooks/useStorage";
 import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam } from "../config/types";
 import { toDateRefBR } from "../utils/time";
 import { uuid } from "../utils/calc";
+import { searchCities } from "../data/cities-pe";
+import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon } from "lucide-react";
+
+interface NewRouteForm {
+  city: string;
+  startDate: string;
+}
 
 export function TeamBuilderPage() {
   const [drivers, setDrivers] = useState<User[]>([]);
@@ -19,16 +26,22 @@ export function TeamBuilderPage() {
   const [availableDrivers, setAvailableDrivers] = useState<User[]>([]);
   const [availableAssistants, setAvailableAssistants] = useState<User[]>([]);
   
-  // Form states for new route
-  const [newRouteCity, setNewRouteCity] = useState("");
-  const [newRouteDate, setNewRouteDate] = useState(toDateRefBR());
-  const [selectedTeamId, setSelectedTeamId] = useState("");
+  // Modal states
+  const [showNewRouteModal, setShowNewRouteModal] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
+  const [filteredCities, setFilteredCities] = useState<string[]>([]);
+  const [newRoute, setNewRoute] = useState<NewRouteForm>({ city: "", startDate: toDateRefBR() });
+  const [editingRoute, setEditingRoute] = useState<TravelRouteWithTeam | null>(null);
 
   const storage = useStorage();
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    setFilteredCities(searchCities(citySearch));
+  }, [citySearch]);
 
   const loadData = async () => {
     try {
@@ -87,13 +100,6 @@ export function TeamBuilderPage() {
     const assignedDrivers = new Set<string>();
     const assignedAssistants = new Set<string>();
 
-    currentTeams.forEach(team => {
-      assignedDrivers.add(team.driverUsername);
-      team.assistants.forEach(assistantUsername => {
-        assignedAssistants.add(assistantUsername);
-      });
-    });
-
     activeRoutes.forEach(route => {
       if (route.team && route.status === "active") {
         assignedDrivers.add(route.team.driverUsername);
@@ -125,7 +131,7 @@ export function TeamBuilderPage() {
       if (draggedDriver && teams[teamIndex]) {
         const updatedTeams = [...teams];
         // Remove current driver from team if exists
-        if (updatedTeams[teamIndex].driver) {
+        if (updatedTeams[teamIndex].driver && updatedTeams[teamIndex].driver.username) {
           setAvailableDrivers(prev => [...prev, updatedTeams[teamIndex].driver]);
         }
         
@@ -198,39 +204,6 @@ export function TeamBuilderPage() {
     }
   };
 
-  const createNewTeam = () => {
-    const newTeam: TeamWithMembers = {
-      id: uuid(),
-      driverUsername: "",
-      assistants: [],
-      driver: {} as User,
-      assistantUsers: []
-    };
-    
-    setTeams(prev => [...prev, newTeam]);
-  };
-
-  const removeTeam = async (teamIndex: number) => {
-    const team = teams[teamIndex];
-    
-    // Return users to available pools
-    if (team.driver && team.driver.username) {
-      setAvailableDrivers(prev => [...prev, team.driver]);
-    }
-    if (team.assistantUsers.length > 0) {
-      setAvailableAssistants(prev => [...prev, ...team.assistantUsers]);
-    }
-    
-    setTeams(prev => prev.filter((_, index) => index !== teamIndex));
-    
-    // Remove from storage
-    try {
-      await storage.deleteTeam(team.id);
-    } catch (error) {
-      console.error("Error deleting team:", error);
-    }
-  };
-
   const saveTeam = async (team: TeamWithMembers) => {
     try {
       const teamData: Team = {
@@ -254,49 +227,108 @@ export function TeamBuilderPage() {
     }
   };
 
-  const createRoute = async () => {
-    if (!newRouteCity.trim() || !selectedTeamId) {
-      alert("Preencha a cidade e selecione uma equipe");
+  const handleCreateRoute = async () => {
+    if (!newRoute.city.trim()) {
+      alert("Por favor, selecione uma cidade");
       return;
     }
 
-    const selectedTeam = teams.find(t => t.id === selectedTeamId);
-    if (!selectedTeam || !selectedTeam.driver.username) {
-      alert("Equipe selecionada é inválida");
-      return;
-    }
-
-    const newRoute: TravelRouteWithTeam = {
-      id: uuid(),
-      city: newRouteCity.trim(),
-      teamId: selectedTeamId,
-      startDate: newRouteDate,
-      status: "active",
-      team: selectedTeam
-    };
-
-    setRoutes(prev => [...prev, newRoute]);
-    
-    // Remove team from available teams (they're now on a route)
-    setTeams(prev => prev.filter(t => t.id !== selectedTeamId));
-    
-    // Clear form
-    setNewRouteCity("");
-    setNewRouteDate(toDateRefBR());
-    setSelectedTeamId("");
-
-    // Save to storage
     try {
-      const routeData: TravelRoute = {
-        id: newRoute.id,
-        city: newRoute.city,
-        teamId: newRoute.teamId,
-        startDate: newRoute.startDate,
-        status: newRoute.status
+      // Check if city already has an active route
+      const existingRoute = routes.find(r => r.city === newRoute.city && r.status === "active");
+      let routeTitle = newRoute.city;
+      
+      if (existingRoute) {
+        // Find the highest "Parte" number for this city
+        const cityRoutes = routes.filter(r => r.city === newRoute.city);
+        const parts = cityRoutes.map(r => {
+          const match = r.city.match(/- Parte (\d+)$/);
+          return match ? parseInt(match[1]) : 1;
+        });
+        const nextPart = Math.max(...parts) + 1;
+        routeTitle = `${newRoute.city} - Parte ${nextPart}`;
+      }
+
+      // Create new team for this route
+      const newTeam: TeamWithMembers = {
+        id: uuid(),
+        driverUsername: "",
+        assistants: [],
+        driver: {} as User,
+        assistantUsers: [],
+        createdAt: new Date().toISOString()
       };
+
+      // Save team
+      await storage.createTeam({
+        id: newTeam.id,
+        driverUsername: newTeam.driverUsername,
+        assistants: newTeam.assistants,
+        createdAt: newTeam.createdAt
+      });
+
+      // Create route
+      const routeData: TravelRoute = {
+        id: uuid(),
+        city: routeTitle,
+        teamId: newTeam.id,
+        startDate: newRoute.startDate,
+        status: "active"
+      };
+
       await storage.createTravelRoute(routeData);
+
+      // Add to state
+      const newRouteWithTeam: TravelRouteWithTeam = {
+        ...routeData,
+        team: newTeam
+      };
+
+      setTeams(prev => [...prev, newTeam]);
+      setRoutes(prev => [...prev, newRouteWithTeam]);
+
+      // Reset form and close modal
+      setNewRoute({ city: "", startDate: toDateRefBR() });
+      setCitySearch("");
+      setShowNewRouteModal(false);
     } catch (error) {
       console.error("Error creating route:", error);
+      alert("Erro ao criar rota. Tente novamente.");
+    }
+  };
+
+  const handleEditRoute = (route: TravelRouteWithTeam) => {
+    setEditingRoute(route);
+    setNewRoute({ city: route.city.replace(/^(.+?)( - Parte \d+)?$/, '$1'), startDate: route.startDate });
+    setCitySearch(route.city.replace(/^(.+?)( - Parte \d+)?$/, '$1'));
+    setShowNewRouteModal(true);
+  };
+
+  const handleUpdateRoute = async () => {
+    if (!editingRoute || !newRoute.city.trim()) return;
+
+    try {
+      await storage.updateTravelRoute(editingRoute.id, {
+        city: newRoute.city,
+        startDate: newRoute.startDate,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update state
+      setRoutes(prev => prev.map(r => 
+        r.id === editingRoute.id 
+          ? { ...r, city: newRoute.city, startDate: newRoute.startDate }
+          : r
+      ));
+
+      // Reset and close
+      setEditingRoute(null);
+      setNewRoute({ city: "", startDate: toDateRefBR() });
+      setCitySearch("");
+      setShowNewRouteModal(false);
+    } catch (error) {
+      console.error("Error updating route:", error);
+      alert("Erro ao atualizar rota. Tente novamente.");
     }
   };
 
@@ -304,30 +336,57 @@ export function TeamBuilderPage() {
     const route = routes.find(r => r.id === routeId);
     if (!route) return;
 
-    // Mark route as completed
-    const updatedRoutes = routes.map(r => 
-      r.id === routeId 
-        ? { ...r, status: "completed" as const, endDate: toDateRefBR() }
-        : r
-    );
-    
-    setRoutes(updatedRoutes);
-    
-    // Return team to available teams
-    if (route.team) {
-      setTeams(prev => [...prev, route.team!]);
-    }
-
-    // Update storage
     try {
+      // Mark route as completed
       await storage.updateTravelRoute(routeId, { 
         status: "completed", 
         endDate: toDateRefBR(),
         updatedAt: new Date().toISOString()
       });
+
+      // Update state
+      const updatedRoutes = routes.map(r => 
+        r.id === routeId 
+          ? { ...r, status: "completed" as const, endDate: toDateRefBR() }
+          : r
+      );
+      
+      setRoutes(updatedRoutes);
+      
+      // Return team to available teams and remove from current teams
+      if (route.team) {
+        if (route.team.driver && route.team.driver.username) {
+          setAvailableDrivers(prev => [...prev, route.team!.driver]);
+        }
+        if (route.team.assistantUsers.length > 0) {
+          setAvailableAssistants(prev => [...prev, ...route.team!.assistantUsers]);
+        }
+        
+        // Remove team from teams list
+        setTeams(prev => prev.filter(t => t.id !== route.teamId));
+        await storage.deleteTeam(route.teamId!);
+      }
+
+      updateAvailableUsers(drivers, assistants, teams, updatedRoutes);
     } catch (error) {
       console.error("Error finishing route:", error);
     }
+  };
+
+  const selectCity = (city: string) => {
+    setNewRoute(prev => ({ ...prev, city }));
+    setCitySearch(city);
+  };
+
+  const closeModal = () => {
+    setShowNewRouteModal(false);
+    setEditingRoute(null);
+    setNewRoute({ city: "", startDate: toDateRefBR() });
+    setCitySearch("");
+  };
+
+  const getRouteTitle = (route: TravelRouteWithTeam) => {
+    return route.city || "Equipe Sem Rota";
   };
 
   return (
@@ -339,285 +398,343 @@ export function TeamBuilderPage() {
         </p>
       </div>
 
+      {/* New Route Modal */}
+      <Dialog open={showNewRouteModal} onOpenChange={closeModal}>
+        <DialogTrigger asChild>
+          <Button onClick={() => setShowNewRouteModal(true)} className="mb-6">
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Equipe
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingRoute ? "Editar Rota" : "Criar Nova Rota"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="city">Cidade de Destino</Label>
+              <Input
+                id="city"
+                value={citySearch}
+                onChange={(e) => setCitySearch(e.target.value)}
+                placeholder="Digite para buscar cidade..."
+                className="mb-2"
+              />
+              
+              {citySearch && filteredCities.length > 0 && (
+                <div className="max-h-32 overflow-y-auto border rounded-lg">
+                  {filteredCities.map(city => (
+                    <div
+                      key={city}
+                      onClick={() => selectCity(city)}
+                      className="px-3 py-2 hover:bg-muted cursor-pointer text-sm border-b last:border-b-0"
+                    >
+                      {city}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {newRoute.city && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                  <strong>Selecionado:</strong> {newRoute.city}
+                </div>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="start-date">Data de Início</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={newRoute.startDate}
+                onChange={(e) => setNewRoute(prev => ({ ...prev, startDate: e.target.value }))}
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={closeModal}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={editingRoute ? handleUpdateRoute : handleCreateRoute}
+              disabled={!newRoute.city.trim()}
+            >
+              {editingRoute ? "Atualizar" : "Criar Rota"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Available Users */}
+          
+          {/* Available Users - Reorganized */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Funcionários Disponíveis</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <UsersIcon className="w-5 h-5" />
+                Funcionários Disponíveis
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Available Drivers */}
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Motoristas</Label>
-                <Droppable droppableId="available-drivers">
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`min-h-[100px] p-2 rounded-lg border-2 border-dashed ${
-                        snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
-                      }`}
-                    >
-                      {availableDrivers
-                        .filter(driver => driver.id && driver.id.trim() !== "")
-                        .map((driver, index) => (
-                        <Draggable key={driver.id} draggableId={driver.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`p-2 mb-2 bg-card border rounded-lg cursor-move ${
-                                snapshot.isDragging ? "shadow-lg" : ""
-                              }`}
-                            >
-                              <div className="font-medium text-sm">{driver.displayName}</div>
-                              <Badge variant="outline">Motorista</Badge>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                      {availableDrivers.length === 0 && (
-                        <div className="text-sm text-muted-foreground text-center py-4">
-                          Nenhum motorista disponível
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </Droppable>
-              </div>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                
+                {/* Assistants on the left */}
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Ajudantes
+                  </Label>
+                  <Droppable droppableId="available-assistants">
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[200px] p-2 rounded-lg border-2 border-dashed ${
+                          snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
+                        }`}
+                      >
+                        {availableAssistants
+                          .filter(assistant => assistant.id && assistant.id.trim() !== "")
+                          .map((assistant, index) => (
+                          <Draggable key={assistant.id} draggableId={assistant.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`p-2 mb-2 bg-card border rounded-lg cursor-move ${
+                                  snapshot.isDragging ? "shadow-lg" : ""
+                                }`}
+                              >
+                                <div className="font-medium text-xs">
+                                  {assistant.displayName.split(' ').slice(0, 2).join(' ')}
+                                </div>
+                                <Badge variant="outline">Ajudante</Badge>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        {availableAssistants.length === 0 && (
+                          <div className="text-xs text-muted-foreground text-center py-4">
+                            Nenhum ajudante disponível
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
 
-              {/* Available Assistants */}
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Ajudantes</Label>
-                <Droppable droppableId="available-assistants">
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`min-h-[100px] p-2 rounded-lg border-2 border-dashed ${
-                        snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
-                      }`}
-                    >
-                      {availableAssistants
-                        .filter(assistant => assistant.id && assistant.id.trim() !== "")
-                        .map((assistant, index) => (
-                        <Draggable key={assistant.id} draggableId={assistant.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={`p-2 mb-2 bg-card border rounded-lg cursor-move ${
-                                snapshot.isDragging ? "shadow-lg" : ""
-                              }`}
-                            >
-                              <div className="font-medium text-sm">{assistant.displayName}</div>
-                              <Badge variant="outline">Ajudante</Badge>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                      {availableAssistants.length === 0 && (
-                        <div className="text-sm text-muted-foreground text-center py-4">
-                          Nenhum ajudante disponível
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </Droppable>
+                {/* Drivers on the right */}
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Motoristas
+                  </Label>
+                  <Droppable droppableId="available-drivers">
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[200px] p-2 rounded-lg border-2 border-dashed ${
+                          snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
+                        }`}
+                      >
+                        {availableDrivers
+                          .filter(driver => driver.id && driver.id.trim() !== "")
+                          .map((driver, index) => (
+                          <Draggable key={driver.id} draggableId={driver.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`p-2 mb-2 bg-card border rounded-lg cursor-move ${
+                                  snapshot.isDragging ? "shadow-lg" : ""
+                                }`}
+                              >
+                                <div className="font-medium text-xs">
+                                  {driver.displayName.split(' ').slice(0, 2).join(' ')}
+                                </div>
+                                <Badge variant="outline">Motorista</Badge>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        {availableDrivers.length === 0 && (
+                          <div className="text-xs text-muted-foreground text-center py-4">
+                            Nenhum motorista disponível
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Teams */}
+          {/* Teams with City Names */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Equipes</CardTitle>
-              <Button onClick={createNewTeam} size="sm">
-                Nova Equipe
-              </Button>
+            <CardHeader>
+              <CardTitle className="text-lg">Equipes por Rota</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {teams.map((team, index) => (
-                  <div key={team.id} className="border rounded-lg p-3">
+                {routes.filter(r => r.status === "active").map((route) => (
+                  <div key={route.id} className="border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">Equipe {index + 1}</h4>
+                      <div>
+                        <h4 className="font-medium flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          {getRouteTitle(route)}
+                        </h4>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {route.startDate}
+                        </p>
+                      </div>
                       <Button
-                        onClick={() => removeTeam(index)}
+                        onClick={() => handleEditRoute(route)}
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:text-destructive"
                       >
-                        Remover
+                        <Edit className="w-4 h-4" />
                       </Button>
                     </div>
                     
-                    <Droppable droppableId={`team-${index}`}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className={`min-h-[80px] p-2 rounded border-2 border-dashed space-y-1 ${
-                            snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
-                          }`}
-                        >
-                          {team.driver && team.driver.username && team.driver.id && (
-                            <Draggable draggableId={team.driver.id} index={0}>
-                              {(provided, snapshot) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  className={`p-2 bg-blue-50 border border-blue-200 rounded text-sm ${
-                                    snapshot.isDragging ? "shadow-lg" : ""
-                                  }`}
-                                >
-                                  <div className="font-medium">{team.driver.displayName}</div>
-                                  <Badge variant="secondary" className="text-xs">Motorista</Badge>
-                                </div>
-                              )}
-                            </Draggable>
-                          )}
-                          
-                          {team.assistantUsers
-                            .filter(assistant => assistant.id && assistant.id.trim() !== "")
-                            .map((assistant, assistantIndex) => (
-                            <Draggable key={assistant.id} draggableId={assistant.id} index={assistantIndex + 1}>
-                              {(provided, snapshot) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  className={`p-2 bg-green-50 border border-green-200 rounded text-sm ${
-                                    snapshot.isDragging ? "shadow-lg" : ""
-                                  }`}
-                                >
-                                  <div className="font-medium">{assistant.displayName}</div>
-                                  <Badge variant="secondary" className="text-xs">Ajudante</Badge>
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          
-                          {provided.placeholder}
-                          
-                          {(!team.driver || !team.driver.username) && team.assistantUsers.length === 0 && (
-                            <div className="text-xs text-muted-foreground text-center py-2">
-                              Arraste motoristas e ajudantes aqui
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </Droppable>
+                    {route.team && (
+                      <Droppable droppableId={`team-${routes.indexOf(route)}`}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className={`min-h-[80px] p-2 rounded border-2 border-dashed space-y-1 ${
+                              snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
+                            }`}
+                          >
+                            {route.team?.driver && route.team.driver.username && route.team.driver.id && (
+                              <Draggable draggableId={route.team.driver.id} index={0}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`p-2 bg-blue-50 border border-blue-200 rounded text-sm ${
+                                      snapshot.isDragging ? "shadow-lg" : ""
+                                    }`}
+                                  >
+                                    <div className="font-medium text-xs">
+                                      {route.team?.driver.displayName.split(' ').slice(0, 2).join(' ')}
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">Motorista</Badge>
+                                  </div>
+                                )}
+                              </Draggable>
+                            )}
+                            
+                            {route.team?.assistantUsers
+                              .filter(assistant => assistant.id && assistant.id.trim() !== "")
+                              .map((assistant, assistantIndex) => (
+                              <Draggable key={assistant.id} draggableId={assistant.id} index={assistantIndex + 1}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`p-2 bg-green-50 border border-green-200 rounded text-sm ${
+                                      snapshot.isDragging ? "shadow-lg" : ""
+                                    }`}
+                                  >
+                                    <div className="font-medium text-xs">
+                                      {assistant.displayName.split(' ').slice(0, 2).join(' ')}
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">Ajudante</Badge>
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            
+                            {provided.placeholder}
+                            
+                            {(!route.team?.driver || !route.team.driver.username) && (route.team?.assistantUsers.length || 0) === 0 && (
+                              <div className="text-xs text-muted-foreground text-center py-2">
+                                Arraste funcionários aqui
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Droppable>
+                    )}
                   </div>
                 ))}
                 
-                {teams.length === 0 && (
+                {routes.filter(r => r.status === "active").length === 0 && (
                   <div className="text-sm text-muted-foreground text-center py-8">
-                    Clique em "Nova Equipe" para começar
+                    Clique em "Nova Equipe" para criar uma rota
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Route Creation */}
+          {/* Active Routes Summary */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Criar Rota</CardTitle>
+              <CardTitle className="text-lg">Rotas Ativas</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="city">Cidade</Label>
-                <Input
-                  id="city"
-                  value={newRouteCity}
-                  onChange={(e) => setNewRouteCity(e.target.value)}
-                  placeholder="Ex: São Bento do Una"
-                />
+            <CardContent>
+              <div className="space-y-3">
+                {routes.filter(r => r.status === "active").map((route) => (
+                  <div key={route.id} className="border rounded-lg p-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-medium">{route.city}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Início: {route.startDate}
+                        </p>
+                      </div>
+                      <Badge variant="default">Ativa</Badge>
+                    </div>
+                    
+                    {route.team && (
+                      <div className="text-xs text-muted-foreground mb-2">
+                        <div>Motorista: {route.team.driver?.displayName || "Não definido"}</div>
+                        <div>
+                          Ajudantes: {(route.team.assistantUsers?.length || 0) > 0 
+                            ? route.team.assistantUsers?.map(a => a.displayName).join(", ")
+                            : "Nenhum"
+                          }
+                        </div>
+                      </div>
+                    )}
+                    
+                    <Button 
+                      onClick={() => finishRoute(route.id)}
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      Finalizar Rota
+                    </Button>
+                  </div>
+                ))}
+                
+                {routes.filter(r => r.status === "active").length === 0 && (
+                  <div className="text-sm text-muted-foreground text-center py-8">
+                    Nenhuma rota ativa no momento
+                  </div>
+                )}
               </div>
-              
-              <div>
-                <Label htmlFor="start-date">Data de Início</Label>
-                <Input
-                  id="start-date"
-                  type="date"
-                  value={newRouteDate}
-                  onChange={(e) => setNewRouteDate(e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="team-select">Equipe</Label>
-                <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma equipe" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams
-                      .filter(team => team.driver && team.driver.username)
-                      .map((team, index) => (
-                        <SelectItem key={team.id} value={team.id}>
-                          Equipe {index + 1} - {team.driver.displayName}
-                        </SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button 
-                onClick={createRoute} 
-                className="w-full"
-                disabled={!newRouteCity.trim() || !selectedTeamId}
-              >
-                Criar Rota
-              </Button>
             </CardContent>
           </Card>
         </div>
       </DragDropContext>
-
-      {/* Active Routes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Rotas Ativas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {routes.filter(r => r.status === "active").map((route) => (
-              <div key={route.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <div className="font-medium">{route.city}</div>
-                  <div className="text-sm text-muted-foreground">
-                    Início: {route.startDate} • 
-                    Motorista: {route.team?.driver.displayName} • 
-                    Ajudantes: {route.team?.assistantUsers.map(a => a.displayName).join(", ") || "Nenhum"}
-                  </div>
-                  <Badge variant="default" className="mt-1">Ativa</Badge>
-                </div>
-                <Button 
-                  onClick={() => finishRoute(route.id)}
-                  variant="outline"
-                >
-                  Finalizar Rota
-                </Button>
-              </div>
-            ))}
-            
-            {routes.filter(r => r.status === "active").length === 0 && (
-              <div className="text-sm text-muted-foreground text-center py-8">
-                Nenhuma rota ativa no momento
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Completed Routes */}
       {routes.filter(r => r.status === "completed").length > 0 && (
@@ -626,18 +743,25 @@ export function TeamBuilderPage() {
             <CardTitle className="text-lg">Rotas Finalizadas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {routes.filter(r => r.status === "completed").map((route) => (
-                <div key={route.id} className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
-                  <div>
-                    <div className="font-medium">{route.city}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {route.startDate} - {route.endDate} • 
-                      Motorista: {route.team?.driver.displayName} • 
-                      Ajudantes: {route.team?.assistantUsers.map(a => a.displayName).join(", ") || "Nenhum"}
+                <div key={route.id} className="border rounded-lg p-3 bg-muted/30">
+                  <h4 className="font-medium">{route.city}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {route.startDate} - {route.endDate}
+                  </p>
+                  {route.team && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      <div>Motorista: {route.team.driver?.displayName || "N/A"}</div>
+                      <div>
+                        Ajudantes: {(route.team?.assistantUsers?.length || 0) > 0 
+                          ? route.team?.assistantUsers?.map(a => a.displayName).join(", ")
+                          : "Nenhum"
+                        }
+                      </div>
                     </div>
-                    <Badge variant="secondary" className="mt-1">Finalizada</Badge>
-                  </div>
+                  )}
+                  <Badge variant="secondary" className="mt-2">Finalizada</Badge>
                 </div>
               ))}
             </div>

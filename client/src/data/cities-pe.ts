@@ -1,0 +1,45 @@
+// Lista de cidades/municípios de Pernambuco - Brasil
+// Total: 184 municípios (Fernando de Noronha é distrito estadual)
+
+export const citiesPernambucoData = [
+  "Abreu e Lima", "Afogados da Ingazeira", "Afrânio", "Agrestina", "Água Preta",
+  "Águas Belas", "Alagoinha", "Aliança", "Altinho", "Amaraji", "Angelim", "Araçoiaba",
+  "Araripina", "Arcoverde", "Barra de Guabiraba", "Barreiros", "Belém de Maria",
+  "Belém do São Francisco", "Belo Jardim", "Betânia", "Bezerros", "Bodocó", "Bom Conselho",
+  "Bom Jardim", "Bonito", "Brejão", "Brejo da Madre de Deus", "Buenos Aires", "Buíque",
+  "Cabo de Santo Agostinho", "Cabrobó", "Cachoeirinha", "Caetés", "Calçado", "Calumbi",
+  "Camaragibe", "Camocim de São Félix", "Camutanga", "Canhotinho", "Capoeiras", "Carnaíba",
+  "Carnaubeira da Penha", "Carpina", "Caruaru", "Casinhas", "Catende", "Cedro", "Chã de Alegria",
+  "Chã Grande", "Condado", "Correntes", "Cortês", "Cumaru", "Cupira", "Custódia", "Dormentes",
+  "Escada", "Exu", "Feira Nova", "Fernando de Noronha", "Ferreiros", "Flores", "Floresta",
+  "Frei Miguelinho", "Gameleira", "Garanhuns", "Glória do Goitá", "Goiana", "Granito",
+  "Gravatá", "Iati", "Ibimirim", "Ibirajuba", "Igarassu", "Iguaraci", "Ilha de Itamaracá",
+  "Inajá", "Ingazeira", "Ipojuca", "Ipubi", "Itacuruba", "Itaíba", "Itambé", "Itapetim",
+  "Itapissuma", "Itaquitinga", "Jaboatão dos Guararapes", "Jaqueira", "Jataúba", "Jatobá",
+  "João Alfredo", "Joaquim Nabuco", "Jucati", "Jupi", "Jurema", "Lagoa do Carro",
+  "Lagoa do Itaenga", "Lagoa do Ouro", "Lagoa dos Gatos", "Lagoa Grande", "Lajedo",
+  "Limoeiro", "Macaparana", "Machados", "Manari", "Maraial", "Mirandiba", "Moreilândia",
+  "Moreno", "Nazaré da Mata", "Olinda", "Orocó", "Ouricuri", "Palmares", "Palmeirina",
+  "Panelas", "Paranatama", "Parnamirim", "Passira", "Paudalho", "Paulista", "Pedra",
+  "Pesqueira", "Petrolândia", "Petrolina", "Poção", "Pombos", "Primavera", "Quipapá",
+  "Quixaba", "Recife", "Riacho das Almas", "Ribeirão", "Rio Formoso", "Sairé",
+  "Salgadinho", "Salgueiro", "Saloá", "Sanharó", "Santa Cruz", "Santa Cruz da Baixa Verde",
+  "Santa Cruz do Capibaribe", "Santa Filomena", "Santa Maria da Boa Vista",
+  "Santa Maria do Cambucá", "Santa Terezinha", "São Bento do Una", "São Caetano",
+  "São João", "São Joaquim do Monte", "São José da Coroa Grande", "São José do Belmonte",
+  "São José do Egito", "São Lourenço da Mata", "São Vicente Férrer", "Serra Talhada",
+  "Serrita", "Sertânia", "Sirinhaém", "Solidão", "Surubim", "Tabira", "Tacaimbó",
+  "Tacaratu", "Tamandaré", "Taquaritinga do Norte", "Terezinha", "Terra Nova", "Timbaúba",
+  "Toritama", "Tracunhaém", "Trindade", "Triunfo", "Tupanatinga", "Tuparetama",
+  "Venturosa", "Verdejante", "Vertente do Lério", "Vertentes", "Vicência", "Vitória de Santo Antão",
+  "Xexéu"
+];
+
+export function searchCities(query: string): string[] {
+  if (!query.trim()) return citiesPernambucoData.slice(0, 10); // Show first 10 if no query
+  
+  const normalizedQuery = query.toLowerCase().trim();
+  return citiesPernambucoData
+    .filter(city => city.toLowerCase().includes(normalizedQuery))
+    .slice(0, 15); // Limit to 15 results
+}

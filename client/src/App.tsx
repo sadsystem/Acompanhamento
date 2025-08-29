@@ -109,11 +109,13 @@ function AppContent() {
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-sm">OV</span>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold transition-colors ${
+                    navigator.onLine ? 'bg-green-600' : 'bg-red-600'
+                  }`}>
+                    <span>OV</span>
                   </div>
                   <h1 className="text-lg font-semibold text-foreground">
-                    {CONFIG.appName}
+                    Sistema de Acompanhamento Diário
                   </h1>
                 </div>
               </div>
