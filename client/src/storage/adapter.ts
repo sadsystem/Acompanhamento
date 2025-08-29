@@ -35,6 +35,7 @@ export interface StorageAdapter {
   createTravelRoute(route: TravelRoute): Promise<TravelRoute>;
   updateTravelRoute(id: string, updates: Partial<TravelRoute>): Promise<TravelRoute>;
   deleteTravelRoute(id: string): Promise<void>;
+  clearAllData?(): Promise<void>;
 }
 
 export class MockStorageAdapter implements StorageAdapter {

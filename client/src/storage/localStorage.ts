@@ -24,6 +24,13 @@ export class LocalStorageAdapter implements StorageAdapter {
     this.writeLS(LS_KEYS.users, users);
   }
 
+  async clearAllData(): Promise<void> {
+    // Clear all localStorage data to force fresh start
+    Object.values(LS_KEYS).forEach(key => {
+      localStorage.removeItem(key);
+    });
+  }
+
   async createUser(user: User): Promise<User> {
     const users = await this.getUsers();
     users.push(user);

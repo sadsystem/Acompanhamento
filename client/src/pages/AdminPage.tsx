@@ -40,7 +40,15 @@ export function AdminPage() {
   const storage = useStorage();
 
   useEffect(() => {
-    loadUsers();
+    // Force cleanup of old data and reload
+    const initializeData = async () => {
+      // Check if localStorage adapter has clearAllData method
+      if ('clearAllData' in storage) {
+        await (storage as any).clearAllData();
+      }
+      await loadUsers();
+    };
+    initializeData();
   }, []);
 
   const loadUsers = async () => {
@@ -341,18 +349,18 @@ export function AdminPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1 w-20">
+                    <div className="flex flex-col gap-1 w-24">
                       <Button
                         onClick={() => handleToggleUser(user)}
                         variant={user.active ? "destructive" : "default"}
                         size="sm"
                         data-testid={`button-toggle-${user.username}`}
-                        className="text-xs px-2 py-1 h-7"
+                        className="text-xs px-2 py-1 h-7 min-w-0"
                       >
                         {user.active ? (
                           <>
-                            <UserX className="w-3 h-3 mr-1" />
-                            Desativar
+                            <UserX className="w-3 h-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">Desativar</span>
                           </>
                         ) : (
                           "Reativar"
@@ -363,10 +371,10 @@ export function AdminPage() {
                         variant="outline"
                         size="sm"
                         data-testid={`button-edit-${user.username}`}
-                        className="text-xs px-2 py-1 h-7"
+                        className="text-xs px-2 py-1 h-7 min-w-0"
                       >
-                        <Edit className="w-3 h-3 mr-1" />
-                        Editar
+                        <Edit className="w-3 h-3 mr-1 flex-shrink-0" />
+                        <span className="truncate">Editar</span>
                       </Button>
                     </div>
                   </div>
