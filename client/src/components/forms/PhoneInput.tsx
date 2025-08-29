@@ -16,7 +16,7 @@ export function PhoneInput({
   value, 
   onChange, 
   label = "Telefone", 
-  placeholder = "(87) 9 XXXX-XXXX",
+  placeholder = "(XX) 9 XXXX-XXXX",
   required = false,
   error,
   id = "phone"
@@ -28,7 +28,7 @@ export function PhoneInput({
     if (value) {
       setDisplayValue(formatPhone(value));
     } else {
-      setDisplayValue("(87) 9 ");
+      setDisplayValue("");
     }
   }, [value]);
 
@@ -36,24 +36,22 @@ export function PhoneInput({
     // Remove all non-digits
     const digits = phone.replace(/\D/g, '');
     
-    // Always ensure it starts with 879
-    let cleanDigits = digits;
-    if (!cleanDigits.startsWith('879')) {
-      cleanDigits = '879' + cleanDigits.substring(cleanDigits.startsWith('87') ? 2 : 0);
-    }
-    
-    // Format: (87) 9 XXXX-XXXX
-    if (cleanDigits.length <= 3) {
-      return "(87) 9 ";
-    } else if (cleanDigits.length <= 7) {
-      return `(87) 9 ${cleanDigits.slice(3)}`;
+    // Format: (XX) 9 XXXX-XXXX
+    if (digits.length === 0) {
+      return "";
+    } else if (digits.length <= 2) {
+      return `(${digits}`;
+    } else if (digits.length <= 3) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    } else if (digits.length <= 7) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 3)} ${digits.slice(3)}`;
     } else {
-      return `(87) 9 ${cleanDigits.slice(3, 7)}-${cleanDigits.slice(7, 11)}`;
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 3)} ${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
     }
   };
 
-  const validatePEPhone = (phone: string): boolean => {
-    const phoneRegex = /^\(87\) 9 \d{4}-\d{4}$/;
+  const validateBRPhone = (phone: string): boolean => {
+    const phoneRegex = /^\(\d{2}\) 9 \d{4}-\d{4}$/;
     return phoneRegex.test(phone);
   };
 
@@ -66,7 +64,7 @@ export function PhoneInput({
     
     // Validate phone
     if (formatted.length >= 15) {
-      const valid = validatePEPhone(formatted);
+      const valid = validateBRPhone(formatted);
       setIsValid(valid);
     } else {
       setIsValid(null);
@@ -74,11 +72,7 @@ export function PhoneInput({
   };
 
   const handleFocus = () => {
-    if (!displayValue || displayValue === "(87) 9 ") {
-      const defaultValue = "(87) 9 ";
-      setDisplayValue(defaultValue);
-      onChange(defaultValue);
-    }
+    // Não define mais valor padrão no foco
   };
 
   return (
