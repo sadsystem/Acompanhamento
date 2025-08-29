@@ -345,7 +345,7 @@ export function AdminPage() {
                       variant={user.active ? "destructive" : "default"}
                       size="sm"
                       data-testid={`button-toggle-${user.username}`}
-                      className="px-3 py-1 h-8 w-[90px]"
+                      className="px-3 py-1 h-8 w-[110px]"
                     >
                       {user.active ? (
                         <>
@@ -368,7 +368,7 @@ export function AdminPage() {
                       variant="outline"
                       size="sm"
                       data-testid={`button-edit-${user.username}`}
-                      className="px-3 py-1 h-8 w-[90px]"
+                      className="px-3 py-1 h-8 w-[110px]"
                     >
                       <Edit className="w-4 h-4 mr-1" />
                       Editar
