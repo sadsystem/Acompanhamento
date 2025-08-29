@@ -827,7 +827,7 @@ export function TeamBuilderPage() {
                 
                 {routes.filter(r => r.status === "formation").length === 0 && (
                   <div className="text-sm text-muted-foreground text-center py-8">
-                    Clique em "Nova Equipe" para criar uma rota
+                    Clique em "Criar Rota" para começar a formação.
                   </div>
                 )}
               </div>
