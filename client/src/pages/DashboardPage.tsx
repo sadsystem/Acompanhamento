@@ -14,7 +14,7 @@ import { toDateRefBR, formatDateTimeBRdash } from "../utils/time";
 export function DashboardPage() {
   const [dateFrom, setDateFrom] = useState(toDateRefBR());
   const [dateTo, setDateTo] = useState(toDateRefBR());
-  const [selectedUser, setSelectedUser] = useState("");
+  const [selectedUser, setSelectedUser] = useState("all");
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
@@ -29,7 +29,7 @@ export function DashboardPage() {
       storage.getEvaluations({
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
-        evaluated: selectedUser || undefined
+        evaluated: selectedUser === "all" ? undefined : selectedUser
       }),
       storage.getUsers()
     ]);
@@ -222,7 +222,7 @@ export function DashboardPage() {
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {users
                     .filter(u => u.role === "colaborador")
                     .map(user => (
