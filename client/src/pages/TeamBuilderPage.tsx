@@ -11,7 +11,7 @@ import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam } from ".
 import { toDateRefBR } from "../utils/time";
 import { uuid } from "../utils/calc";
 import { searchCities } from "../data/cities-pe";
-import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle } from "lucide-react";
+import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle, Check } from "lucide-react";
 
 interface NewRouteForm {
   cities: string[];
@@ -402,9 +402,9 @@ export function TeamBuilderPage() {
 
   const handleEditRoute = (route: TravelRouteWithTeam) => {
     setEditingRoute(route);
-    // For editing, convert back to single city (simplified approach)
-    const cityName = route.city.replace(/^(.+?)( - Parte \d+)?$/, '$1').split(' + ')[0];
-    setNewRoute({ cities: [cityName], startDate: route.startDate });
+    // Usa a lista completa de cidades se disponível
+    const cities = route.cities && route.cities.length > 0 ? route.cities : [route.city || ""];
+    setNewRoute({ cities: [...cities], startDate: route.startDate });
     setCitySearch("");
     setShowNewRouteModal(true);
   };
@@ -787,10 +787,10 @@ export function TeamBuilderPage() {
                           onClick={() => handleConfirmRoute(route)}
                           variant="ghost"
                           size="sm"
-                          className="hover:bg-blue-500 hover:text-white"
+                          className="text-green-600 hover:bg-blue-500 hover:text-white"
                           disabled={!route.team?.driver?.username || route.team.assistantUsers.length === 0}
                         >
-                          <CheckCircle className="w-4 h-4" />
+                          <Check className="w-4 h-4" />
                         </Button>
                         <Button
                           onClick={() => openRouteActionModal(route)}
@@ -1041,7 +1041,7 @@ export function TeamBuilderPage() {
           {selectedRoute && (
             <div className="space-y-4">
               <div className="text-sm text-muted-foreground">
-                <strong>Rota:</strong> {selectedRoute.city}
+                <strong>Rota:</strong> {getAllCitiesFormatted(selectedRoute)}
               </div>
               
               <div className="space-y-2">
@@ -1094,7 +1094,7 @@ export function TeamBuilderPage() {
                   }
                 </p>
                 <div className="p-3 bg-muted rounded text-xs">
-                  <strong>Rota:</strong> {selectedRoute.city}<br/>
+                  <strong>Rota:</strong> {getAllCitiesFormatted(selectedRoute)}<br/>
                   <strong>Data:</strong> {selectedRoute.startDate}
                   {selectedRoute.team && (
                     <>
