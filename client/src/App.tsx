@@ -10,6 +10,7 @@ import { AuthService } from "./auth/service";
 import { seedUsers } from "./storage/seeds";
 import { User, AppRoute } from "./config/types";
 import { CONFIG } from "./config/constants";
+import { Menu, X } from "lucide-react";
 
 // Pages
 import { LoginPage } from "./pages/LoginPage";
@@ -28,6 +29,7 @@ function AppContent() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const authService = new AuthService(storageAdapter);
 
@@ -114,13 +116,14 @@ function AppContent() {
                   }`}>
                     <span>OURO VERDE</span>
                   </div>
-                  <h1 className="text-lg font-semibold text-foreground">
+                  <h1 className="text-sm sm:text-lg font-semibold text-foreground">
                     Sistema de Acompanhamento Diário
                   </h1>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-4">
+              {/* Desktop Menu */}
+              <div className="hidden lg:flex items-center space-x-4">
                 <span className="text-sm text-muted-foreground">
                   {currentUser.displayName}
                 </span>
@@ -175,7 +178,94 @@ function AppContent() {
                   Sair
                 </button>
               </div>
+
+              {/* Mobile Menu Button */}
+              <div className="lg:hidden">
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="p-2 rounded-md hover:bg-muted"
+                  data-testid="mobile-menu-toggle"
+                >
+                  {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
+
+            {/* Mobile Menu Dropdown */}
+            {isMobileMenuOpen && (
+              <div className="lg:hidden border-t border-border bg-card">
+                <div className="px-4 py-3 space-y-2">
+                  <div className="text-sm text-muted-foreground pb-2 border-b border-border">
+                    {currentUser.displayName}
+                  </div>
+                  
+                  {currentUser.role === "admin" && (
+                    <>
+                      <button
+                        onClick={() => {
+                          navigateTo("dashboard");
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
+                          currentRoute === "dashboard" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                        }`}
+                        data-testid="mobile-nav-dashboard"
+                      >
+                        Dashboard
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigateTo("teamBuilder");
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
+                          currentRoute === "teamBuilder" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                        }`}
+                        data-testid="mobile-nav-team-builder"
+                      >
+                        Montar Equipes
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigateTo("admin");
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`block w-full text-left px-3 py-2 text-sm rounded-md ${
+                          currentRoute === "admin" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                        }`}
+                        data-testid="mobile-nav-admin"
+                      >
+                        Gestão
+                      </button>
+                    </>
+                  )}
+                  
+                  {currentUser.role === "colaborador" && currentRoute !== "selectPartner" && (
+                    <button
+                      onClick={() => {
+                        navigateTo("selectPartner");
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted"
+                      data-testid="mobile-nav-back"
+                    >
+                      Voltar
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted text-destructive"
+                    data-testid="mobile-button-logout"
+                  >
+                    Sair
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
       )}
