@@ -135,7 +135,7 @@ export function TeamBuilderPage() {
 
     // Handle dragging from available users to teams
     if (sourceId === "available-drivers" && destId.startsWith("team-")) {
-      const teamId = destId.split("-")[1];
+      const teamId = destId.replace("team-", "");
       const draggedDriver = availableDrivers.find(d => d.id === draggableId);
       const targetRoute = routes.find(r => r.team?.id === teamId);
       
@@ -181,7 +181,7 @@ export function TeamBuilderPage() {
     }
 
     if (sourceId === "available-assistants" && destId.startsWith("team-")) {
-      const teamId = destId.split("-")[1];
+      const teamId = destId.replace("team-", "");
       const draggedAssistant = availableAssistants.find(a => a.id === draggableId);
       const targetRoute = routes.find(r => r.team?.id === teamId);
       
@@ -223,7 +223,7 @@ export function TeamBuilderPage() {
 
     // Handle removing users from teams back to available
     if (sourceId.startsWith("team-") && destId === "available-drivers") {
-      const teamId = sourceId.split("-")[1];
+      const teamId = sourceId.replace("team-", "");
       const targetRoute = routes.find(r => r.team?.id === teamId);
       
       if (targetRoute && targetRoute.team && targetRoute.team.driver && targetRoute.team.driver.id === draggableId) {
@@ -256,7 +256,7 @@ export function TeamBuilderPage() {
     }
 
     if (sourceId.startsWith("team-") && destId === "available-assistants") {
-      const teamId = sourceId.split("-")[1];
+      const teamId = sourceId.replace("team-", "");
       const targetRoute = routes.find(r => r.team?.id === teamId);
       const draggedAssistant = targetRoute?.team?.assistantUsers.find(a => a.id === draggableId);
       
