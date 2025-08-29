@@ -590,6 +590,12 @@ export function TeamBuilderPage() {
     };
   };
 
+  const getAllCitiesFormatted = (route: TravelRouteWithTeam) => {
+    // Usa a lista de cidades se disponível, senão usa o campo city
+    const cities = route.cities && route.cities.length > 0 ? route.cities : [route.city || "Equipe Sem Rota"];
+    return cities.join(", ");
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4">
       <div className="text-center mb-8">
@@ -755,29 +761,16 @@ export function TeamBuilderPage() {
             <CardContent>
               <div className="space-y-4">
                 {routes.filter(r => r.status === "formation").map((route) => (
-                  <div key={route.id} className="border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4" />
-                          {(() => {
-                            const routeInfo = getDetailedRouteTitle(route);
-                            return (
-                              <div>
-                                <h4 className="font-medium">{routeInfo.main}</h4>
-                                {routeInfo.subtitle && (
-                                  <p className="text-xs text-blue-600 font-medium">{routeInfo.subtitle}</p>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {route.startDate}
-                        </p>
+                  <div key={route.id} className="border rounded-lg p-4">
+                    {/* Cidades - Todas com mesmo formato */}
+                    <div className="text-center mb-3">
+                      <div className="flex items-center justify-center gap-2 mb-3">
+                        <MapPin className="w-4 h-4" />
+                        <h4 className="font-medium text-base">{getAllCitiesFormatted(route)}</h4>
                       </div>
-                      <div className="flex gap-1">
+                      
+                      {/* Botões centralizados */}
+                      <div className="flex justify-center gap-2 mb-3">
                         <Button
                           onClick={() => handleEditRoute(route)}
                           variant="ghost"
@@ -789,7 +782,7 @@ export function TeamBuilderPage() {
                           onClick={() => handleConfirmRoute(route)}
                           variant="default"
                           size="sm"
-                          className="text-green-600 hover:text-green-800 hover:bg-green-50 mr-1"
+                          className="text-green-600 hover:text-green-800 hover:bg-green-50"
                           disabled={!route.team?.driver?.username || route.team.assistantUsers.length === 0}
                         >
                           <CheckCircle className="w-4 h-4" />
@@ -803,6 +796,12 @@ export function TeamBuilderPage() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
+                      
+                      {/* Data centralizada */}
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {route.startDate}
+                      </p>
                     </div>
                     
                     {route.team && (
