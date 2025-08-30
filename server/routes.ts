@@ -253,6 +253,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Questions routes
+  app.get("/api/questions", async (req, res) => {
+    try {
+      const questionList = await storage.getQuestions();
+      res.json(questionList);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao buscar perguntas" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

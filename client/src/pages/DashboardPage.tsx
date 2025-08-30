@@ -45,6 +45,37 @@ export function DashboardPage() {
     setUsers(allUsers);
   };
 
+  const loadSyncedData = async () => {
+    try {
+      // Buscar dados direto do banco PostgreSQL
+      const params = new URLSearchParams();
+      if (dateFrom) params.append('dateFrom', dateFrom);
+      if (dateTo) params.append('dateTo', dateTo);
+      if (selectedUser !== "all") params.append('evaluated', selectedUser);
+
+      const [evaluationsResponse, usersResponse] = await Promise.all([
+        fetch(`/api/evaluations?${params}`),
+        fetch('/api/users/team')
+      ]);
+      
+      if (evaluationsResponse.ok && usersResponse.ok) {
+        const serverEvaluations = await evaluationsResponse.json();
+        const serverUsers = await usersResponse.json();
+        
+        setEvaluations(serverEvaluations);
+        setUsers(serverUsers);
+        
+        alert(`Carregados dados sincronizados: ${serverEvaluations.length} avaliações de todos os dispositivos.`);
+      } else {
+        throw new Error("Erro ao buscar dados do servidor");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados sincronizados:", error);
+      alert("Erro ao carregar dados sincronizados. Usando dados locais.");
+      await loadData(); // Fallback to local data
+    }
+  };
+
   const stats = useMemo(() => {
     if (evaluations.length === 0) {
       return {
@@ -244,20 +275,70 @@ export function DashboardPage() {
   };
 
   const simulateSync = async () => {
-    // CORREÇÃO: Pegar TODAS as avaliações, não apenas as filtradas
-    const allEvaluations = await storage.getEvaluations(); // Sem filtros = todas
-    
-    // Atualizar apenas as que estão pendentes para "synced"
-    const updatedEvaluations = allEvaluations.map(evaluation => ({
-      ...evaluation,
-      status: evaluation.status === "queued" ? "synced" as const : evaluation.status
-    }));
-    
-    await storage.setEvaluations(updatedEvaluations);
-    await loadData(); // Recarregar com filtros atuais
-    
-    const syncedCount = allEvaluations.filter(e => e.status === "queued").length;
-    alert(`Sincronizados: ${syncedCount} registros pendentes. Total de ${allEvaluations.length} registros preservados.`);
+    try {
+      if (!navigator.onLine) {
+        alert("Sem conexão com a internet. Conecte-se e tente novamente.");
+        return;
+      }
+
+      // Pegar todas as avaliações do localStorage (incluindo as de outros dispositivos já sincronizadas)
+      const allEvaluations = await storage.getEvaluations();
+      const pendingEvaluations = allEvaluations.filter(e => e.status === "queued");
+      
+      if (pendingEvaluations.length === 0) {
+        // Se não há pendentes, buscar dados do servidor para mostrar dados de outros dispositivos
+        try {
+          const response = await fetch('/api/evaluations');
+          if (response.ok) {
+            const serverEvaluations = await response.json();
+            alert(`Dados sincronizados! Encontradas ${serverEvaluations.length} avaliações no total (incluindo de outros dispositivos).`);
+          }
+        } catch (error) {
+          alert("Nenhuma avaliação pendente para sincronizar");
+        }
+        return;
+      }
+
+      // Enviar avaliações pendentes para o banco PostgreSQL
+      let syncedCount = 0;
+      for (const evaluation of pendingEvaluations) {
+        try {
+          const response = await fetch('/api/evaluations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(evaluation)
+          });
+
+          if (response.ok) {
+            syncedCount++;
+          } else {
+            console.error(`Erro ao sincronizar avaliação ${evaluation.id}:`, await response.text());
+          }
+        } catch (error) {
+          console.error(`Erro ao sincronizar avaliação ${evaluation.id}:`, error);
+        }
+      }
+      
+      // Marcar avaliações como sincronizadas no localStorage
+      const updatedEvaluations = allEvaluations.map(evaluation => ({
+        ...evaluation,
+        status: evaluation.status === "queued" ? "synced" as const : evaluation.status
+      }));
+      
+      await storage.setEvaluations(updatedEvaluations);
+      await loadData(); // Recarregar dados
+      
+      if (syncedCount > 0) {
+        alert(`Sucesso! ${syncedCount} avaliações sincronizadas com o banco de dados. Agora todos os dispositivos verão os mesmos dados.`);
+      } else {
+        alert("Erro ao sincronizar. Tente novamente.");
+      }
+    } catch (error) {
+      console.error("Erro na sincronização:", error);
+      alert("Erro ao sincronizar dados. Verifique sua conexão com a internet.");
+    }
   };
 
   const getUserDisplayName = (username: string) => {
@@ -319,6 +400,9 @@ export function DashboardPage() {
             </Button>
             <Button onClick={simulateSync} variant="outline" size="sm" data-testid="button-sync">
               Sincronizar
+            </Button>
+            <Button onClick={loadSyncedData} variant="outline" size="sm" data-testid="button-load-synced">
+              Ver Todos os Dados
             </Button>
           </div>
         </div>
