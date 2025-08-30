@@ -100,26 +100,25 @@ export function AdminPage() {
     }
   };
 
-  // Fetch users from API with aggressive cache busting
-  const { data: users = [], isLoading, refetch } = useQuery({
-    queryKey: ['/api/users/admin', Date.now()], // Add timestamp to force refresh
-    queryFn: async () => {
-      const timestamp = Date.now();
-      const response = await fetch(`/api/users/admin?_t=${timestamp}`, {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch users');
-      return response.json();
-    },
-    staleTime: 0, // Always fetch fresh data
-    gcTime: 0,    // Don't cache results (React Query v5)
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true
-  });
+  // State for users data
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load users using storage (same as TeamBuilderPage)
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      const usersData = await storage.getUsers();
+      setUsers(usersData);
+      console.log('Users loaded:', usersData.length);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refetch = loadUsers;
 
   // Create user mutation
   const createUserMutation = useMutation({
@@ -156,8 +155,7 @@ export function AdminPage() {
 
   useEffect(() => {
     const initAdminPage = async () => {
-      // Simple refresh for AdminPage
-      await refetch();
+      await loadUsers();
       loadCurrentUser();
     };
     
