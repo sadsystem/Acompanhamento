@@ -1,5 +1,6 @@
 export const CONFIG = {
-  appName: "Sistema de Acompanhamento Diário - Ouro Verde",
+  appName: "Acompanhamento Diário - Ouro Verde",
+  version: "0.81b",
   alertThreshold: 0.3,
 } as const;
 

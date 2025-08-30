@@ -5,9 +5,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StorageProvider } from "./context/StorageContext";
-import { LocalStorageAdapter } from "./storage/localStorage";
+import { ApiStorageAdapter } from "./storage/apiAdapter";
 import { AuthService } from "./auth/service";
-import { seedUsers } from "./storage/seeds";
 import { User, AppRoute } from "./config/types";
 import { CONFIG } from "./config/constants";
 import { Menu, X, Eye } from "lucide-react";
@@ -22,7 +21,7 @@ import { TeamBuilderPage } from "./pages/TeamBuilderPage.tsx";
 import NotFound from "@/pages/not-found";
 
 // Create storage adapter instance
-const storageAdapter = new LocalStorageAdapter();
+const storageAdapter = new ApiStorageAdapter();
 
 function AppContent() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>("login");
@@ -40,9 +39,6 @@ function AppContent() {
 
   const initializeApp = async () => {
     try {
-      // Seed initial data
-      await seedUsers(storageAdapter);
-      
       // Check for remembered session
       await authService.ensureFirstLogin();
       
@@ -104,7 +100,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       {currentUser && (
         <header className="bg-card border-b border-border sticky top-0 z-50">
@@ -119,10 +115,10 @@ function AppContent() {
                   </div>
                   <div>
                     <h1 className="text-sm sm:text-lg font-semibold text-foreground">
-                      Sistema de Acompanhamento Diário
+                      Acompanhamento Diário
                     </h1>
                     <p className="text-xs text-muted-foreground">
-                      Versão 0.12a
+                      Versão {CONFIG.version}
                     </p>
                   </div>
                 </div>
@@ -187,16 +183,18 @@ function AppContent() {
 
               {/* Mobile Menu Button */}
               <div className="lg:hidden flex items-center gap-2">
-                <button
-                  onClick={() => setAccessibilityMode(!accessibilityMode)}
-                  className={`p-2 rounded-md transition-colors ${
-                    accessibilityMode ? 'bg-blue-50 border border-blue-200 text-blue-700' : 'hover:bg-muted'
-                  }`}
-                  data-testid="mobile-accessibility-button"
-                  title="Modo de Acessibilidade"
-                >
-                  <Eye className="w-5 h-5" />
-                </button>
+                {currentUser.role === "colaborador" && (
+                  <button
+                    onClick={() => setAccessibilityMode(!accessibilityMode)}
+                    className={`p-2 rounded-md transition-colors ${
+                      accessibilityMode ? 'bg-blue-50 border border-blue-200 text-blue-700' : 'hover:bg-muted'
+                    }`}
+                    data-testid="mobile-accessibility-button"
+                    title="Modo de Acessibilidade"
+                  >
+                    <Eye className="w-5 h-5" />
+                  </button>
+                )}
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                   className="p-2 rounded-md hover:bg-muted"
@@ -287,7 +285,7 @@ function AppContent() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col overflow-auto">
         {currentRoute === "login" && (
           <LoginPage onLoggedIn={handleLoggedIn} />
         )}
@@ -322,9 +320,9 @@ function AppContent() {
         )}
       </main>
       
-      <footer className="border-t bg-muted/30 py-4 mt-auto">
+      <footer className="border-t bg-muted/30 py-4 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 text-center text-sm text-muted-foreground">
-          Sistema de Acompanhamento Diário © 2025. Criado por Jucélio Verissimo.
+          Acompanhamento Diário © 2025. Criado por Jucélio Verissimo.
         </div>
       </footer>
       

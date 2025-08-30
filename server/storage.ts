@@ -1,5 +1,7 @@
-import { type User, type InsertUser, type Evaluation, type InsertEvaluation, type Question, type InsertQuestion } from "@shared/schema";
+import { type User, type InsertUser, type Evaluation, type InsertEvaluation, type Question, type InsertQuestion, users, evaluations, questions } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 // Extended interface to match application needs
 export interface IStorage {
@@ -9,6 +11,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User>;
+  deleteUser(id: string): Promise<void>;
 
   // Evaluations
   getEvaluations(filters?: {
@@ -251,4 +254,66 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage using PostgreSQL
+export class DatabaseStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    const result = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+    if (!result[0]) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async getEvaluations(filters?: {
+    dateFrom?: string;
+    dateTo?: string;
+    evaluator?: string;
+    evaluated?: string;
+    status?: string;
+  }): Promise<Evaluation[]> {
+    return await db.select().from(evaluations);
+  }
+
+  async createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation> {
+    const result = await db.insert(evaluations).values(evaluation).returning();
+    return result[0];
+  }
+
+  async setEvaluations(evaluationList: Evaluation[]): Promise<void> {
+    // For now, just ignore this method as it's not used in production
+  }
+
+  async getQuestions(): Promise<Question[]> {
+    return await db.select().from(questions);
+  }
+
+  async createQuestion(question: InsertQuestion): Promise<Question> {
+    const result = await db.insert(questions).values(question).returning();
+    return result[0];
+  }
+}
+
+export const storage = new DatabaseStorage();

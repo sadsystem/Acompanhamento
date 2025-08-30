@@ -8,11 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Badge } from "../components/ui/badge";
 import { PhoneInput } from "../components/forms/PhoneInput";
 import { CPFInput } from "../components/forms/CPFInput";
-import { useStorage } from "../hooks/useStorage";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { User, Role } from "../config/types";
 import { uuid } from "../utils/calc";
 import { UserPlus, Edit, UserX, Users, CheckCircle, LogIn, Trash2 } from "lucide-react";
 import { AuthService } from "../auth/service";
+import { useStorage } from "../hooks/useStorage";
 
 // Function to get role badge styling
 const getRoleBadgeStyle = (role: string) => {
@@ -37,8 +39,8 @@ const getPermissionBadgeStyle = (permission: string) => {
 };
 
 export function AdminPage() {
-  const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     displayName: "",
     cpf: "",
@@ -74,19 +76,56 @@ export function AdminPage() {
   const storage = useStorage();
   const authService = new AuthService(storage);
 
+  // Fetch users from API
+  const { data: users = [], isLoading, refetch } = useQuery({
+    queryKey: ['/api/users/admin'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/admin');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    }
+  });
+
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: any) => {
+      const response = await apiRequest('POST', '/api/users', userData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users/admin'] });
+    }
+  });
+
+  // Update user mutation
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      const response = await apiRequest('PUT', `/api/users/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users/admin'] });
+    }
+  });
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest('DELETE', `/api/users/${userId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users/admin'] });
+    }
+  });
+
   useEffect(() => {
-    loadUsers();
     loadCurrentUser();
   }, []);
 
   const loadCurrentUser = async () => {
     const user = await authService.getCurrentUser();
     setCurrentUser(user);
-  };
-
-  const loadUsers = async () => {
-    const allUsers = await storage.getUsers();
-    setUsers(allUsers);
   };
 
   const phoneToUsername = (phone: string): string => {
@@ -122,7 +161,7 @@ export function AdminPage() {
 
     // Check if phone already exists (except for current user in edit mode)
     const phoneUsername = phoneToUsername(data.phone);
-    const existingUser = users.find(u => u.username === phoneUsername);
+    const existingUser = users?.find(u => u.username === phoneUsername);
     if (existingUser && (!isEdit || existingUser.id !== editUser?.id)) {
       newErrors.phone = "Este telefone já está cadastrado";
     }
@@ -157,8 +196,7 @@ export function AdminPage() {
         cargo: formData.cargo
       };
 
-      await storage.createUser(newUser);
-      await loadUsers();
+      await createUserMutation.mutateAsync(newUser);
       
       // Reset form
       setFormData({
@@ -228,8 +266,7 @@ export function AdminPage() {
         updatedUser.password = editFormData.password;
       }
 
-      await storage.updateUser(editUser.id, updatedUser);
-      await loadUsers();
+      await updateUserMutation.mutateAsync({ id: editUser.id, updates: updatedUser });
       
       setShowEditModal(false);
       setEditUser(null);
@@ -265,8 +302,7 @@ export function AdminPage() {
     
     try {
       const updatedUser = { ...userToDeactivate, active: !userToDeactivate.active };
-      await storage.updateUser(userToDeactivate.id, updatedUser);
-      await loadUsers();
+      await updateUserMutation.mutateAsync({ id: userToDeactivate.id, updates: updatedUser });
       
       const action = userToDeactivate.active ? "desativado" : "reativado";
       alert(`Usuário ${action} com sucesso!`);
@@ -321,12 +357,8 @@ export function AdminPage() {
     if (!userToDelete) return;
 
     try {
-      // Como não existe deleteUser no storage, vamos implementar manualmente
-      const allUsers = await storage.getUsers();
-      const filteredUsers = allUsers.filter(u => u.id !== userToDelete.id);
-      await storage.setUsers(filteredUsers);
+      await deleteUserMutation.mutateAsync(userToDelete.id);
       
-      await loadUsers();
       setDeletedUserName(userToDelete.displayName);
       setShowDeleteModal(false);
       setUserToDelete(null);
@@ -473,7 +505,9 @@ export function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {users.map(user => (
+              {isLoading ? (
+                <div className="text-center p-4">Carregando usuários...</div>
+              ) : users.map(user => (
                 <div 
                   key={user.id} 
                   className={`p-4 border rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 ${!user.active ? 'bg-gray-50 opacity-70' : 'bg-white'}`}

@@ -1,4 +1,5 @@
-const CACHE_NAME = 'sad-ouro-verde-v1';
+const CACHE_NAME = 'sad-ouro-verde-0.81b';
+const VERSION_CHECK = '0.81b-' + Date.now(); // Força atualização
 const urlsToCache = [
   '/',
   '/src/main.tsx',

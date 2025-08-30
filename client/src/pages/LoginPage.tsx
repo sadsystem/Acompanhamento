@@ -64,7 +64,7 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
           <span className="text-white font-bold text-sm tracking-wide">OURO VERDE</span>
         </div>
         <h1 className="text-2xl font-bold text-gray-700 drop-shadow-sm">
-          Sistema de Acompanhamento Diário
+          Acompanhamento Diário
         </h1>
       </div>
       
