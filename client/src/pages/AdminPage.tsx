@@ -11,7 +11,7 @@ import { CPFInput } from "../components/forms/CPFInput";
 import { useStorage } from "../hooks/useStorage";
 import { User, Role } from "../config/types";
 import { uuid } from "../utils/calc";
-import { UserPlus, Edit, UserX, Users } from "lucide-react";
+import { UserPlus, Edit, UserX, Users, CheckCircle } from "lucide-react";
 import { AuthService } from "../auth/service";
 
 // Function to get role badge styling
@@ -66,6 +66,7 @@ export function AdminPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const storage = useStorage();
   const authService = new AuthService(storage);
 
@@ -167,7 +168,7 @@ export function AdminPage() {
       });
       setErrors({});
       
-      alert("Usuário cadastrado com sucesso!");
+      setShowSuccessModal(true);
     } catch (error) {
       console.error("Error creating user:", error);
       alert("Erro ao cadastrar usuário");
@@ -625,6 +626,48 @@ export function AdminPage() {
                 {userToDeactivate?.active ? "Desativar" : "Reativar"}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Sucesso */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="w-6 h-6" />
+              Usuário Registrado com Sucesso!
+            </DialogTitle>
+            <DialogDescription>
+              O novo usuário foi cadastrado no sistema com sucesso
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <span className="font-medium text-green-800">Cadastro Concluído</span>
+              </div>
+              <p className="text-sm text-green-700">
+                O usuário agora pode fazer login no sistema usando as credenciais fornecidas.
+              </p>
+            </div>
+            
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 <strong>Próximos passos:</strong> Certifique-se de que o usuário tenha conhecimento de suas credenciais de acesso.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => setShowSuccessModal(false)}
+              className="px-6"
+            >
+              Entendi
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

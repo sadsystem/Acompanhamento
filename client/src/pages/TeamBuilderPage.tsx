@@ -1062,6 +1062,8 @@ export function TeamBuilderPage() {
                 onChange={(e) => setCitySearch(e.target.value)}
                 placeholder="Digite para buscar e adicionar cidades..."
                 className="mb-2"
+                autoComplete="off"
+                data-testid="input-city-search"
               />
               
               {citySearch && filteredCities.length > 0 && (
