@@ -50,22 +50,29 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-gradient-to-br from-green-50 via-white to-blue-50 overflow-hidden">
+    <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-100 via-gray-50 to-green-100 overflow-hidden relative">
+      {/* Padrão geométrico de fundo */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-10 left-10 w-32 h-32 bg-green-600 rounded-full blur-3xl"></div>
+        <div className="absolute top-40 right-20 w-24 h-24 bg-blue-500 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-32 left-1/4 w-40 h-40 bg-green-500 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-28 h-28 bg-slate-400 rounded-full blur-2xl"></div>
+      </div>
       {/* Logo e Header */}
-      <div className="text-center pt-8 pb-4">
-        <div className="inline-flex items-center justify-center px-4 py-2 bg-green-600 rounded-full mb-3 shadow-lg">
+      <div className="text-center pt-8 pb-4 relative z-10">
+        <div className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 rounded-full mb-4 shadow-xl border border-green-500/20">
           <span className="text-white font-bold text-sm tracking-wide">OURO VERDE</span>
         </div>
-        <h1 className="text-xl font-bold text-gray-800">
+        <h1 className="text-2xl font-bold text-gray-700 drop-shadow-sm">
           Sistema de Acompanhamento Diário
         </h1>
       </div>
       
       {/* Área do formulário centralizada */}
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="flex-1 flex items-center justify-center p-4 relative z-10">
         <div className="w-full max-w-md">
         
-        <Card className="w-full shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+        <Card className="w-full shadow-2xl border border-white/20 bg-white/90 backdrop-blur-md">
         <CardContent className="pt-6">
           <h2 className="text-lg font-semibold mb-6 text-center uppercase tracking-wide text-gray-700">
             ENTRAR
