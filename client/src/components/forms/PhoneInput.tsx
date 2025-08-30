@@ -22,7 +22,6 @@ export function PhoneInput({
   id = "phone"
 }: PhoneInputProps) {
   const [displayValue, setDisplayValue] = useState(value);
-  const [isValid, setIsValid] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (value) {
@@ -50,10 +49,6 @@ export function PhoneInput({
     }
   };
 
-  const validateBRPhone = (phone: string): boolean => {
-    const phoneRegex = /^\(\d{2}\) 9 \d{4}-\d{4}$/;
-    return phoneRegex.test(phone);
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
@@ -61,14 +56,6 @@ export function PhoneInput({
     
     setDisplayValue(formatted);
     onChange(formatted);
-    
-    // Validate phone
-    if (formatted.length >= 15) {
-      const valid = validateBRPhone(formatted);
-      setIsValid(valid);
-    } else {
-      setIsValid(null);
-    }
   };
 
   const handleFocus = () => {
@@ -86,21 +73,12 @@ export function PhoneInput({
         value={displayValue}
         onChange={handleChange}
         placeholder={placeholder}
-        className={`
-          ${error ? 'border-red-500 ring-red-500' : ''}
-          ${isValid === true ? 'border-green-500' : ''}
-          ${isValid === false ? 'border-red-500' : ''}
-        `}
+        className={error ? 'border-red-500 ring-red-500' : ''}
         data-testid={`input-${id}`}
       />
       {error && (
         <span className="text-xs text-red-600" data-testid={`error-${id}`}>
           {error}
-        </span>
-      )}
-      {isValid === false && !error && (
-        <span className="text-xs text-red-600" data-testid={`validation-error-${id}`}>
-          Telefone inválido
         </span>
       )}
     </div>
