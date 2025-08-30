@@ -1336,17 +1336,32 @@ export function TeamBuilderPage() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-medium">{getAllCitiesFormatted(route)}</h4>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Início: {formatDateToBR(route.startDate)}
                       </p>
                     </div>
-                    <Badge variant={route.vehicle ? "default" : "secondary"}>
-                      {route.vehicle ? "OK" : "Pendente"}
-                    </Badge>
+                    <div className="flex gap-1">
+                      <Button 
+                        onClick={() => setEditingRoute(route)}
+                        variant="ghost"
+                        size="sm"
+                        className="p-1 h-8 w-8"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        onClick={() => openRouteActionModal(route, 'delete')}
+                        variant="ghost"
+                        size="sm"
+                        className="p-1 h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                   
                   {route.team && (
-                    <div className="text-xs text-muted-foreground mb-2">
+                    <div className="text-xs text-muted-foreground mb-3">
                       <div>Motorista: {route.team.driver?.displayName || "Não definido"}</div>
                       <div>
                         Ajudantes: {(route.team.assistantUsers?.length || 0) > 0 
@@ -1360,19 +1375,15 @@ export function TeamBuilderPage() {
                     </div>
                   )}
                   
-                  <div className="flex gap-2 mb-2">
+                  <div className="flex gap-2 mb-3">
                     <Button 
                       onClick={() => handleDefineVehicle(route)}
                       variant={route.vehicle ? "outline" : "default"}
                       size="sm"
                       className="flex-1"
                     >
-                      <Car className="w-3 h-3 mr-1" />
                       {route.vehicle ? "Alterar Veículo" : "Definir Veículo"}
                     </Button>
-                  </div>
-                  
-                  <div className="flex gap-2">
                     <Button 
                       onClick={() => openRouteActionModal(route, 'finish')}
                       variant="outline"
@@ -1381,14 +1392,15 @@ export function TeamBuilderPage() {
                     >
                       Finalizar Rota
                     </Button>
-                    <Button 
-                      onClick={() => openRouteActionModal(route, 'delete')}
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                  </div>
+                  
+                  <div className="flex justify-center">
+                    <Badge 
+                      variant={route.vehicle ? "default" : "destructive"}
+                      className={route.vehicle ? "bg-green-100 text-green-800 border-green-200" : "bg-amber-100 text-amber-800 border-amber-200"}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                      {route.vehicle ? "Rota Definida" : "Falta Definir Veículo"}
+                    </Badge>
                   </div>
                 </div>
               ))}
