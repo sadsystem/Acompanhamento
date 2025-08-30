@@ -156,7 +156,6 @@ export function SelectPartnerPage({ currentUser, onSelected, accessibilityMode }
           
           {currentRoute && (
             <Alert className="mb-4">
-              <Users className="h-4 w-4" />
               <AlertDescription>
                 <strong>Rota Ativa:</strong> {getAllCitiesFormatted(currentRoute)}<br />
                 <strong>Data de início:</strong> {formatStartDate(currentRoute.startDate)}<br />
