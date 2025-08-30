@@ -11,7 +11,7 @@ import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam } from ".
 import { toDateRefBR } from "../utils/time";
 import { uuid } from "../utils/calc";
 import { searchCities } from "../data/cities-pe";
-import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle, Check, Download } from "lucide-react";
+import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle, Check, Download, Route, Truck, Navigation, Archive, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface NewRouteForm {
   cities: string[];
@@ -42,6 +42,12 @@ export function TeamBuilderPage() {
   
   // Export modal state
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showFinishedExportModal, setShowFinishedExportModal] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState({ startDate: "", endDate: "" });
+  
+  // Pagination for finished routes
+  const [finishedRoutesPage, setFinishedRoutesPage] = useState(0);
+  const ROUTES_PER_PAGE = 9;
 
   const handleConfirmRoute = async (route: TravelRouteWithTeam) => {
     try {
@@ -610,6 +616,19 @@ export function TeamBuilderPage() {
     };
   };
 
+  // Finished routes pagination
+  const getFinishedRoutesPage = () => {
+    const finishedRoutes = routes.filter(r => r.status === "completed");
+    const startIndex = finishedRoutesPage * ROUTES_PER_PAGE;
+    const endIndex = startIndex + ROUTES_PER_PAGE;
+    return finishedRoutes.slice(startIndex, endIndex);
+  };
+
+  const getTotalFinishedPages = () => {
+    const finishedRoutes = routes.filter(r => r.status === "completed");
+    return Math.ceil(finishedRoutes.length / ROUTES_PER_PAGE);
+  };
+
   // Export functions
   const exportToXLSX = async () => {
     const XLSX = await import('xlsx');
@@ -697,6 +716,111 @@ export function TeamBuilderPage() {
     const timestamp = now.toISOString().split('T')[0];
     doc.save(`rotas-ativas-${timestamp}.pdf`);
     setShowExportModal(false);
+  };
+  
+  const exportFinishedToXLSX = async () => {
+    const XLSX = await import('xlsx');
+    let finishedRoutes = routes.filter(r => r.status === "completed");
+    
+    // Filter by date range if provided
+    if (exportDateRange.startDate || exportDateRange.endDate) {
+      finishedRoutes = finishedRoutes.filter(route => {
+        const routeDate = new Date(route.startDate);
+        const startDate = exportDateRange.startDate ? new Date(exportDateRange.startDate) : null;
+        const endDate = exportDateRange.endDate ? new Date(exportDateRange.endDate) : null;
+        
+        if (startDate && routeDate < startDate) return false;
+        if (endDate && routeDate > endDate) return false;
+        return true;
+      });
+    }
+    
+    const data = finishedRoutes.map((route, index) => ({
+      'Nº': index + 1,
+      'Rota': getAllCitiesFormatted(route),
+      'Data de Início': route.startDate,
+      'Data de Fim': route.endDate || 'Não definida',
+      'Status': 'Finalizada',
+      'Motorista': route.team?.driver?.displayName || 'Não definido',
+      'Ajudantes': route.team?.assistantUsers?.map(a => a.displayName).join(', ') || 'Nenhum',
+      'CPF Motorista': route.team?.driver?.cpf || 'Não informado',
+      'Telefone Motorista': route.team?.driver?.phone || 'Não informado'
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Rotas Finalizadas");
+    
+    const cols = [
+      { wch: 5 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 12 },
+      { wch: 25 }, { wch: 30 }, { wch: 20 }, { wch: 20 }
+    ];
+    ws['!cols'] = cols;
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `rotas-finalizadas-${timestamp}.xlsx`);
+    setShowFinishedExportModal(false);
+    setExportDateRange({ startDate: "", endDate: "" });
+  };
+  
+  const exportFinishedToPDF = async () => {
+    const jsPDF = (await import('jspdf')).default;
+    const autoTable = (await import('jspdf-autotable')).default;
+    
+    let finishedRoutes = routes.filter(r => r.status === "completed");
+
+    // Filter by date range if provided
+    if (exportDateRange.startDate || exportDateRange.endDate) {
+      finishedRoutes = finishedRoutes.filter(route => {
+        const routeDate = new Date(route.startDate);
+        const startDate = exportDateRange.startDate ? new Date(exportDateRange.startDate) : null;
+        const endDate = exportDateRange.endDate ? new Date(exportDateRange.endDate) : null;
+        
+        if (startDate && routeDate < startDate) return false;
+        if (endDate && routeDate > endDate) return false;
+        return true;
+      });
+    }
+    
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text('Relatório de Rotas Finalizadas', 14, 22);
+    doc.setFontSize(12);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 32);
+    
+    if (exportDateRange.startDate || exportDateRange.endDate) {
+      const periodText = `Período: ${exportDateRange.startDate || 'Início'} a ${exportDateRange.endDate || 'Fim'}`;
+      doc.text(periodText, 14, 42);
+    }
+    
+    const tableData = finishedRoutes.map((route, index) => [
+      index + 1,
+      getAllCitiesFormatted(route),
+      route.startDate,
+      route.endDate || 'N/A',
+      route.team?.driver?.displayName || 'Não definido'
+    ]);
+    
+    autoTable(doc, {
+      head: [['Nº', 'Rota', 'Início', 'Fim', 'Motorista']],
+      body: tableData,
+      startY: exportDateRange.startDate || exportDateRange.endDate ? 50 : 40,
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 15 },
+        1: { cellWidth: 60 },
+        2: { halign: 'center', cellWidth: 25 },
+        3: { halign: 'center', cellWidth: 25 },
+        4: { cellWidth: 50 }
+      }
+    });
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    doc.save(`rotas-finalizadas-${timestamp}.pdf`);
+    setShowFinishedExportModal(false);
+    setExportDateRange({ startDate: "", endDate: "" });
   };
 
   const getAllCitiesFormatted = (route: TravelRouteWithTeam) => {
@@ -828,7 +952,7 @@ export function TeamBuilderPage() {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`min-h-[300px] rounded-lg ${
+                    className={`min-h-[300px] max-h-[400px] overflow-y-auto rounded-lg ${
                       snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5 p-2" : ""
                     }`}
                   >
@@ -868,7 +992,10 @@ export function TeamBuilderPage() {
           {/* Teams with City Names */}
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-200">
             <CardHeader>
-              <CardTitle className="text-lg">Formação de Rota</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Route className="w-5 h-5" />
+                Formação de Rota
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -994,7 +1121,7 @@ export function TeamBuilderPage() {
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-200">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <UsersIcon className="w-5 h-5" />
+                <Truck className="w-5 h-5" />
                 Motoristas Disponíveis
               </CardTitle>
             </CardHeader>
@@ -1004,7 +1131,7 @@ export function TeamBuilderPage() {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`min-h-[300px] rounded-lg ${
+                    className={`min-h-[300px] max-h-[400px] overflow-y-auto rounded-lg ${
                       snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5 p-2" : ""
                     }`}
                   >
@@ -1048,7 +1175,10 @@ export function TeamBuilderPage() {
         <Card className="mt-6">
           <CardHeader>
             <div className="flex justify-between items-center">
-              <CardTitle className="text-lg">Rotas Ativas</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Navigation className="w-5 h-5" />
+                Rotas Ativas
+              </CardTitle>
               <Button
                 onClick={() => setShowExportModal(true)}
                 variant="outline"
@@ -1115,11 +1245,25 @@ export function TeamBuilderPage() {
       {routes.filter(r => r.status === "completed").length > 0 && (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="text-lg">Rotas Finalizadas</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Archive className="w-5 h-5" />
+                Rotas Finalizadas
+              </CardTitle>
+              <Button
+                onClick={() => setShowFinishedExportModal(true)}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Exportar
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {routes.filter(r => r.status === "completed").map((route) => (
+              {getFinishedRoutesPage().map((route) => (
                 <div key={route.id} className="border rounded-lg p-3 bg-muted/30">
                   <h4 className="font-medium">{getAllCitiesFormatted(route)}</h4>
                   <p className="text-sm text-muted-foreground">
@@ -1150,6 +1294,31 @@ export function TeamBuilderPage() {
                 </div>
               ))}
             </div>
+            
+            {/* Pagination for finished routes */}
+            {getTotalFinishedPages() > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-4">
+                <Button
+                  onClick={() => setFinishedRoutesPage(prev => Math.max(0, prev - 1))}
+                  variant="outline"
+                  size="sm"
+                  disabled={finishedRoutesPage === 0}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Página {finishedRoutesPage + 1} de {getTotalFinishedPages()}
+                </span>
+                <Button
+                  onClick={() => setFinishedRoutesPage(prev => Math.min(getTotalFinishedPages() - 1, prev + 1))}
+                  variant="outline"
+                  size="sm"
+                  disabled={finishedRoutesPage >= getTotalFinishedPages() - 1}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -1314,6 +1483,80 @@ export function TeamBuilderPage() {
           
           <div className="flex justify-end">
             <Button variant="ghost" onClick={() => setShowExportModal(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Exportação para Rotas Finalizadas */}
+      <Dialog open={showFinishedExportModal} onOpenChange={setShowFinishedExportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Exportar Rotas Finalizadas
+            </DialogTitle>
+            <DialogDescription>
+              Escolha o formato e período para exportação
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              Total de rotas finalizadas: {routes.filter(r => r.status === "completed").length}
+            </div>
+            
+            {/* Date Range Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Período (opcional)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">Data Início</label>
+                  <input
+                    type="date"
+                    value={exportDateRange.startDate}
+                    onChange={(e) => setExportDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full p-2 border rounded text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Data Fim</label>
+                  <input
+                    type="date"
+                    value={exportDateRange.endDate}
+                    onChange={(e) => setExportDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full p-2 border rounded text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Button
+                onClick={exportFinishedToXLSX}
+                className="w-full flex items-center justify-center gap-2"
+                variant="default"
+                disabled={routes.filter(r => r.status === "completed").length === 0}
+              >
+                <Download className="w-4 h-4" />
+                Exportar como XLSX
+              </Button>
+              
+              <Button
+                onClick={exportFinishedToPDF}
+                className="w-full flex items-center justify-center gap-2"
+                variant="outline"
+                disabled={routes.filter(r => r.status === "completed").length === 0}
+              >
+                <Download className="w-4 h-4" />
+                Exportar como PDF
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => setShowFinishedExportModal(false)}>
               Cancelar
             </Button>
           </div>
