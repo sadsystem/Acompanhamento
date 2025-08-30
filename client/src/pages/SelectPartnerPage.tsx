@@ -24,6 +24,18 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
   const storage = useStorage();
   const today = toDateRefBR();
 
+  // Helper function to format all cities in route
+  const getAllCitiesFormatted = (route: TravelRouteWithTeam) => {
+    const cities = route.cities && route.cities.length > 0 ? route.cities : [route.city || "Equipe Sem Rota"];
+    return cities.join(", ");
+  };
+
+  // Helper function to format start date from YYYY-MM-DD to DD/MM/YYYY
+  const formatStartDate = (dateString: string) => {
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('pt-BR');
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -145,7 +157,11 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
             <Alert className="mb-4">
               <Users className="h-4 w-4" />
               <AlertDescription>
-                <strong>Rota Ativa:</strong> {currentRoute.city} (desde {currentRoute.startDate})<br />
+                <strong>Rota Ativa:</strong> {getAllCitiesFormatted(currentRoute)}<br />
+                <strong>Data de início:</strong> {formatStartDate(currentRoute.startDate)}<br />
+                {currentRoute.vehicle && (
+                  <><strong>Veículo:</strong> {currentRoute.vehicle.plate} {currentRoute.vehicle.model && currentRoute.vehicle.year ? `(${currentRoute.vehicle.model} ${currentRoute.vehicle.year})` : currentRoute.vehicle.model || ''}<br /></>
+                )}
                 Você pode avaliar apenas os colegas da sua equipe atual.
               </AlertDescription>
             </Alert>
@@ -176,7 +192,7 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
                   onClick={() => onSelected(user.username)}
                   data-testid={`button-select-${user.username}`}
                 >
-                  {alreadyEvaluated.has(user.username) ? "Enviado" : "Escolher"}
+                  {alreadyEvaluated.has(user.username) ? "Finalizado" : "Acompanhar"}
                 </Button>
               </div>
             ))}
