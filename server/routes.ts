@@ -184,11 +184,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/evaluations", async (req, res) => {
     try {
+      console.log("POST /api/evaluations - Received data:", JSON.stringify(req.body, null, 2));
+      
       const evaluationData = insertEvaluationSchema.parse(req.body);
+      console.log("POST /api/evaluations - Parsed data:", JSON.stringify(evaluationData, null, 2));
+      
       const evaluation = await storage.createEvaluation(evaluationData);
       
       res.status(201).json(evaluation);
     } catch (error) {
+      console.error("POST /api/evaluations - Validation error:", error);
+      if (error instanceof Error) {
+        console.error("Error details:", error.message);
+      }
       res.status(400).json({ error: "Dados de avaliação inválidos" });
     }
   });

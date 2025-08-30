@@ -93,6 +93,7 @@ export class ApiStorageAdapter implements StorageAdapter {
   }
 
   async createEvaluation(evaluationData: InsertEvaluation): Promise<Evaluation> {
+    console.log("ApiAdapter - Sending evaluation data:", JSON.stringify(evaluationData, null, 2));
     const response = await apiRequest('POST', '/api/evaluations', evaluationData);
     return response.json();
   }
