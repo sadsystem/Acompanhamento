@@ -12,6 +12,7 @@ import { useStorage } from "../hooks/useStorage";
 import { User, Role } from "../config/types";
 import { uuid } from "../utils/calc";
 import { UserPlus, Edit, UserX, Users } from "lucide-react";
+import { AuthService } from "../auth/service";
 
 // Function to get role badge styling
 const getRoleBadgeStyle = (role: string) => {
@@ -37,6 +38,7 @@ const getPermissionBadgeStyle = (permission: string) => {
 
 export function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     displayName: "",
     cpf: "",
@@ -62,11 +64,20 @@ export function AdminPage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
   const storage = useStorage();
+  const authService = new AuthService(storage);
 
   useEffect(() => {
     loadUsers();
+    loadCurrentUser();
   }, []);
+
+  const loadCurrentUser = async () => {
+    const user = await authService.getCurrentUser();
+    setCurrentUser(user);
+  };
 
   const loadUsers = async () => {
     const allUsers = await storage.getUsers();
@@ -168,6 +179,10 @@ export function AdminPage() {
   };
 
   const handleEditUser = (user: User) => {
+    if (!canEditUser(user)) {
+      alert("Você não tem permissão para editar este usuário.");
+      return;
+    }
     setEditUser(user);
     setEditFormData({
       displayName: user.displayName,
@@ -226,17 +241,40 @@ export function AdminPage() {
     }
   };
 
-  const handleToggleUser = async (user: User) => {
+  const canEditUser = (targetUser: User): boolean => {
+    if (!currentUser) return false;
+    // Only ADM can edit other ADMs
+    if (targetUser.permission === "ADM" && currentUser.permission !== "ADM") {
+      return false;
+    }
+    return true;
+  };
+
+  const handleToggleUserClick = (user: User) => {
+    if (!canEditUser(user)) {
+      alert("Você não tem permissão para editar este usuário.");
+      return;
+    }
+    setUserToDeactivate(user);
+    setShowDeactivateModal(true);
+  };
+
+  const handleConfirmDeactivate = async () => {
+    if (!userToDeactivate) return;
+    
     try {
-      const updatedUser = { ...user, active: !user.active };
-      await storage.updateUser(user.id, updatedUser);
+      const updatedUser = { ...userToDeactivate, active: !userToDeactivate.active };
+      await storage.updateUser(userToDeactivate.id, updatedUser);
       await loadUsers();
       
-      const action = user.active ? "desativado" : "reativado";
+      const action = userToDeactivate.active ? "desativado" : "reativado";
       alert(`Usuário ${action} com sucesso!`);
     } catch (error) {
       console.error("Error toggling user:", error);
       alert("Erro ao alterar status do usuário");
+    } finally {
+      setShowDeactivateModal(false);
+      setUserToDeactivate(null);
     }
   };
 
@@ -343,19 +381,21 @@ export function AdminPage() {
                 )}
               </div>
 
-              <div>
-                <Label>Nível de Permissão *</Label>
-                <Select value={formData.permission} onValueChange={(value) => setFormData(prev => ({ ...prev, permission: value }))}>
-                  <SelectTrigger data-testid="select-permission">
-                    <SelectValue placeholder="Selecione a permissão..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ADM">ADM</SelectItem>
-                    <SelectItem value="Colaborador">Colaborador</SelectItem>
-                    <SelectItem value="Gestor">Gestor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {currentUser?.permission === "ADM" && (
+                <div>
+                  <Label>Nível de Permissão *</Label>
+                  <Select value={formData.permission} onValueChange={(value) => setFormData(prev => ({ ...prev, permission: value }))}>
+                    <SelectTrigger data-testid="select-permission">
+                      <SelectValue placeholder="Selecione a permissão..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ADM">ADM</SelectItem>
+                      <SelectItem value="Colaborador">Colaborador</SelectItem>
+                      <SelectItem value="Gestor">Gestor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <Button type="submit" className="w-full" data-testid="button-register">
                 Registrar
@@ -385,7 +425,7 @@ export function AdminPage() {
                       {user.displayName}
                     </div>
                     <Button
-                      onClick={() => handleToggleUser(user)}
+                      onClick={() => handleToggleUserClick(user)}
                       variant={user.active ? "destructive" : "default"}
                       size="sm"
                       data-testid={`button-toggle-${user.username}`}
@@ -546,6 +586,49 @@ export function AdminPage() {
             <Button onClick={handleUpdateUser}>
               Salvar Alterações
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação para Desativação */}
+      <Dialog open={showDeactivateModal} onOpenChange={setShowDeactivateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <UserX className="w-5 h-5" />
+              Confirmação de Segurança
+            </DialogTitle>
+            <DialogDescription>
+              {userToDeactivate?.active 
+                ? "Ao desativar este usuário, ele não poderá mais fazer login no sistema." 
+                : "Reativar este usuário permitirá que ele faça login novamente."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm">
+                <strong>Usuário:</strong> {userToDeactivate?.displayName}<br/>
+                <strong>Cargo:</strong> {userToDeactivate?.cargo}<br/>
+                <strong>Permissão:</strong> {userToDeactivate?.permission}
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDeactivateModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant={userToDeactivate?.active ? "destructive" : "default"}
+                onClick={handleConfirmDeactivate}
+              >
+                {userToDeactivate?.active ? "Desativar" : "Reativar"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

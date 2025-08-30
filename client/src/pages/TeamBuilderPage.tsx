@@ -13,6 +13,18 @@ import { uuid } from "../utils/calc";
 import { searchCities } from "../data/cities-pe";
 import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle, Check, Download, Route, Truck, Navigation, Archive, ChevronLeft, ChevronRight } from "lucide-react";
 
+// Function to get role badge styling
+const getRoleBadgeStyle = (role: string) => {
+  const styles = {
+    "Motorista": "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200",
+    "Ajudante": "bg-green-100 text-green-800 border-green-200 hover:bg-green-200", 
+    "Supervisor": "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200",
+    "Gerente": "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200",
+    "Assistente de Logística": "bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200"
+  };
+  return styles[role as keyof typeof styles] || "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
+};
+
 interface NewRouteForm {
   cities: string[];
   startDate: string;
@@ -975,7 +987,7 @@ export function TeamBuilderPage() {
                             <div className="font-medium text-sm">
                               {assistant.displayName.split(' ').slice(0, 2).join(' ')}
                             </div>
-                            <Badge variant="outline" className="text-xs mt-1">Ajudante</Badge>
+                            <Badge className={`text-xs mt-1 border ${getRoleBadgeStyle('Ajudante')}`}>Ajudante</Badge>
                           </div>
                         )}
                       </Draggable>
@@ -1069,7 +1081,7 @@ export function TeamBuilderPage() {
                                     <div className="font-medium text-xs">
                                       {route.team?.driver.displayName.split(' ').slice(0, 2).join(' ')}
                                     </div>
-                                    <Badge variant="secondary" className="text-xs">Motorista</Badge>
+                                    <Badge className={`text-xs border ${getRoleBadgeStyle('Motorista')}`}>Motorista</Badge>
                                   </div>
                                 )}
                               </Draggable>
@@ -1091,7 +1103,7 @@ export function TeamBuilderPage() {
                                     <div className="font-medium text-xs">
                                       {assistant.displayName.split(' ').slice(0, 2).join(' ')}
                                     </div>
-                                    <Badge variant="secondary" className="text-xs">Ajudante</Badge>
+                                    <Badge className={`text-xs border ${getRoleBadgeStyle('Ajudante')}`}>Ajudante</Badge>
                                   </div>
                                 )}
                               </Draggable>
@@ -1154,7 +1166,7 @@ export function TeamBuilderPage() {
                             <div className="font-medium text-sm">
                               {driver.displayName.split(' ').slice(0, 2).join(' ')}
                             </div>
-                            <Badge variant="outline" className="text-xs mt-1">Motorista</Badge>
+                            <Badge className={`text-xs mt-1 border ${getRoleBadgeStyle('Motorista')}`}>Motorista</Badge>
                           </div>
                         )}
                       </Draggable>
