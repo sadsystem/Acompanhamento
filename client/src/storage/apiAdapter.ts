@@ -208,5 +208,11 @@ export class ApiStorageAdapter implements StorageAdapter {
     // Clear localStorage data only (API data persists)
     const keys = ['sad_session', 'sad_remember', 'sad_teams', 'sad_travel_routes', 'sad_vehicles'];
     keys.forEach(key => localStorage.removeItem(key));
+    
+    // Clear all browser caches to force fresh data
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
   }
 }

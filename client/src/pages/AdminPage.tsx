@@ -76,6 +76,13 @@ export function AdminPage() {
   const storage = useStorage();
   const authService = new AuthService(storage);
 
+  // Clear cache function
+  const clearAllCache = async () => {
+    await queryClient.clear(); // Clear React Query cache
+    await storage.clearAllData?.(); // Clear localStorage
+    window.location.reload(); // Force page reload
+  };
+
   // Fetch users from API
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ['/api/users/admin'],
@@ -83,7 +90,9 @@ export function AdminPage() {
       const response = await fetch('/api/users/admin');
       if (!response.ok) throw new Error('Failed to fetch users');
       return response.json();
-    }
+    },
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0     // Don't cache results (React Query v5)
   });
 
   // Create user mutation
@@ -161,7 +170,7 @@ export function AdminPage() {
 
     // Check if phone already exists (except for current user in edit mode)
     const phoneUsername = phoneToUsername(data.phone);
-    const existingUser = users?.find(u => u.username === phoneUsername);
+    const existingUser = users?.find((u: User) => u.username === phoneUsername);
     if (existingUser && (!isEdit || existingUser.id !== editUser?.id)) {
       newErrors.phone = "Este telefone já está cadastrado";
     }
@@ -371,11 +380,21 @@ export function AdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-4">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestão de Usuários</h1>
-        <p className="text-lg text-muted-foreground">
-          Painel de controle de usuários do sistema
-        </p>
+      <div className="mb-8 flex justify-between items-center">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestão de Usuários</h1>
+          <p className="text-lg text-muted-foreground">
+            Painel de controle de usuários do sistema
+          </p>
+        </div>
+        <Button 
+          onClick={clearAllCache}
+          variant="outline"
+          className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+          data-testid="button-clear-cache"
+        >
+          🔄 Limpar Cache
+        </Button>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -507,7 +526,7 @@ export function AdminPage() {
             <div className="space-y-4">
               {isLoading ? (
                 <div className="text-center p-4">Carregando usuários...</div>
-              ) : users.map(user => (
+              ) : users.map((user: User) => (
                 <div 
                   key={user.id} 
                   className={`p-4 border rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 ${!user.active ? 'bg-gray-50 opacity-70' : 'bg-white'}`}
