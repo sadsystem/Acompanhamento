@@ -11,7 +11,7 @@ import { CPFInput } from "../components/forms/CPFInput";
 import { useStorage } from "../hooks/useStorage";
 import { User, Role } from "../config/types";
 import { uuid } from "../utils/calc";
-import { UserPlus, Edit, UserX, Users, CheckCircle, LogIn } from "lucide-react";
+import { UserPlus, Edit, UserX, Users, CheckCircle, LogIn, Trash2 } from "lucide-react";
 import { AuthService } from "../auth/service";
 
 // Function to get role badge styling
@@ -67,6 +67,8 @@ export function AdminPage() {
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const storage = useStorage();
   const authService = new AuthService(storage);
 
@@ -296,6 +298,43 @@ export function AdminPage() {
     }
   };
 
+  const handleDeleteUserClick = (user: User) => {
+    // Verificar se o usuário atual é ADM
+    if (!currentUser || currentUser.permission !== "ADM") {
+      alert("Acesso negado. Apenas administradores podem usar esta função.");
+      return;
+    }
+
+    // Não permitir que ADM exclua a si mesmo
+    if (user.id === currentUser.id) {
+      alert("Você não pode excluir sua própria conta.");
+      return;
+    }
+
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+
+    try {
+      // Como não existe deleteUser no storage, vamos implementar manualmente
+      const allUsers = await storage.getUsers();
+      const filteredUsers = allUsers.filter(u => u.id !== userToDelete.id);
+      await storage.setUsers(filteredUsers);
+      
+      await loadUsers();
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      
+      alert(`Usuário ${userToDelete.displayName} foi excluído permanentemente do sistema.`);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Erro ao excluir usuário. Tente novamente.");
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4">
       <div className="text-center mb-8">
@@ -494,7 +533,7 @@ export function AdminPage() {
                   
                   {/* Line 4: Admin Login As User Button (only for ADM users) */}
                   {currentUser?.permission === "ADM" && user.id !== currentUser.id && (
-                    <div className="flex justify-center pt-3 border-t border-gray-100 mt-3">
+                    <div className="flex justify-center items-center gap-2 pt-3 border-t border-gray-100 mt-3">
                       <Button
                         onClick={() => handleLoginAsUser(user)}
                         variant="outline"
@@ -504,6 +543,15 @@ export function AdminPage() {
                       >
                         <LogIn className="w-3 h-3 mr-1" />
                         Logar como este usuário
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteUserClick(user)}
+                        variant="outline"
+                        size="sm"
+                        className="px-2 py-2 h-8 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300"
+                        data-testid={`button-delete-${user.username}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   )}
@@ -704,6 +752,68 @@ export function AdminPage() {
               className="px-6"
             >
               Entendi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-6 h-6" />
+              Confirmação de Segurança
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação é irreversível e irá excluir permanentemente o usuário
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Trash2 className="w-5 h-5 text-red-600" />
+                <span className="font-medium text-red-800">Atenção: Exclusão Permanente</span>
+              </div>
+              <p className="text-sm text-red-700">
+                O usuário será removido completamente do sistema e todos os seus dados serão perdidos.
+              </p>
+            </div>
+            
+            {userToDelete && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>Usuário a ser excluído:</strong><br/>
+                  <strong>Nome:</strong> {userToDelete.displayName}<br/>
+                  <strong>Telefone:</strong> {userToDelete.phone}<br/>
+                  <strong>Cargo:</strong> {userToDelete.cargo}<br/>
+                  <strong>Permissão:</strong> {userToDelete.permission}
+                </p>
+              </div>
+            )}
+            
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-xs text-gray-700">
+                ⚠️ <strong>Importante:</strong> Esta ação não pode ser desfeita. Certifique-se de que realmente deseja excluir este usuário.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteModal(false)}
+              className="px-6"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              className="px-6"
+            >
+              Sim, Excluir Permanentemente
             </Button>
           </div>
         </DialogContent>
