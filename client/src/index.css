@@ -120,57 +120,57 @@
   background-color: hsl(45.4 93.4% 47.5%); 
 }
 
-/* Accessibility Mode Styles - Card Specific Only */
-/* Apply only to content within cards, not header or footer */
-.accessibility-mode h2:not(header h2):not(footer h2) {
+/* Accessibility Mode Styles - Only for main content cards */
+/* Very specific targeting to avoid affecting header/footer */
+main .accessibility-mode h2 {
   font-size: 1.8rem !important;
   font-weight: 700 !important;
   line-height: 1.4 !important;
   letter-spacing: 0.02em !important;
 }
 
-.accessibility-mode .text-lg:not(header .text-lg):not(footer .text-lg) {
+main .accessibility-mode .text-lg {
   font-size: 1.4rem !important;
   font-weight: 600 !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode .text-sm:not(header .text-sm):not(footer .text-sm) {
+main .accessibility-mode .text-sm {
   font-size: 1.2rem !important;
   line-height: 1.5 !important;
   font-weight: 500 !important;
 }
 
-.accessibility-mode .text-xs:not(header .text-xs):not(footer .text-xs) {
+main .accessibility-mode .text-xs {
   font-size: 1.1rem !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode .text-xl:not(header .text-xl):not(footer .text-xl) {
+main .accessibility-mode .text-xl {
   font-size: 2rem !important;
   font-weight: 700 !important;
   line-height: 1.4 !important;
 }
 
-.accessibility-mode p:not(header p):not(footer p) {
+main .accessibility-mode p {
   font-size: 1.3rem !important;
   line-height: 1.6 !important;
   letter-spacing: 0.01em !important;
   font-weight: 500 !important;
 }
 
-.accessibility-mode span:not(header span):not(footer span) {
+main .accessibility-mode span {
   font-size: 1.2rem !important;
   line-height: 1.5 !important;
   font-weight: 500 !important;
 }
 
-.accessibility-mode div:not(header div):not(footer div) {
+main .accessibility-mode div {
   font-size: 1.2rem !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode button:not([data-testid*="accessibility"]):not([data-testid*="mobile-menu"]):not(header button):not(footer button) {
+main .accessibility-mode button:not([data-testid*="accessibility"]):not([data-testid*="mobile-menu"]) {
   font-size: 1.4rem !important;
   font-weight: 600 !important;
   padding: 1rem 2rem !important;
@@ -178,43 +178,21 @@
   letter-spacing: 0.02em !important;
 }
 
-.accessibility-mode strong:not(header strong):not(footer strong) {
+main .accessibility-mode strong {
   font-size: 1.3rem !important;
   font-weight: 700 !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode label {
+main .accessibility-mode label {
   font-size: 1.2rem !important;
   font-weight: 600 !important;
   line-height: 1.4 !important;
 }
 
-.accessibility-mode textarea {
+main .accessibility-mode textarea {
   font-size: 1.2rem !important;
   padding: 0.8rem !important;
   min-height: 3rem !important;
   line-height: 1.4 !important;
-}
-
-/* Explicitly exclude header and footer from accessibility styles */
-header *,
-footer * {
-  font-size: inherit !important;
-  font-weight: inherit !important;
-  line-height: inherit !important;
-  letter-spacing: inherit !important;
-  padding: inherit !important;
-}
-
-/* Force reset header and footer styles even in accessibility mode */
-header.accessibility-mode *,
-footer.accessibility-mode *,
-.accessibility-mode header *,
-.accessibility-mode footer * {
-  font-size: inherit !important;
-  font-weight: inherit !important;
-  line-height: inherit !important;
-  letter-spacing: inherit !important;
-  padding: inherit !important;
 }
