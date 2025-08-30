@@ -492,13 +492,24 @@ export function TeamBuilderPage() {
     }
   };
 
-  const handleEditRoute = (route: TravelRouteWithTeam) => {
-    setEditingRoute(route);
-    // Usa a lista completa de cidades se disponível
-    const cities = route.cities && route.cities.length > 0 ? route.cities : [route.city || ""];
-    setNewRoute({ cities: [...cities], startDate: route.startDate });
-    setCitySearch("");
-    setShowNewRouteModal(true);
+  const handleEditRoute = async (route: TravelRouteWithTeam) => {
+    try {
+      // Retorna a rota para status "formation" (formação)
+      await storage.updateTravelRoute(route.id, {
+        status: "formation",
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Update state to move route back to formation
+      setRoutes(prev => prev.map(r => 
+        r.id === route.id 
+          ? { ...r, status: "formation" as const }
+          : r
+      ));
+    } catch (error) {
+      console.error("Error editing route:", error);
+      alert("Erro ao editar rota. Tente novamente.");
+    }
   };
 
   const handleUpdateRoute = async () => {
@@ -1336,13 +1347,13 @@ export function TeamBuilderPage() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-medium">{getAllCitiesFormatted(route)}</h4>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Início: {formatDateToBR(route.startDate)}
                       </p>
                     </div>
                     <div className="flex gap-1">
                       <Button 
-                        onClick={() => setEditingRoute(route)}
+                        onClick={() => handleEditRoute(route)}
                         variant="ghost"
                         size="sm"
                         className="p-1 h-8 w-8"
@@ -1361,7 +1372,7 @@ export function TeamBuilderPage() {
                   </div>
                   
                   {route.team && (
-                    <div className="text-xs text-muted-foreground mb-3">
+                    <div className="text-sm text-muted-foreground mb-3">
                       <div>Motorista: {route.team.driver?.displayName || "Não definido"}</div>
                       <div>
                         Ajudantes: {(route.team.assistantUsers?.length || 0) > 0 
