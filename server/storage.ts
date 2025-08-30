@@ -251,7 +251,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-import { DbStorage } from "./dbStorage";
-
-// Use database storage for real synchronization
-export const storage = new DbStorage();
+export const storage = new MemStorage();

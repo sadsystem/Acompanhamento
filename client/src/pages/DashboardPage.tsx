@@ -24,12 +24,11 @@ export function DashboardPage() {
   const [selectedUser, setSelectedUser] = useState("all");
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [dataSource, setDataSource] = useState<"database" | "localStorage">("localStorage");
   
   const storage = useStorage();
 
   useEffect(() => {
-    loadSyncedData(); // Sempre carregar dados do banco primeiro
+    loadData();
   }, [dateFrom, dateTo, selectedUser]);
 
   const loadData = async () => {
@@ -44,123 +43,7 @@ export function DashboardPage() {
     
     setEvaluations(allEvaluations);
     setUsers(allUsers);
-    setDataSource("localStorage");
   };
-
-  const loadSyncedData = async () => {
-    try {
-      // Buscar dados direto do banco PostgreSQL
-      const params = new URLSearchParams();
-      if (dateFrom) params.append('dateFrom', dateFrom);
-      if (dateTo) params.append('dateTo', dateTo);
-      if (selectedUser !== "all") params.append('evaluated', selectedUser);
-
-      console.log("🔄 CARREGANDO DO BANCO com filtros:", params.toString());
-      
-      const [evaluationsResponse, usersResponse] = await Promise.all([
-        fetch(`/api/evaluations?${params}`),
-        fetch('/api/users/team')
-      ]);
-      
-      if (evaluationsResponse.ok && usersResponse.ok) {
-        const serverEvaluations = await evaluationsResponse.json();
-        const serverUsers = await usersResponse.json();
-        
-        console.log("📊 DADOS DO BANCO RECEBIDOS:", {
-          totalEvaluations: serverEvaluations.length,
-          scores: serverEvaluations.map((e: any) => e.score),
-          averageScore: serverEvaluations.reduce((sum: number, e: any) => sum + e.score, 0) / serverEvaluations.length,
-          selectedUser: selectedUser,
-          filteredUser: selectedUser !== "all" ? selectedUser : "TODOS"
-        });
-        
-        setEvaluations(serverEvaluations);
-        setUsers(serverUsers);
-        setDataSource("database");
-        
-        console.log(`✅ Carregados ${serverEvaluations.length} avaliações sincronizadas do PostgreSQL`);
-      } else {
-        throw new Error("Erro ao buscar dados do servidor");
-      }
-    } catch (error) {
-      console.error("Erro ao carregar dados sincronizados:", error);
-      alert("Erro ao carregar dados sincronizados. Verifique sua conexão.");
-      // Não fazer fallback para localStorage - forçar apenas dados do banco
-    }
-  };
-
-  const migrateToDatabaseBulk = async () => {
-    try {
-      if (!navigator.onLine) {
-        alert("Sem conexão com a internet. Conecte-se e tente novamente.");
-        return;
-      }
-
-      // Pegar TODAS as avaliações do localStorage
-      const allLocalEvaluations = await storage.getEvaluations();
-      
-      if (allLocalEvaluations.length === 0) {
-        alert("Nenhuma avaliação encontrada no localStorage para migrar.");
-        return;
-      }
-
-      const response = await fetch('/api/sync/migrate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ evaluations: allLocalEvaluations })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        
-        // Marcar todas como sincronizadas no localStorage
-        const updatedEvaluations = allLocalEvaluations.map(evaluation => ({
-          ...evaluation,
-          status: "synced" as const
-        }));
-        
-        await storage.setEvaluations(updatedEvaluations);
-        
-        // Recarregar dados do banco
-        await loadSyncedData();
-        
-        alert(`Migração completa! ${result.syncedCount} avaliações enviadas para o banco PostgreSQL. Agora todos os dispositivos verão os mesmos dados.`);
-      } else {
-        throw new Error("Erro na migração");
-      }
-    } catch (error) {
-      console.error("Erro na migração:", error);
-      alert("Erro ao migrar dados. Verifique sua conexão e tente novamente.");
-    }
-  };
-
-  const resetAndLoadFromDatabase = async () => {
-    try {
-      if (!navigator.onLine) {
-        alert("Sem conexão com a internet. Conecte-se e tente novamente.");
-        return;
-      }
-
-      const confirmed = confirm("Isso irá limpar todos os dados locais e carregar apenas os dados do banco PostgreSQL. Deseja continuar?");
-      if (!confirmed) return;
-
-      // Limpar localStorage
-      if (storage.clearAllData) {
-        await storage.clearAllData();
-      }
-
-      // Forçar carregamento do banco
-      await loadSyncedData();
-      
-      alert("Dados locais limpos! Agora exibindo apenas dados sincronizados do banco PostgreSQL.");
-    } catch (error) {
-      console.error("Erro ao resetar dados:", error);
-      alert("Erro ao resetar dados.");
-    }
-  };
-
 
   const stats = useMemo(() => {
     if (evaluations.length === 0) {
@@ -224,7 +107,7 @@ export function DashboardPage() {
         e.answers.filter(a => a.questionId === question.id)
       );
       const goodAnswers = categoryAnswers.filter(a => a.value === question.goodWhenYes).length;
-      const percentage = categoryAnswers.length > 0 ? (goodAnswers / categoryAnswers.length) : 0;
+      const percentage = categoryAnswers.length > 0 ? (goodAnswers / categoryAnswers.length) * 100 : 0;
       
       return {
         name: question.text.slice(0, 25) + '...',
@@ -250,7 +133,7 @@ export function DashboardPage() {
       
       weeklyTrend.push({
         date: date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }),
-        score: Number((avgScore * 100).toFixed(2)),
+        score: Number(avgScore.toFixed(2)),
         count: dayEvaluations.length
       });
     }
@@ -265,7 +148,7 @@ export function DashboardPage() {
     ];
     
     evaluations.forEach(evaluation => {
-      const scorePercent = evaluation.score * 100; // Converter para 0-100
+      const scorePercent = evaluation.score;
       const range = scoreRanges.find(r => scorePercent >= r.min && scorePercent <= r.max);
       if (range) range.count++;
     });
@@ -305,7 +188,7 @@ export function DashboardPage() {
     return Array.from(problemsByUserAndQuestion.entries())
       .map(([key, stats]) => {
         const [username, questionId] = key.split("|");
-        const percentage = stats.total > 0 ? (stats.bad / stats.total) : 0;
+        const percentage = stats.total > 0 ? stats.bad / stats.total : 0;
         return {
           username,
           questionId,
@@ -361,70 +244,14 @@ export function DashboardPage() {
   };
 
   const simulateSync = async () => {
-    try {
-      if (!navigator.onLine) {
-        alert("Sem conexão com a internet. Conecte-se e tente novamente.");
-        return;
-      }
-
-      // Pegar todas as avaliações do localStorage (incluindo as de outros dispositivos já sincronizadas)
-      const allEvaluations = await storage.getEvaluations();
-      const pendingEvaluations = allEvaluations.filter(e => e.status === "queued");
-      
-      if (pendingEvaluations.length === 0) {
-        // Se não há pendentes, buscar dados do servidor para mostrar dados de outros dispositivos
-        try {
-          const response = await fetch('/api/evaluations');
-          if (response.ok) {
-            const serverEvaluations = await response.json();
-            alert(`Dados sincronizados! Encontradas ${serverEvaluations.length} avaliações no total (incluindo de outros dispositivos).`);
-          }
-        } catch (error) {
-          alert("Nenhuma avaliação pendente para sincronizar");
-        }
-        return;
-      }
-
-      // Enviar avaliações pendentes para o banco PostgreSQL
-      let syncedCount = 0;
-      for (const evaluation of pendingEvaluations) {
-        try {
-          const response = await fetch('/api/evaluations', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(evaluation)
-          });
-
-          if (response.ok) {
-            syncedCount++;
-          } else {
-            console.error(`Erro ao sincronizar avaliação ${evaluation.id}:`, await response.text());
-          }
-        } catch (error) {
-          console.error(`Erro ao sincronizar avaliação ${evaluation.id}:`, error);
-        }
-      }
-      
-      // Marcar avaliações como sincronizadas no localStorage
-      const updatedEvaluations = allEvaluations.map(evaluation => ({
-        ...evaluation,
-        status: evaluation.status === "queued" ? "synced" as const : evaluation.status
-      }));
-      
-      await storage.setEvaluations(updatedEvaluations);
-      await loadData(); // Recarregar dados
-      
-      if (syncedCount > 0) {
-        alert(`Sucesso! ${syncedCount} avaliações sincronizadas com o banco de dados. Agora todos os dispositivos verão os mesmos dados.`);
-      } else {
-        alert("Erro ao sincronizar. Tente novamente.");
-      }
-    } catch (error) {
-      console.error("Erro na sincronização:", error);
-      alert("Erro ao sincronizar dados. Verifique sua conexão com a internet.");
-    }
+    const updatedEvaluations = evaluations.map(evaluation => ({
+      ...evaluation,
+      status: "synced" as const
+    }));
+    
+    await storage.setEvaluations(updatedEvaluations);
+    await loadData();
+    alert(`Sincronizados: ${evaluations.length} registros`);
   };
 
   const getUserDisplayName = (username: string) => {
@@ -435,18 +262,6 @@ export function DashboardPage() {
     <div className="max-w-7xl mx-auto p-4 space-y-6">
       {/* Header com filtros */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Filtros e Controles</h2>
-          <div className="flex items-center gap-2">
-            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-              dataSource === "database" 
-                ? "bg-green-100 text-green-800" 
-                : "bg-orange-100 text-orange-800"
-            }`}>
-              {dataSource === "database" ? "🔄 Dados Sincronizados" : "📱 Dados Locais"}
-            </div>
-          </div>
-        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <Label htmlFor="date-from" className="text-sm font-medium">De</Label>
@@ -499,15 +314,6 @@ export function DashboardPage() {
             <Button onClick={simulateSync} variant="outline" size="sm" data-testid="button-sync">
               Sincronizar
             </Button>
-            <Button onClick={loadSyncedData} variant="outline" size="sm" data-testid="button-load-synced">
-              Ver Todos os Dados
-            </Button>
-            <Button onClick={migrateToDatabaseBulk} variant="outline" size="sm" data-testid="button-migrate-bulk">
-              Migrar Tudo
-            </Button>
-            <Button onClick={resetAndLoadFromDatabase} variant="destructive" size="sm" data-testid="button-reset-load">
-              Limpar e Recarregar
-            </Button>
           </div>
         </div>
       </div>
@@ -548,7 +354,7 @@ export function DashboardPage() {
               <div>
                 <p className="text-sm font-medium text-orange-600">Score Médio</p>
                 <p className="text-3xl font-bold text-orange-900" data-testid="stat-average-score">
-                  {(stats.averageScore * 100).toFixed(1)}%
+                  {stats.averageScore.toFixed(1)}%
                 </p>
               </div>
               <Target className="h-8 w-8 text-orange-500" />
@@ -698,8 +504,8 @@ export function DashboardPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">{(performer.average * 100).toFixed(1)}%</div>
-                        <Progress value={performer.average * 100} className="w-16" />
+                        <div className="font-bold text-lg">{performer.average.toFixed(1)}%</div>
+                        <Progress value={performer.average} className="w-16" />
                       </div>
                     </div>
                   ))}
@@ -773,11 +579,11 @@ export function DashboardPage() {
                   <div key={category.name} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-medium">{category.fullName}</h4>
-                      <Badge variant={category.percentage >= 0.8 ? "default" : category.percentage >= 0.6 ? "secondary" : "destructive"}>
-                        {(category.percentage * 100).toFixed(1)}%
+                      <Badge variant={category.percentage >= 80 ? "default" : category.percentage >= 60 ? "secondary" : "destructive"}>
+                        {category.percentage.toFixed(1)}%
                       </Badge>
                     </div>
-                    <Progress value={category.percentage * 100} className="mb-2" />
+                    <Progress value={category.percentage} className="mb-2" />
                     <div className="text-xs text-gray-600">
                       {category.good} de {category.total} respostas positivas
                     </div>
@@ -808,7 +614,7 @@ export function DashboardPage() {
                       </div>
                       <div className="text-center p-4 bg-green-50 rounded-lg">
                         <div className="text-2xl font-bold text-green-900">
-                          {(((stats.individualStats.get(selectedUser)?.scoreSum || 0) / (stats.individualStats.get(selectedUser)?.count || 1)) * 100).toFixed(1)}%
+                          {((stats.individualStats.get(selectedUser)?.scoreSum || 0) / (stats.individualStats.get(selectedUser)?.count || 1)).toFixed(1)}%
                         </div>
                         <div className="text-sm text-green-600">Score Médio</div>
                       </div>
@@ -836,8 +642,8 @@ export function DashboardPage() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-lg font-bold">{(percentage * 100).toFixed(1)}%</div>
-                              <Progress value={percentage * 100} className="w-20" />
+                              <div className="text-lg font-bold">{percentage.toFixed(1)}%</div>
+                              <Progress value={percentage} className="w-20" />
                             </div>
                           </div>
                         );
@@ -894,8 +700,8 @@ export function DashboardPage() {
                           {getUserDisplayName(evaluation.evaluated)}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <Badge variant={evaluation.score >= 0.8 ? "default" : evaluation.score >= 0.6 ? "secondary" : "destructive"}>
-                            {(evaluation.score * 100).toFixed(1)}%
+                          <Badge variant={evaluation.score >= 80 ? "default" : evaluation.score >= 60 ? "secondary" : "destructive"}>
+                            {evaluation.score.toFixed(1)}%
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-sm">

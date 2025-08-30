@@ -1,6 +1,0 @@
-id,username,phone,password,display_name,role,permission,active,cargo,cpf,created_at
-44d38cf5-5c88-48e8-af2a-b4c7ca121033,admin,admin,admin123,Administrador,admin,ADM,t,Gestor,,2025-08-30 14:02:38.738377
-8f2778c3-75d6-4ada-adbd-7f6ef46d6290,(11)99999-8888,(11)99999-8888,123456,Motorista Teste 1,colaborador,Colaborador,t,Motorista,,2025-08-30 14:02:38.738377
-a6aebe80-7779-463a-a195-8833cc1c6a1a,(11)99999-7777,(11)99999-7777,123456,Ajudante Teste 1,colaborador,Colaborador,t,Ajudante,,2025-08-30 14:02:38.738377
-be5e33a0-57a9-4a51-b8b0-8368d65cacca,(11)99999-6666,(11)99999-6666,123456,Motorista Teste 2,colaborador,Colaborador,t,Motorista,,2025-08-30 14:02:38.738377
-1599fb7c-89c0-43d4-acff-6e62b8187edd,(11)99999-5555,(11)99999-5555,123456,Ajudante Teste 2,colaborador,Colaborador,t,Ajudante,,2025-08-30 14:02:38.738377
