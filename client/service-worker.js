@@ -1,5 +1,5 @@
-const CACHE_NAME = 'sad-ouro-verde-0.81a';
-const VERSION_CHECK = '0.81a-' + Date.now(); // Força atualização
+const CACHE_NAME = 'sad-ouro-verde-0.82a-' + Date.now();
+const VERSION_CHECK = '0.82a-' + Date.now(); // Dashboard renovado
 const urlsToCache = [
   '/',
   '/src/main.tsx',
