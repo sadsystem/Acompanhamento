@@ -76,8 +76,8 @@ export function DashboardPage() {
       }
     } catch (error) {
       console.error("Erro ao carregar dados sincronizados:", error);
-      alert("Erro ao carregar dados sincronizados. Usando dados locais.");
-      await loadData(); // Fallback to local data
+      alert("Erro ao carregar dados sincronizados. Verifique sua conexão.");
+      // Não fazer fallback para localStorage - forçar apenas dados do banco
     }
   };
 
@@ -150,6 +150,48 @@ export function DashboardPage() {
     } catch (error) {
       console.error("Erro ao resetar dados:", error);
       alert("Erro ao resetar dados.");
+    }
+  };
+
+  const forceFromDatabase = async () => {
+    try {
+      // Limpar localStorage sem confirmação
+      if (storage.clearAllData) {
+        await storage.clearAllData();
+      }
+
+      // Recarregar FORÇADAMENTE do banco
+      const params = new URLSearchParams();
+      if (dateFrom) params.append('dateFrom', dateFrom);
+      if (dateTo) params.append('dateTo', dateTo);
+      if (selectedUser !== "all") params.append('evaluated', selectedUser);
+
+      console.log("FORÇANDO carregamento do banco com filtros:", params.toString());
+      
+      const response = await fetch(`/api/evaluations?${params}`);
+      const usersResponse = await fetch('/api/users/team');
+      
+      if (response.ok && usersResponse.ok) {
+        const serverEvaluations = await response.json();
+        const serverUsers = await usersResponse.json();
+        
+        console.log("Dados FORÇADOS do banco:", {
+          evaluations: serverEvaluations,
+          count: serverEvaluations.length,
+          scores: serverEvaluations.map(e => e.score)
+        });
+        
+        setEvaluations(serverEvaluations);
+        setUsers(serverUsers);
+        setDataSource("database");
+        
+        alert(`FORÇADO: ${serverEvaluations.length} avaliações carregadas do banco PostgreSQL.`);
+      } else {
+        alert("Erro ao forçar carregamento do banco.");
+      }
+    } catch (error) {
+      console.error("Erro ao forçar carregamento:", error);
+      alert("Erro ao forçar carregamento do banco.");
     }
   };
 
@@ -498,6 +540,9 @@ export function DashboardPage() {
             </Button>
             <Button onClick={resetAndLoadFromDatabase} variant="destructive" size="sm" data-testid="button-reset-load">
               Limpar e Recarregar
+            </Button>
+            <Button onClick={forceFromDatabase} variant="secondary" size="sm" data-testid="button-force-db">
+              🔄 Só Banco
             </Button>
           </div>
         </div>
