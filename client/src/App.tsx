@@ -104,9 +104,7 @@ function AppContent() {
   }
 
   return (
-    <div className={`min-h-screen bg-background flex flex-col ${
-      accessibilityMode ? 'accessibility-mode' : ''
-    }`}>
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       {currentUser && (
         <header className="bg-card border-b border-border sticky top-0 z-50">
