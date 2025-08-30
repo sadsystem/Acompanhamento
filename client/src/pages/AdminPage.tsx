@@ -129,7 +129,20 @@ export function AdminPage() {
   });
 
   useEffect(() => {
-    loadCurrentUser();
+    const initAdminPage = async () => {
+      // Force aggressive cache clear for AdminPage
+      await queryClient.clear();
+      await storage.clearAllData?.();
+      console.log('AdminPage: All caches cleared');
+      
+      // Force refresh users data
+      await refetch();
+      console.log('AdminPage: Users data refreshed');
+      
+      loadCurrentUser();
+    };
+    
+    initAdminPage();
   }, []);
 
   const loadCurrentUser = async () => {

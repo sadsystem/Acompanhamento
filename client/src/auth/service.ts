@@ -1,5 +1,6 @@
 import { StorageAdapter } from '../storage/adapter';
 import { User, LoginResult, Session } from '../config/types';
+import { queryClient } from '@/lib/queryClient';
 
 export class AuthService {
   constructor(private storage: StorageAdapter) {}
@@ -31,6 +32,10 @@ export class AuthService {
       // Save session
       const session: Session = { username: result.data.user.username };
       await this.storage.setSession(session);
+      
+      // Force clear all caches on successful login to ensure fresh data
+      await queryClient.clear();
+      await this.storage.clearAllData?.();
       
       return { ok: true, user: result.data.user };
     } catch (error) {
