@@ -1,0 +1,5 @@
+id,text,order,good_when_yes,require_reason_when
+pontualidade,Chegou dentro do horário estipulado?,1,t,no
+conduta,Foi educado e prestativo nas atividades de hoje?,2,t,no
+desvio_rota,Houve desvio de rota ao longo do dia?,3,f,yes
+avaria,Causou alguma avaria ao manusear os produtos?,4,f,yes
