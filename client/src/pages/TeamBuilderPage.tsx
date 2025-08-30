@@ -828,7 +828,7 @@ export function TeamBuilderPage() {
                             }`}
                           >
                             {route.team?.driver && route.team.driver.username && route.team.driver.id && (
-                              <Draggable key={`team-driver-${route.id}-${route.team.driver.id}`} draggableId={route.team.driver.id} index={0})>
+                              <Draggable key={`team-driver-${route.id}-${route.team.driver.id}`} draggableId={route.team.driver.id} index={0}>
                                 {(provided, snapshot) => (
                                   <div
                                     ref={provided.innerRef}
@@ -1108,9 +1108,9 @@ export function TeamBuilderPage() {
                   }
                 </p>
                 <div className="p-3 bg-muted rounded text-xs">
-                  <strong>Rota:</strong> {getAllCitiesFormatted(selectedRoute)}<br/>
-                  <strong>Data:</strong> {selectedRoute.startDate}
-                  {selectedRoute.team && (
+                  <strong>Rota:</strong> {selectedRoute ? getAllCitiesFormatted(selectedRoute) : 'N/A'}<br/>
+                  <strong>Data:</strong> {selectedRoute?.startDate}
+                  {selectedRoute?.team && (
                     <>
                       <br/><strong>Motorista:</strong> {selectedRoute.team.driver?.displayName || 'Não definido'}
                       <br/><strong>Ajudantes:</strong> {selectedRoute.team.assistantUsers?.map(a => a.displayName).join(', ') || 'Nenhum'}
