@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 import { useStorage } from "../hooks/useStorage";
 import { User, TravelRouteWithTeam } from "../config/types";
 import { toDateRefBR } from "../utils/time";
-import { Users, RefreshCw } from "lucide-react";
+import { Users, RefreshCw, Eye } from "lucide-react";
 
 interface SelectPartnerPageProps {
   currentUser: User;
@@ -20,6 +20,7 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
   const [alreadyEvaluated, setAlreadyEvaluated] = useState<Set<string>>(new Set());
   const [currentRoute, setCurrentRoute] = useState<TravelRouteWithTeam | null>(null);
   const [hasActiveRoute, setHasActiveRoute] = useState<boolean | null>(null);
+  const [accessibilityMode, setAccessibilityMode] = useState(false);
   
   const storage = useStorage();
   const today = toDateRefBR();
@@ -122,11 +123,23 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
 
   return (
     <div className="flex-1 flex flex-col justify-center max-w-3xl mx-auto p-4">
-      <Card>
+      <Card className={accessibilityMode ? 'accessibility-mode' : ''}>
         <CardContent className="pt-6">
-          <h2 className="text-lg font-semibold mb-4 text-center uppercase tracking-wide">
-            SELECIONE O PARCEIRO DE EQUIPE
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-center uppercase tracking-wide flex-1">
+              SELECIONE O PARCEIRO DE EQUIPE
+            </h2>
+            <button
+              onClick={() => setAccessibilityMode(!accessibilityMode)}
+              className={`px-3 py-2 text-sm rounded-md border border-gray-200 hover:bg-gray-50 transition-colors ${
+                accessibilityMode ? 'bg-blue-50 border-blue-200 text-blue-700' : 'text-gray-600'
+              }`}
+              data-testid="button-accessibility"
+              title="Modo de Acessibilidade"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          </div>
           
           
           {hasActiveRoute === false && (
