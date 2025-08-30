@@ -5,26 +5,37 @@ export class AuthService {
   constructor(private storage: StorageAdapter) {}
 
   async login(username: string, password: string): Promise<LoginResult> {
-    // Convert phone to username format for lookup
-    const phoneDigits = username.replace(/\D/g, '');
-    const user = await this.storage.getUserByUsername(phoneDigits);
-    
-    if (!user) {
-      return { ok: false, error: "Telefone não encontrado" };
+    try {
+      // Convert phone to username format for API call
+      const phoneDigits = username.replace(/\D/g, '');
+      
+      // Call login API directly
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: phoneDigits,
+          password: password,
+          remember: false
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        return { ok: false, error: result.error || "Credenciais inválidas" };
+      }
+      
+      // Save session
+      const session: Session = { username: result.data.user.username };
+      await this.storage.setSession(session);
+      
+      return { ok: true, user: result.data.user };
+    } catch (error) {
+      return { ok: false, error: "Erro de conexão" };
     }
-    
-    if (!user.active) {
-      return { ok: false, error: "Seu acesso foi desativado, consulte o seu gestor responsável." };
-    }
-    
-    if (user.password !== password) {
-      return { ok: false, error: "Senha incorreta" };
-    }
-    
-    const session: Session = { username: user.username };
-    await this.storage.setSession(session);
-    
-    return { ok: true, user };
   }
 
   async getCurrentUser(): Promise<User | null> {
