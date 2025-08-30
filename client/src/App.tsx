@@ -39,10 +39,6 @@ function AppContent() {
 
   const initializeApp = async () => {
     try {
-      // Force clear cache on app initialization to ensure fresh data
-      await queryClient.clear();
-      console.log('Cache cleared on app initialization');
-      
       // Check for remembered session
       await authService.ensureFirstLogin();
       

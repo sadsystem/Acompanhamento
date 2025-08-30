@@ -33,10 +33,6 @@ export class AuthService {
       const session: Session = { username: result.data.user.username };
       await this.storage.setSession(session);
       
-      // Force clear all caches on successful login to ensure fresh data
-      await queryClient.clear();
-      await this.storage.clearAllData?.();
-      
       return { ok: true, user: result.data.user };
     } catch (error) {
       console.error('Login error:', error);

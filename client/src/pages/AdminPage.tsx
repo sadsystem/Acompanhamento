@@ -76,11 +76,28 @@ export function AdminPage() {
   const storage = useStorage();
   const authService = new AuthService(storage);
 
-  // Clear cache function
+  // Clear cache function - Enhanced for preview
   const clearAllCache = async () => {
-    await queryClient.clear(); // Clear React Query cache
-    await storage.clearAllData?.(); // Clear localStorage
-    window.location.reload(); // Force page reload
+    try {
+      // Clear React Query cache
+      await queryClient.clear();
+      
+      // Clear localStorage
+      await storage.clearAllData?.();
+      
+      // Clear service worker caches
+      if ('serviceWorker' in navigator && 'caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        console.log('All browser caches cleared');
+      }
+      
+      // Force complete page reload
+      window.location.href = window.location.href;
+    } catch (error) {
+      console.error('Cache clear error:', error);
+      window.location.reload();
+    }
   };
 
   // Fetch users from API with aggressive cache busting
@@ -139,15 +156,8 @@ export function AdminPage() {
 
   useEffect(() => {
     const initAdminPage = async () => {
-      // Force aggressive cache clear for AdminPage
-      await queryClient.clear();
-      await storage.clearAllData?.();
-      console.log('AdminPage: All caches cleared');
-      
-      // Force refresh users data
+      // Simple refresh for AdminPage
       await refetch();
-      console.log('AdminPage: Users data refreshed');
-      
       loadCurrentUser();
     };
     
