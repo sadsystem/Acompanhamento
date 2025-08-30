@@ -32,6 +32,14 @@ export function DashboardPage() {
     loadSyncedData(); // Sempre carregar dados do banco primeiro
   }, [dateFrom, dateTo, selectedUser]);
 
+  // Debug: mostrar no console quando stats mudam
+  useEffect(() => {
+    console.log("Stats atualizados:", {
+      averageScore: stats.averageScore,
+      topPerformers: stats.topPerformers.map(p => ({ name: p.username, avg: p.average }))
+    });
+  }, [stats]);
+
   const loadData = async () => {
     const [allEvaluations, allUsers] = await Promise.all([
       storage.getEvaluations({
