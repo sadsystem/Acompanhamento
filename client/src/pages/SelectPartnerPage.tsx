@@ -162,7 +162,6 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
                 {currentRoute.vehicle && (
                   <><strong>Veículo:</strong> {currentRoute.vehicle.plate} {currentRoute.vehicle.model && currentRoute.vehicle.year ? `(${currentRoute.vehicle.model} ${currentRoute.vehicle.year})` : currentRoute.vehicle.model || ''}<br /></>
                 )}
-                Você pode avaliar apenas os colegas da sua equipe atual.
               </AlertDescription>
             </Alert>
           )}

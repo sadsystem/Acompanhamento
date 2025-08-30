@@ -10,7 +10,7 @@ import { AuthService } from "./auth/service";
 import { seedUsers } from "./storage/seeds";
 import { User, AppRoute } from "./config/types";
 import { CONFIG } from "./config/constants";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Eye } from "lucide-react";
 
 // Pages
 import { LoginPage } from "./pages/LoginPage";
@@ -30,6 +30,7 @@ function AppContent() {
   const [selectedPartner, setSelectedPartner] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [accessibilityMode, setAccessibilityMode] = useState(false);
 
   const authService = new AuthService(storageAdapter);
 
@@ -103,7 +104,9 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className={`min-h-screen bg-background flex flex-col ${
+      accessibilityMode ? 'accessibility-mode' : ''
+    }`}>
       {/* Header */}
       {currentUser && (
         <header className="bg-card border-b border-border sticky top-0 z-50">
@@ -175,6 +178,16 @@ function AppContent() {
                   </button>
                 )}
                 
+                <button
+                  onClick={() => setAccessibilityMode(!accessibilityMode)}
+                  className={`px-3 py-1 text-sm rounded-md hover:bg-muted ${
+                    accessibilityMode ? 'bg-primary text-primary-foreground' : ''
+                  }`}
+                  data-testid="button-accessibility"
+                  title="Modo de Acessibilidade"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
                 <button
                   onClick={handleLogout}
                   className="px-3 py-1 text-sm rounded-md hover:bg-muted text-destructive"
@@ -257,6 +270,22 @@ function AppContent() {
                       Voltar
                     </button>
                   )}
+                  
+                  <button
+                    onClick={() => {
+                      setAccessibilityMode(!accessibilityMode);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted ${
+                      accessibilityMode ? 'bg-primary text-primary-foreground' : ''
+                    }`}
+                    data-testid="mobile-button-accessibility"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4" />
+                      Acessibilidade
+                    </div>
+                  </button>
                   
                   <button
                     onClick={() => {
