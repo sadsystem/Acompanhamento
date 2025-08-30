@@ -7,7 +7,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { StorageProvider } from "./context/StorageContext";
 import { LocalStorageAdapter } from "./storage/localStorage";
 import { AuthService } from "./auth/service";
-import { seedUsers } from "./storage/seeds";
 import { User, AppRoute } from "./config/types";
 import { CONFIG } from "./config/constants";
 import { Menu, X, Eye } from "lucide-react";
@@ -40,9 +39,6 @@ function AppContent() {
 
   const initializeApp = async () => {
     try {
-      // Seed initial data
-      await seedUsers(storageAdapter);
-      
       // Check for remembered session
       await authService.ensureFirstLogin();
       

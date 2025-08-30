@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { SupabaseStorage } from "./supabaseStorage";
+
+const storage = new SupabaseStorage();
 import { z } from "zod";
 import { insertUserSchema, insertEvaluationSchema } from "@shared/schema";
 
@@ -17,6 +19,8 @@ const createUserSchema = insertUserSchema.extend({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize Supabase storage and seed data
+  await storage.seedInitialData();
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {
