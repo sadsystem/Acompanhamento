@@ -83,16 +83,25 @@ export function AdminPage() {
     window.location.reload(); // Force page reload
   };
 
-  // Fetch users from API
+  // Fetch users from API with aggressive cache busting
   const { data: users = [], isLoading, refetch } = useQuery({
-    queryKey: ['/api/users/admin'],
+    queryKey: ['/api/users/admin', Date.now()], // Add timestamp to force refresh
     queryFn: async () => {
-      const response = await fetch('/api/users/admin');
+      const timestamp = Date.now();
+      const response = await fetch(`/api/users/admin?_t=${timestamp}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch users');
       return response.json();
     },
     staleTime: 0, // Always fetch fresh data
-    gcTime: 0     // Don't cache results (React Query v5)
+    gcTime: 0,    // Don't cache results (React Query v5)
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true
   });
 
   // Create user mutation

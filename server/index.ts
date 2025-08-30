@@ -13,6 +13,18 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Disable caching for all API routes - force fresh data
+app.use('/api', (req, res, next) => {
+  res.set({
+    'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Last-Modified': new Date().toUTCString(),
+    'ETag': Math.random().toString()
+  });
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

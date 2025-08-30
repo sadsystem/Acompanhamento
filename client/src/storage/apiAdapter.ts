@@ -5,7 +5,14 @@ import { apiRequest } from '@/lib/queryClient';
 export class ApiStorageAdapter implements StorageAdapter {
   // Users
   async getUsers(): Promise<User[]> {
-    const response = await fetch('/api/users/admin');
+    const timestamp = Date.now();
+    const response = await fetch(`/api/users/admin?_t=${timestamp}`, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     if (!response.ok) throw new Error('Failed to fetch users');
     return response.json();
   }
