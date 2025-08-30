@@ -122,37 +122,37 @@
 
 /* Accessibility Mode Styles - Card Specific Only */
 /* Apply only to content within cards, not header or footer */
-.accessibility-mode h2 {
+.accessibility-mode h2:not(header h2):not(footer h2) {
   font-size: 1.8rem !important;
   font-weight: 700 !important;
   line-height: 1.4 !important;
   letter-spacing: 0.02em !important;
 }
 
-.accessibility-mode .text-lg {
+.accessibility-mode .text-lg:not(header .text-lg):not(footer .text-lg) {
   font-size: 1.4rem !important;
   font-weight: 600 !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode .text-sm {
+.accessibility-mode .text-sm:not(header .text-sm):not(footer .text-sm) {
   font-size: 1.2rem !important;
   line-height: 1.5 !important;
   font-weight: 500 !important;
 }
 
-.accessibility-mode .text-xs {
+.accessibility-mode .text-xs:not(header .text-xs):not(footer .text-xs) {
   font-size: 1.1rem !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode .text-xl {
+.accessibility-mode .text-xl:not(header .text-xl):not(footer .text-xl) {
   font-size: 2rem !important;
   font-weight: 700 !important;
   line-height: 1.4 !important;
 }
 
-.accessibility-mode p {
+.accessibility-mode p:not(header p):not(footer p) {
   font-size: 1.3rem !important;
   line-height: 1.6 !important;
   letter-spacing: 0.01em !important;
@@ -198,15 +198,23 @@
 }
 
 /* Explicitly exclude header and footer from accessibility styles */
-header .accessibility-mode,
-footer .accessibility-mode {
-  font-size: inherit !important;
-}
-
-header * {
-  font-size: inherit !important;
-}
-
+header *,
 footer * {
   font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  letter-spacing: inherit !important;
+  padding: inherit !important;
+}
+
+/* Force reset header and footer styles even in accessibility mode */
+header.accessibility-mode *,
+footer.accessibility-mode *,
+.accessibility-mode header *,
+.accessibility-mode footer * {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  letter-spacing: inherit !important;
+  padding: inherit !important;
 }
