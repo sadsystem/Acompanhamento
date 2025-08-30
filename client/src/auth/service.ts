@@ -34,7 +34,8 @@ export class AuthService {
       
       return { ok: true, user: result.data.user };
     } catch (error) {
-      return { ok: false, error: "Erro de conexão" };
+      console.error('Login error:', error);
+      return { ok: false, error: "Telefone não encontrado" };
     }
   }
 
