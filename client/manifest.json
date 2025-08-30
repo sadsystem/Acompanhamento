@@ -1,7 +1,7 @@
 {
-  "name": "Sistema de Acompanhamento Diário - Ouro Verde",
+  "name": "Acompanhamento Diário - Ouro Verde",
   "short_name": "SAD Ouro Verde",
-  "description": "Sistema de Gestão de Equipes para Ouro Verde",
+  "description": "Acompanhamento Diário de Equipes para Ouro Verde",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
