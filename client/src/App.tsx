@@ -116,16 +116,21 @@ function AppContent() {
                   }`}>
                     <span>OURO VERDE</span>
                   </div>
-                  <h1 className="text-sm sm:text-lg font-semibold text-foreground">
-                    Sistema de Acompanhamento Diário
-                  </h1>
+                  <div>
+                    <h1 className="text-sm sm:text-lg font-semibold text-foreground">
+                      Sistema de Acompanhamento Diário
+                    </h1>
+                    <p className="text-xs text-muted-foreground">
+                      Versão 0.12a
+                    </p>
+                  </div>
                 </div>
               </div>
               
               {/* Desktop Menu */}
               <div className="hidden lg:flex items-center space-x-4">
                 <span className="text-sm text-muted-foreground">
-                  {currentUser.displayName}
+                  {currentUser.displayName.split(' ').slice(0, 2).join(' ')}
                 </span>
                 
                 {currentUser.role === "admin" && (
@@ -155,7 +160,7 @@ function AppContent() {
                       }`}
                       data-testid="nav-admin"
                     >
-                      Gestão
+                      Gestão de Usuários
                     </button>
                   </div>
                 )}
@@ -196,7 +201,7 @@ function AppContent() {
               <div className="lg:hidden border-t border-border bg-card">
                 <div className="px-4 py-3 space-y-2">
                   <div className="text-sm text-muted-foreground pb-2 border-b border-border">
-                    {currentUser.displayName}
+                    {currentUser.displayName.split(' ').slice(0, 2).join(' ')}
                   </div>
                   
                   {currentUser.role === "admin" && (

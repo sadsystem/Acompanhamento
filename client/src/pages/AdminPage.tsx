@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../components/ui/dialog";
 import { Badge } from "../components/ui/badge";
 import { PhoneInput } from "../components/forms/PhoneInput";
+import { CPFInput } from "../components/forms/CPFInput";
 import { useStorage } from "../hooks/useStorage";
 import { User, Role } from "../config/types";
 import { uuid } from "../utils/calc";
@@ -16,7 +17,8 @@ export function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
     displayName: "",
-    phone: "(87) 9 ",
+    cpf: "",
+    phone: "",
     password: "",
     confirmPassword: "",
     cargo: "",
@@ -28,6 +30,7 @@ export function AdminPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
     displayName: "",
+    cpf: "",
     phone: "",
     password: "",
     confirmPassword: "",
@@ -59,10 +62,16 @@ export function AdminPage() {
       newErrors.displayName = "Nome completo é obrigatório";
     }
 
-    if (!data.phone || data.phone === "(87) 9 ") {
+    if (!data.cpf.trim()) {
+      newErrors.cpf = "CPF é obrigatório";
+    } else if (data.cpf.replace(/\D/g, '').length !== 11) {
+      newErrors.cpf = "CPF deve ter 11 dígitos";
+    }
+
+    if (!data.phone) {
       newErrors.phone = "Telefone é obrigatório";
-    } else if (!/^\(87\) 9 \d{4}-\d{4}$/.test(data.phone)) {
-      newErrors.phone = "Telefone deve ter o formato (87) 9 XXXX-XXXX";
+    } else if (!/^\(\d{2}\) 9 \d{4}-\d{4}$/.test(data.phone)) {
+      newErrors.phone = "Telefone deve ter o formato (XX) 9 XXXX-XXXX";
     }
 
     if (!isEdit && !data.password.trim()) {
@@ -104,6 +113,7 @@ export function AdminPage() {
       const newUser: User = {
         id: uuid(),
         username,
+        cpf: formData.cpf,
         phone: formData.phone,
         password: formData.password,
         displayName: formData.displayName.trim(),
@@ -119,7 +129,8 @@ export function AdminPage() {
       // Reset form
       setFormData({
         displayName: "",
-        phone: "(87) 9 ",
+        cpf: "",
+        phone: "",
         password: "",
         confirmPassword: "",
         cargo: "",
@@ -138,6 +149,7 @@ export function AdminPage() {
     setEditUser(user);
     setEditFormData({
       displayName: user.displayName,
+      cpf: user.cpf || "",
       phone: user.phone,
       password: "",
       confirmPassword: "",
@@ -165,6 +177,7 @@ export function AdminPage() {
       const updatedUser: User = {
         ...editUser,
         username,
+        cpf: editFormData.cpf,
         phone: editFormData.phone,
         displayName: editFormData.displayName.trim(),
         role,
@@ -239,6 +252,15 @@ export function AdminPage() {
                 {errors.displayName && (
                   <span className="text-sm text-red-600">{errors.displayName}</span>
                 )}
+              </div>
+
+              <div>
+                <CPFInput
+                  value={formData.cpf}
+                  onChange={(value) => setFormData(prev => ({ ...prev, cpf: value }))}
+                  label="CPF *"
+                  error={errors.cpf}
+                />
               </div>
 
               <div>
@@ -333,7 +355,7 @@ export function AdminPage() {
               {users.map(user => (
                 <div 
                   key={user.id} 
-                  className={`p-4 border rounded-lg shadow-sm ${!user.active ? 'bg-gray-50 opacity-70' : 'bg-white'}`}
+                  className={`p-4 border rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 ${!user.active ? 'bg-gray-50 opacity-70' : 'bg-white'}`}
                 >
                   {/* Line 1: Name and Deactivate Button */}
                   <div className="flex justify-between items-center mb-2">
@@ -413,6 +435,15 @@ export function AdminPage() {
                 id="edit-displayName"
                 value={editFormData.displayName}
                 onChange={(e) => setEditFormData(prev => ({ ...prev, displayName: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <CPFInput
+                value={editFormData.cpf}
+                onChange={(value) => setEditFormData(prev => ({ ...prev, cpf: value }))}
+                label="CPF"
+                error={errors.cpf}
               />
             </div>
 
