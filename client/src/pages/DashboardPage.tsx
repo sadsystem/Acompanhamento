@@ -537,7 +537,7 @@ export function DashboardPage() {
               <div>
                 <p className="text-sm font-medium text-orange-600">Score Médio</p>
                 <p className="text-3xl font-bold text-orange-900" data-testid="stat-average-score">
-                  {stats.averageScore.toFixed(1)}%
+                  {(stats.averageScore * 100).toFixed(1)}%
                 </p>
               </div>
               <Target className="h-8 w-8 text-orange-500" />
@@ -687,8 +687,8 @@ export function DashboardPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">{performer.average.toFixed(1)}%</div>
-                        <Progress value={performer.average} className="w-16" />
+                        <div className="font-bold text-lg">{(performer.average * 100).toFixed(1)}%</div>
+                        <Progress value={performer.average * 100} className="w-16" />
                       </div>
                     </div>
                   ))}
@@ -797,7 +797,7 @@ export function DashboardPage() {
                       </div>
                       <div className="text-center p-4 bg-green-50 rounded-lg">
                         <div className="text-2xl font-bold text-green-900">
-                          {((stats.individualStats.get(selectedUser)?.scoreSum || 0) / (stats.individualStats.get(selectedUser)?.count || 1)).toFixed(1)}%
+                          {(((stats.individualStats.get(selectedUser)?.scoreSum || 0) / (stats.individualStats.get(selectedUser)?.count || 1)) * 100).toFixed(1)}%
                         </div>
                         <div className="text-sm text-green-600">Score Médio</div>
                       </div>
@@ -825,8 +825,8 @@ export function DashboardPage() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-lg font-bold">{percentage.toFixed(1)}%</div>
-                              <Progress value={percentage} className="w-20" />
+                              <div className="text-lg font-bold">{(percentage * 100).toFixed(1)}%</div>
+                              <Progress value={percentage * 100} className="w-20" />
                             </div>
                           </div>
                         );
@@ -883,8 +883,8 @@ export function DashboardPage() {
                           {getUserDisplayName(evaluation.evaluated)}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <Badge variant={evaluation.score >= 80 ? "default" : evaluation.score >= 60 ? "secondary" : "destructive"}>
-                            {evaluation.score.toFixed(1)}%
+                          <Badge variant={evaluation.score >= 0.8 ? "default" : evaluation.score >= 0.6 ? "secondary" : "destructive"}>
+                            {(evaluation.score * 100).toFixed(1)}%
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-sm">
