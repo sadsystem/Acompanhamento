@@ -705,17 +705,18 @@ export function TeamBuilderPage() {
     const data = activeRoutes.map((route, index) => ({
       'Nº': index + 1,
       'Rota': getAllCitiesFormatted(route),
-      'Data de Início': route.startDate,
-      'Status': 'Ativa',
+      'Data de Início': formatDateToBR(route.startDate),
+      'Status': route.vehicle ? 'OK' : 'Pendente',
       'Motorista': route.team?.driver?.displayName || 'Não definido',
       'Ajudantes': route.team?.assistantUsers?.map(a => a.displayName).join(', ') || 'Nenhum',
+      'Veículo': route.vehicle?.plate || 'Não definido',
       'CPF Motorista': route.team?.driver?.cpf || 'Não informado',
       'Telefone Motorista': route.team?.driver?.phone || 'Não informado'
     }));
     
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Rotas Ativas");
+    XLSX.utils.book_append_sheet(wb, ws, "Rotas em andamento");
     
     // Auto-size columns
     const cols = [
@@ -725,6 +726,7 @@ export function TeamBuilderPage() {
       { wch: 10 },  // Status
       { wch: 25 },  // Motorista
       { wch: 30 },  // Ajudantes
+      { wch: 15 },  // Veículo
       { wch: 20 },  // CPF
       { wch: 20 }   // Telefone
     ];
@@ -732,7 +734,7 @@ export function TeamBuilderPage() {
     
     const now = new Date();
     const timestamp = now.toISOString().split('T')[0];
-    XLSX.writeFile(wb, `rotas-ativas-${timestamp}.xlsx`);
+    XLSX.writeFile(wb, `rotas-em-andamento-${timestamp}.xlsx`);
     setShowExportModal(false);
   };
   
@@ -745,7 +747,7 @@ export function TeamBuilderPage() {
     
     // Header
     doc.setFontSize(18);
-    doc.text('Relatório de Rotas Ativas', 14, 22);
+    doc.text('Relatório de Rotas em andamento', 14, 22);
     doc.setFontSize(12);
     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 32);
     
@@ -753,13 +755,14 @@ export function TeamBuilderPage() {
     const tableData = activeRoutes.map((route, index) => [
       index + 1,
       getAllCitiesFormatted(route),
-      route.startDate,
+      formatDateToBR(route.startDate),
       route.team?.driver?.displayName || 'Não definido',
-      route.team?.assistantUsers?.map(a => a.displayName).join(', ') || 'Nenhum'
+      route.team?.assistantUsers?.map(a => a.displayName).join(', ') || 'Nenhum',
+      route.vehicle?.plate || 'Não definido'
     ]);
     
     autoTable(doc, {
-      head: [['Nº', 'Rota', 'Data', 'Motorista', 'Ajudantes']],
+      head: [['Nº', 'Rota', 'Data', 'Motorista', 'Ajudantes', 'Veículo']],
       body: tableData,
       startY: 40,
       styles: {
@@ -773,16 +776,17 @@ export function TeamBuilderPage() {
       },
       columnStyles: {
         0: { halign: 'center', cellWidth: 15 },
-        1: { cellWidth: 60 },
+        1: { cellWidth: 50 },
         2: { halign: 'center', cellWidth: 25 },
-        3: { cellWidth: 45 },
-        4: { cellWidth: 45 }
+        3: { cellWidth: 40 },
+        4: { cellWidth: 35 },
+        5: { cellWidth: 25 }
       }
     });
     
     const now = new Date();
     const timestamp = now.toISOString().split('T')[0];
-    doc.save(`rotas-ativas-${timestamp}.pdf`);
+    doc.save(`rotas-em-andamento-${timestamp}.pdf`);
     setShowExportModal(false);
   };
   
@@ -806,11 +810,12 @@ export function TeamBuilderPage() {
     const data = finishedRoutes.map((route, index) => ({
       'Nº': index + 1,
       'Rota': getAllCitiesFormatted(route),
-      'Data de Início': route.startDate,
-      'Data de Fim': route.endDate || 'Não definida',
+      'Data de Início': formatDateToBR(route.startDate),
+      'Data de Fim': formatDateToBR(route.endDate || route.startDate),
       'Status': 'Finalizada',
       'Motorista': route.team?.driver?.displayName || 'Não definido',
       'Ajudantes': route.team?.assistantUsers?.map(a => a.displayName).join(', ') || 'Nenhum',
+      'Veículo': route.vehicle?.plate || 'Não definido',
       'CPF Motorista': route.team?.driver?.cpf || 'Não informado',
       'Telefone Motorista': route.team?.driver?.phone || 'Não informado'
     }));
@@ -821,7 +826,7 @@ export function TeamBuilderPage() {
     
     const cols = [
       { wch: 5 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 12 },
-      { wch: 25 }, { wch: 30 }, { wch: 20 }, { wch: 20 }
+      { wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 20 }, { wch: 20 }
     ];
     ws['!cols'] = cols;
     
@@ -865,23 +870,25 @@ export function TeamBuilderPage() {
     const tableData = finishedRoutes.map((route, index) => [
       index + 1,
       getAllCitiesFormatted(route),
-      route.startDate,
-      route.endDate || 'N/A',
-      route.team?.driver?.displayName || 'Não definido'
+      formatDateToBR(route.startDate),
+      formatDateToBR(route.endDate || route.startDate),
+      route.team?.driver?.displayName || 'Não definido',
+      route.vehicle?.plate || 'Não definido'
     ]);
     
     autoTable(doc, {
-      head: [['Nº', 'Rota', 'Início', 'Fim', 'Motorista']],
+      head: [['Nº', 'Rota', 'Início', 'Fim', 'Motorista', 'Veículo']],
       body: tableData,
       startY: exportDateRange.startDate || exportDateRange.endDate ? 50 : 40,
       styles: { fontSize: 10, cellPadding: 3 },
       headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
       columnStyles: {
         0: { halign: 'center', cellWidth: 15 },
-        1: { cellWidth: 60 },
+        1: { cellWidth: 45 },
         2: { halign: 'center', cellWidth: 25 },
         3: { halign: 'center', cellWidth: 25 },
-        4: { cellWidth: 50 }
+        4: { cellWidth: 40 },
+        5: { cellWidth: 25 }
       }
     });
     
@@ -946,6 +953,13 @@ export function TeamBuilderPage() {
       console.error("Error creating vehicle:", error);
       alert("Erro ao registrar veículo. Tente novamente.");
     }
+  };
+
+  // Helper function to format date to Brazilian format
+  const formatDateToBR = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
   };
 
   const getAllCitiesFormatted = (route: TravelRouteWithTeam) => {
@@ -1302,7 +1316,7 @@ export function TeamBuilderPage() {
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Navigation className="w-5 h-5" />
-                Rotas Ativas
+                Rotas em andamento
               </CardTitle>
               <Button
                 onClick={() => setShowExportModal(true)}
@@ -1323,10 +1337,12 @@ export function TeamBuilderPage() {
                     <div>
                       <h4 className="font-medium">{getAllCitiesFormatted(route)}</h4>
                       <p className="text-xs text-muted-foreground">
-                        Início: {route.startDate}
+                        Início: {formatDateToBR(route.startDate)}
                       </p>
                     </div>
-                    <Badge variant="default">Ativa</Badge>
+                    <Badge variant={route.vehicle ? "default" : "secondary"}>
+                      {route.vehicle ? "OK" : "Pendente"}
+                    </Badge>
                   </div>
                   
                   {route.team && (
@@ -1339,7 +1355,6 @@ export function TeamBuilderPage() {
                         }
                       </div>
                       <div className="flex items-center gap-1 mt-1">
-                        <Car className="w-3 h-3" />
                         <span>Veículo: {route.vehicle?.plate || "Não definido"}</span>
                       </div>
                     </div>
@@ -1407,8 +1422,9 @@ export function TeamBuilderPage() {
               {getFinishedRoutesPage().map((route) => (
                 <div key={route.id} className="border rounded-lg p-3 bg-muted/30">
                   <h4 className="font-medium">{getAllCitiesFormatted(route)}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {route.startDate} - {route.endDate}
+                  
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Início: {formatDateToBR(route.startDate)} - Finalizado: {formatDateToBR(route.endDate || route.startDate)}
                   </p>
                   {route.team && (
                     <div className="text-xs text-muted-foreground mt-1">
@@ -1419,6 +1435,7 @@ export function TeamBuilderPage() {
                           : "Nenhum"
                         }
                       </div>
+                      <div>Veículo: {route.vehicle?.plate || "Não definido"}</div>
                     </div>
                   )}
                   <div className="flex justify-between items-center mt-2">
