@@ -97,14 +97,10 @@ export function AdminPage() {
 
     if (!data.cpf.trim()) {
       newErrors.cpf = "CPF é obrigatório";
-    } else if (data.cpf.replace(/\D/g, '').length !== 11) {
-      newErrors.cpf = "CPF deve ter 11 dígitos";
     }
 
     if (!data.phone) {
       newErrors.phone = "Telefone é obrigatório";
-    } else if (!/^\(\d{2}\) 9 \d{4}-\d{4}$/.test(data.phone)) {
-      newErrors.phone = "Telefone deve ter o formato (XX) 9 XXXX-XXXX";
     }
 
     if (!isEdit && !data.password.trim()) {

@@ -1496,7 +1496,7 @@ export function TeamBuilderPage() {
                     Início: {formatDateToBR(route.startDate)} - Finalizado: {formatDateToBR(route.endDate || route.startDate)}
                   </p>
                   {route.team && (
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-sm text-muted-foreground mb-3">
                       <div>Motorista: {route.team.driver?.displayName || "N/A"}</div>
                       <div>
                         Ajudantes: {(route.team?.assistantUsers?.length || 0) > 0 
