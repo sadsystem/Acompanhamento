@@ -122,7 +122,7 @@ function AppContent() {
                       Acompanhamento Diário
                     </h1>
                     <p className="text-xs text-muted-foreground">
-                      Versão 0.12a
+                      Versão {CONFIG.version}
                     </p>
                   </div>
                 </div>
@@ -187,16 +187,18 @@ function AppContent() {
 
               {/* Mobile Menu Button */}
               <div className="lg:hidden flex items-center gap-2">
-                <button
-                  onClick={() => setAccessibilityMode(!accessibilityMode)}
-                  className={`p-2 rounded-md transition-colors ${
-                    accessibilityMode ? 'bg-blue-50 border border-blue-200 text-blue-700' : 'hover:bg-muted'
-                  }`}
-                  data-testid="mobile-accessibility-button"
-                  title="Modo de Acessibilidade"
-                >
-                  <Eye className="w-5 h-5" />
-                </button>
+                {currentUser.role === "colaborador" && (
+                  <button
+                    onClick={() => setAccessibilityMode(!accessibilityMode)}
+                    className={`p-2 rounded-md transition-colors ${
+                      accessibilityMode ? 'bg-blue-50 border border-blue-200 text-blue-700' : 'hover:bg-muted'
+                    }`}
+                    data-testid="mobile-accessibility-button"
+                    title="Modo de Acessibilidade"
+                  >
+                    <Eye className="w-5 h-5" />
+                  </button>
+                )}
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                   className="p-2 rounded-md hover:bg-muted"
