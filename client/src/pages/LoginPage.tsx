@@ -50,20 +50,20 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-green-50 via-white to-blue-50 min-h-screen">
-      <div className="w-full max-w-md">
-        {/* Logo e Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-full mb-4 shadow-lg">
-            <span className="text-white font-bold text-xl">OV</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
-            Sistema de Acompanhamento Diário
-          </h1>
-          <p className="text-gray-600 text-sm">
-            Ouro Verde - Gestão de Equipes
-          </p>
+    <div className="flex-1 flex flex-col bg-gradient-to-br from-green-50 via-white to-blue-50 overflow-hidden">
+      {/* Logo e Header */}
+      <div className="text-center pt-8 pb-4">
+        <div className="inline-flex items-center justify-center px-4 py-2 bg-green-600 rounded-full mb-3 shadow-lg">
+          <span className="text-white font-bold text-sm tracking-wide">OURO VERDE</span>
         </div>
+        <h1 className="text-xl font-bold text-gray-800">
+          Sistema de Acompanhamento Diário
+        </h1>
+      </div>
+      
+      {/* Área do formulário centralizada */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
         
         <Card className="w-full shadow-xl border-0 bg-white/95 backdrop-blur-sm">
         <CardContent className="pt-6">
@@ -124,6 +124,7 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
           </form>
         </CardContent>
         </Card>
+        </div>
       </div>
 
       {loading && (
