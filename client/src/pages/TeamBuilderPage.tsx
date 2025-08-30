@@ -38,6 +38,7 @@ export function TeamBuilderPage() {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<TravelRouteWithTeam | null>(null);
   const [pendingAction, setPendingAction] = useState<'finish' | 'delete' | null>(null);
+  const [actionContext, setActionContext] = useState<'finish' | 'delete' | null>(null);
   
   // Export modal state
   const [showExportModal, setShowExportModal] = useState(false);
@@ -459,8 +460,9 @@ export function TeamBuilderPage() {
     }
   };
 
-  const openRouteActionModal = (route: TravelRouteWithTeam) => {
+  const openRouteActionModal = (route: TravelRouteWithTeam, action?: 'finish' | 'delete') => {
     setSelectedRoute(route);
+    setActionContext(action || null);
     setShowRouteActionModal(true);
   };
 
@@ -468,6 +470,7 @@ export function TeamBuilderPage() {
     setShowRouteActionModal(false);
     setSelectedRoute(null);
     setPendingAction(null);
+    setActionContext(null);
   };
 
   const handleActionChoice = (action: 'finish' | 'delete') => {
@@ -825,8 +828,8 @@ export function TeamBuilderPage() {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`min-h-[300px] p-2 rounded-lg border-2 border-dashed ${
-                      snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
+                    className={`min-h-[300px] p-2 rounded-lg ${
+                      snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5" : ""
                     }`}
                   >
                     {availableAssistants
@@ -902,7 +905,7 @@ export function TeamBuilderPage() {
                           <Check className="w-4 h-4" />
                         </Button>
                         <Button
-                          onClick={() => openRouteActionModal(route)}
+                          onClick={() => openRouteActionModal(route, 'delete')}
                           variant="ghost"
                           size="sm"
                           className="text-red-600 hover:text-red-800 hover:bg-red-50"
@@ -918,8 +921,8 @@ export function TeamBuilderPage() {
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className={`min-h-[80px] p-2 rounded border-2 border-dashed space-y-1 ${
-                              snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
+                            className={`min-h-[80px] p-2 rounded space-y-1 ${
+                              snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5" : "border border-border"
                             }`}
                           >
                             {route.team?.driver && route.team.driver.username && route.team.driver.id && (
@@ -1001,8 +1004,8 @@ export function TeamBuilderPage() {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`min-h-[300px] p-2 rounded-lg border-2 border-dashed ${
-                      snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-border"
+                    className={`min-h-[300px] p-2 rounded-lg ${
+                      snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5" : ""
                     }`}
                   >
                     {availableDrivers
@@ -1085,7 +1088,7 @@ export function TeamBuilderPage() {
                   
                   <div className="flex gap-2">
                     <Button 
-                      onClick={() => openRouteActionModal(route)}
+                      onClick={() => openRouteActionModal(route, 'finish')}
                       variant="outline"
                       size="sm"
                       className="flex-1"
@@ -1093,7 +1096,7 @@ export function TeamBuilderPage() {
                       Finalizar Rota
                     </Button>
                     <Button 
-                      onClick={() => openRouteActionModal(route)}
+                      onClick={() => openRouteActionModal(route, 'delete')}
                       variant="outline"
                       size="sm"
                       className="text-red-600 hover:text-red-800 hover:bg-red-50"
@@ -1136,7 +1139,7 @@ export function TeamBuilderPage() {
                   <div className="flex justify-between items-center mt-2">
                     <Badge variant="secondary">Finalizada</Badge>
                     <Button 
-                      onClick={() => openRouteActionModal(route)}
+                      onClick={() => openRouteActionModal(route, 'delete')}
                       variant="ghost"
                       size="sm"
                       className="text-red-600 hover:text-red-800 hover:bg-red-50"
@@ -1155,9 +1158,9 @@ export function TeamBuilderPage() {
       <Dialog open={showRouteActionModal} onOpenChange={setShowRouteActionModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Ações da Rota</DialogTitle>
+            <DialogTitle>Confirmação de segurança</DialogTitle>
             <DialogDescription>
-              Escolha uma ação para executar nesta rota
+              Confirme a ação que deseja executar
             </DialogDescription>
           </DialogHeader>
           
@@ -1168,23 +1171,27 @@ export function TeamBuilderPage() {
               </div>
               
               <div className="space-y-2">
-                <Button
-                  onClick={() => handleActionChoice('finish')}
-                  className="w-full flex items-center gap-2"
-                  variant="default"
-                >
-                  <Calendar className="w-4 h-4" />
-                  Finalizar Rota
-                </Button>
+                {actionContext === 'finish' && (
+                  <Button
+                    onClick={() => handleActionChoice('finish')}
+                    className="w-full flex items-center gap-2"
+                    variant="default"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Finalizar Rota
+                  </Button>
+                )}
                 
-                <Button
-                  onClick={() => handleActionChoice('delete')}
-                  className="w-full flex items-center gap-2"
-                  variant="destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Excluir Rota
-                </Button>
+                {actionContext === 'delete' && (
+                  <Button
+                    onClick={() => handleActionChoice('delete')}
+                    className="w-full flex items-center gap-2"
+                    variant="destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir Rota
+                  </Button>
+                )}
               </div>
             </div>
           )}
