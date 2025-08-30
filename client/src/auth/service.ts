@@ -49,4 +49,17 @@ export class AuthService {
       await this.storage.clearSession();
     }
   }
+
+  async adminLoginAsUser(targetUser: User): Promise<LoginResult> {
+    // This method allows an admin to directly log in as another user
+    // Security: Should only be called after verifying the current user is an admin
+    if (!targetUser.active) {
+      return { ok: false, error: "Este usuário está desativado" };
+    }
+    
+    const session: Session = { username: targetUser.username };
+    await this.storage.setSession(session);
+    
+    return { ok: true, user: targetUser };
+  }
 }
