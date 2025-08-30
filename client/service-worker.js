@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sad-ouro-verde-0.81a';
+const CACHE_NAME = 'sad-ouro-verde-0.81a-' + Date.now();
 const urlsToCache = [
   '/',
   '/src/main.tsx',
