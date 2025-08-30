@@ -13,6 +13,28 @@ import { User, Role } from "../config/types";
 import { uuid } from "../utils/calc";
 import { UserPlus, Edit, UserX, Users } from "lucide-react";
 
+// Function to get role badge styling
+const getRoleBadgeStyle = (role: string) => {
+  const styles = {
+    "Motorista": "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200",
+    "Ajudante": "bg-green-100 text-green-800 border-green-200 hover:bg-green-200", 
+    "Supervisor": "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200",
+    "Gerente": "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200",
+    "Assistente de Logística": "bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200"
+  };
+  return styles[role as keyof typeof styles] || "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
+};
+
+// Function to get permission badge styling  
+const getPermissionBadgeStyle = (permission: string) => {
+  const styles = {
+    "ADM": "bg-red-100 text-red-800 border-red-200 hover:bg-red-200",
+    "Colaborador": "bg-slate-100 text-slate-800 border-slate-200 hover:bg-slate-200",
+    "Gestor": "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200"
+  };
+  return styles[permission as keyof typeof styles] || "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
+};
+
 export function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
@@ -399,10 +421,10 @@ export function AdminPage() {
                   
                   {/* Line 3: Permission and Position Centered */}
                   <div className="flex justify-center items-center gap-3 pt-2 border-t border-gray-100">
-                    <Badge variant="outline" className="px-3 py-1">
+                    <Badge className={`px-3 py-1 border ${getPermissionBadgeStyle(user.permission || '')}`}>
                       {user.permission}
                     </Badge>
-                    <Badge variant="secondary" className="px-3 py-1">
+                    <Badge className={`px-3 py-1 border ${getRoleBadgeStyle(user.cargo || '')}`}>
                       {user.cargo}
                     </Badge>
                     {!user.active && (

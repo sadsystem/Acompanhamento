@@ -43,7 +43,10 @@ export function TeamBuilderPage() {
   // Export modal state
   const [showExportModal, setShowExportModal] = useState(false);
   const [showFinishedExportModal, setShowFinishedExportModal] = useState(false);
-  const [exportDateRange, setExportDateRange] = useState({ startDate: "", endDate: "" });
+  const [exportDateRange, setExportDateRange] = useState(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return { startDate: today, endDate: today };
+  });
   
   // Pagination for finished routes
   const [finishedRoutesPage, setFinishedRoutesPage] = useState(0);
