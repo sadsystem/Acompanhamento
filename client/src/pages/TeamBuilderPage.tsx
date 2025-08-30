@@ -422,6 +422,13 @@ export function TeamBuilderPage() {
       return;
     }
 
+    // Verificar limite de formações de rota (máximo 2)
+    const formationRoutes = routes.filter(r => r.status === "formation");
+    if (formationRoutes.length >= 2) {
+      alert("Limite máximo de 2 formações de rota simultâneas atingido. Finalize ou exclua uma formação existente para criar uma nova.");
+      return;
+    }
+
     try {
       // Create route title with multiple cities
       const routeTitle = newRoute.cities.length === 1 
@@ -918,6 +925,18 @@ export function TeamBuilderPage() {
   const handleSelectVehicle = async (vehicle: Vehicle) => {
     if (!selectedRouteForVehicle) return;
     
+    // Verificar se o veículo já está em uso em outra rota ativa
+    const vehicleInUse = routes.find(r => 
+      r.status === "active" && 
+      r.vehicleId === vehicle.id && 
+      r.id !== selectedRouteForVehicle.id
+    );
+    
+    if (vehicleInUse) {
+      alert(`Este veículo (${vehicle.plate}) já está em uso na rota "${getAllCitiesFormatted(vehicleInUse)}". Por favor, selecione outro veículo ou remova-o da rota atual.`);
+      return;
+    }
+    
     try {
       await storage.updateTravelRoute(selectedRouteForVehicle.id, {
         vehicleId: vehicle.id,
@@ -936,6 +955,30 @@ export function TeamBuilderPage() {
     } catch (error) {
       console.error("Error assigning vehicle:", error);
       alert("Erro ao definir veículo. Tente novamente.");
+    }
+  };
+
+  const handleRemoveVehicle = async () => {
+    if (!selectedRouteForVehicle) return;
+    
+    try {
+      await storage.updateTravelRoute(selectedRouteForVehicle.id, {
+        vehicleId: undefined,
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Update state
+      setRoutes(prev => prev.map(r => 
+        r.id === selectedRouteForVehicle.id 
+          ? { ...r, vehicle: undefined, vehicleId: undefined }
+          : r
+      ));
+      
+      setShowVehicleModal(false);
+      setSelectedRouteForVehicle(null);
+    } catch (error) {
+      console.error("Error removing vehicle:", error);
+      alert("Erro ao remover veículo. Tente novamente.");
     }
   };
 
@@ -1813,6 +1856,15 @@ export function TeamBuilderPage() {
             >
               Cancelar
             </Button>
+            {selectedRouteForVehicle?.vehicle && (
+              <Button 
+                variant="destructive" 
+                onClick={handleRemoveVehicle}
+                data-testid="button-remove-vehicle"
+              >
+                Remover Veículo
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
