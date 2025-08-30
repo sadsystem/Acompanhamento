@@ -1,5 +1,5 @@
 import { StorageAdapter } from './adapter';
-import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute } from '../config/types';
+import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle } from '../config/types';
 import { LS_KEYS } from '../config/constants';
 
 export class LocalStorageAdapter implements StorageAdapter {
@@ -175,5 +175,38 @@ export class LocalStorageAdapter implements StorageAdapter {
     const routes = await this.getTravelRoutes();
     const filteredRoutes = routes.filter(r => r.id !== id);
     await this.setTravelRoutes(filteredRoutes);
+  }
+
+  // Vehicles methods
+  async getVehicles(): Promise<Vehicle[]> {
+    return this.readLS<Vehicle[]>(LS_KEYS.vehicles, []);
+  }
+
+  async setVehicles(vehicles: Vehicle[]): Promise<void> {
+    this.writeLS(LS_KEYS.vehicles, vehicles);
+  }
+
+  async createVehicle(vehicle: Vehicle): Promise<Vehicle> {
+    const vehicles = await this.getVehicles();
+    vehicles.push(vehicle);
+    await this.setVehicles(vehicles);
+    return vehicle;
+  }
+
+  async updateVehicle(id: string, updates: Partial<Vehicle>): Promise<Vehicle> {
+    const vehicles = await this.getVehicles();
+    const index = vehicles.findIndex(v => v.id === id);
+    if (index === -1) throw new Error('Vehicle not found');
+    
+    const updatedVehicle = { ...vehicles[index], ...updates };
+    vehicles[index] = updatedVehicle;
+    await this.setVehicles(vehicles);
+    return updatedVehicle;
+  }
+
+  async deleteVehicle(id: string): Promise<void> {
+    const vehicles = await this.getVehicles();
+    const filteredVehicles = vehicles.filter(v => v.id !== id);
+    await this.setVehicles(filteredVehicles);
   }
 }

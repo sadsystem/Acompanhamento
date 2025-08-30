@@ -65,6 +65,16 @@ export type ChecklistDraft = {
   dateRef: string;
 };
 
+export type Vehicle = {
+  id: string;
+  plate: string; // License plate (e.g., "PDO-0000")
+  model?: string;
+  year?: number;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type Team = {
   id: string;
   driverUsername: string;
@@ -78,6 +88,7 @@ export type TravelRoute = {
   city: string;
   cities: string[]; // lista completa das cidades
   teamId?: string;
+  vehicleId?: string;
   startDate: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD when completed
   status: "formation" | "active" | "completed";
@@ -92,4 +103,5 @@ export type TeamWithMembers = Team & {
 
 export type TravelRouteWithTeam = TravelRoute & {
   team?: TeamWithMembers;
+  vehicle?: Vehicle;
 };

@@ -10,6 +10,7 @@ export const LS_KEYS = {
   remember: "sad_remember",
   teams: "sad_teams",
   travelRoutes: "sad_travel_routes",
+  vehicles: "sad_vehicles",
 } as const;
 
 export const ROUTES = {

@@ -1,4 +1,4 @@
-import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute } from '../config/types';
+import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle } from '../config/types';
 
 export interface StorageAdapter {
   // Users
@@ -35,6 +35,14 @@ export interface StorageAdapter {
   createTravelRoute(route: TravelRoute): Promise<TravelRoute>;
   updateTravelRoute(id: string, updates: Partial<TravelRoute>): Promise<TravelRoute>;
   deleteTravelRoute(id: string): Promise<void>;
+  
+  // Vehicles
+  getVehicles(): Promise<Vehicle[]>;
+  setVehicles(vehicles: Vehicle[]): Promise<void>;
+  createVehicle(vehicle: Vehicle): Promise<Vehicle>;
+  updateVehicle(id: string, updates: Partial<Vehicle>): Promise<Vehicle>;
+  deleteVehicle(id: string): Promise<void>;
+  
   clearAllData?(): Promise<void>;
 }
 
@@ -43,6 +51,7 @@ export class MockStorageAdapter implements StorageAdapter {
   private evaluations: Evaluation[] = [];
   private teams: Team[] = [];
   private travelRoutes: TravelRoute[] = [];
+  private vehicles: Vehicle[] = [];
   private session: Session | null = null;
   private remember: boolean = false;
 
@@ -175,5 +184,32 @@ export class MockStorageAdapter implements StorageAdapter {
 
   async deleteTravelRoute(id: string): Promise<void> {
     this.travelRoutes = this.travelRoutes.filter(r => r.id !== id);
+  }
+
+  // Vehicles methods
+  async getVehicles(): Promise<Vehicle[]> {
+    return [...this.vehicles];
+  }
+
+  async setVehicles(vehicles: Vehicle[]): Promise<void> {
+    this.vehicles = [...vehicles];
+  }
+
+  async createVehicle(vehicle: Vehicle): Promise<Vehicle> {
+    this.vehicles.push(vehicle);
+    return vehicle;
+  }
+
+  async updateVehicle(id: string, updates: Partial<Vehicle>): Promise<Vehicle> {
+    const index = this.vehicles.findIndex(v => v.id === id);
+    if (index === -1) throw new Error('Vehicle not found');
+    
+    const updatedVehicle = { ...this.vehicles[index], ...updates };
+    this.vehicles[index] = updatedVehicle;
+    return updatedVehicle;
+  }
+
+  async deleteVehicle(id: string): Promise<void> {
+    this.vehicles = this.vehicles.filter(v => v.id !== id);
   }
 }

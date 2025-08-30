@@ -7,11 +7,11 @@ import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../components/ui/dialog";
 import { useStorage } from "../hooks/useStorage";
-import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam } from "../config/types";
+import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam, Vehicle } from "../config/types";
 import { toDateRefBR } from "../utils/time";
 import { uuid } from "../utils/calc";
 import { searchCities } from "../data/cities-pe";
-import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle, Check, Download, Route, Truck, Navigation, Archive, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle, Check, Download, Route, Truck, Navigation, Archive, ChevronLeft, ChevronRight, Car } from "lucide-react";
 
 // Function to get role badge styling
 const getRoleBadgeStyle = (role: string) => {
@@ -35,6 +35,7 @@ export function TeamBuilderPage() {
   const [assistants, setAssistants] = useState<User[]>([]);
   const [teams, setTeams] = useState<TeamWithMembers[]>([]);
   const [routes, setRoutes] = useState<TravelRouteWithTeam[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [availableDrivers, setAvailableDrivers] = useState<User[]>([]);
   const [availableAssistants, setAvailableAssistants] = useState<User[]>([]);
   
@@ -63,6 +64,12 @@ export function TeamBuilderPage() {
   // Pagination for finished routes
   const [finishedRoutesPage, setFinishedRoutesPage] = useState(0);
   const ROUTES_PER_PAGE = 9;
+  
+  // Vehicle modal states
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [showNewVehicleModal, setShowNewVehicleModal] = useState(false);
+  const [selectedRouteForVehicle, setSelectedRouteForVehicle] = useState<TravelRouteWithTeam | null>(null);
+  const [newVehicleData, setNewVehicleData] = useState({ plate: "", model: "", year: "" });
 
   const handleConfirmRoute = async (route: TravelRouteWithTeam) => {
     try {
@@ -93,6 +100,41 @@ export function TeamBuilderPage() {
     setFilteredCities(searchCities(citySearch));
   }, [citySearch]);
 
+  const initializeDefaultVehicles = async () => {
+    const defaultVehicles: Vehicle[] = [
+      {
+        id: uuid(),
+        plate: "PDO-0000",
+        model: "Não especificado",
+        year: new Date().getFullYear(),
+        active: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: uuid(),
+        plate: "SNN-0000", 
+        model: "Não especificado",
+        year: new Date().getFullYear(),
+        active: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: uuid(),
+        plate: "KIF-0000",
+        model: "Não especificado", 
+        year: new Date().getFullYear(),
+        active: true,
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    for (const vehicle of defaultVehicles) {
+      await storage.createVehicle(vehicle);
+    }
+    
+    return defaultVehicles;
+  };
+
   const loadData = async () => {
     try {
       const users = await storage.getUsers();
@@ -102,11 +144,20 @@ export function TeamBuilderPage() {
       setDrivers(driversData);
       setAssistants(assistantsData);
 
-      // Load teams and routes from storage
-      const [teamsData, routesData] = await Promise.all([
+      // Load teams, routes and vehicles from storage
+      const [teamsData, routesData, vehiclesData] = await Promise.all([
         storage.getTeams(),
-        storage.getTravelRoutes()
+        storage.getTravelRoutes(),
+        storage.getVehicles()
       ]);
+
+      // Initialize default vehicles if none exist
+      if (vehiclesData.length === 0) {
+        const defaultVehicles = await initializeDefaultVehicles();
+        setVehicles(defaultVehicles);
+      } else {
+        setVehicles(vehiclesData);
+      }
 
       // Convert teams to TeamWithMembers
       const teamsWithMembers: TeamWithMembers[] = teamsData.map(team => {
@@ -125,6 +176,7 @@ export function TeamBuilderPage() {
       // Convert routes to TravelRouteWithTeam e migra rotas antigas
       const routesWithTeam: TravelRouteWithTeam[] = routesData.map(route => {
         const team = teamsWithMembers.find(t => t.id === route.teamId);
+        const vehicle = vehiclesData.find(v => v.id === route.vehicleId);
         
         // Migração: se não tem o campo cities, cria baseado no city
         let cities = route.cities;
@@ -141,7 +193,8 @@ export function TeamBuilderPage() {
         return {
           ...route,
           cities,
-          team
+          team,
+          vehicle
         };
       });
 
@@ -838,6 +891,63 @@ export function TeamBuilderPage() {
     setExportDateRange({ startDate: "", endDate: "" });
   };
 
+  // Vehicle functions
+  const handleDefineVehicle = (route: TravelRouteWithTeam) => {
+    setSelectedRouteForVehicle(route);
+    setShowVehicleModal(true);
+  };
+
+  const handleSelectVehicle = async (vehicle: Vehicle) => {
+    if (!selectedRouteForVehicle) return;
+    
+    try {
+      await storage.updateTravelRoute(selectedRouteForVehicle.id, {
+        vehicleId: vehicle.id,
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Update state
+      setRoutes(prev => prev.map(r => 
+        r.id === selectedRouteForVehicle.id 
+          ? { ...r, vehicle, vehicleId: vehicle.id }
+          : r
+      ));
+      
+      setShowVehicleModal(false);
+      setSelectedRouteForVehicle(null);
+    } catch (error) {
+      console.error("Error assigning vehicle:", error);
+      alert("Erro ao definir veículo. Tente novamente.");
+    }
+  };
+
+  const handleCreateVehicle = async () => {
+    if (!newVehicleData.plate.trim()) {
+      alert("Placa é obrigatória!");
+      return;
+    }
+
+    try {
+      const newVehicle: Vehicle = {
+        id: uuid(),
+        plate: newVehicleData.plate.toUpperCase(),
+        model: newVehicleData.model || "Não especificado",
+        year: newVehicleData.year ? parseInt(newVehicleData.year) : new Date().getFullYear(),
+        active: true,
+        createdAt: new Date().toISOString()
+      };
+
+      await storage.createVehicle(newVehicle);
+      setVehicles(prev => [...prev, newVehicle]);
+      setNewVehicleData({ plate: "", model: "", year: "" });
+      setShowNewVehicleModal(false);
+      alert("Veículo registrado com sucesso!");
+    } catch (error) {
+      console.error("Error creating vehicle:", error);
+      alert("Erro ao registrar veículo. Tente novamente.");
+    }
+  };
+
   const getAllCitiesFormatted = (route: TravelRouteWithTeam) => {
     // Usa a lista de cidades se disponível, senão usa o campo city
     const cities = route.cities && route.cities.length > 0 ? route.cities : [route.city || "Equipe Sem Rota"];
@@ -1228,8 +1338,24 @@ export function TeamBuilderPage() {
                           : "Nenhum"
                         }
                       </div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Car className="w-3 h-3" />
+                        <span>Veículo: {route.vehicle?.plate || "Não definido"}</span>
+                      </div>
                     </div>
                   )}
+                  
+                  <div className="flex gap-2 mb-2">
+                    <Button 
+                      onClick={() => handleDefineVehicle(route)}
+                      variant={route.vehicle ? "outline" : "default"}
+                      size="sm"
+                      className="flex-1"
+                    >
+                      <Car className="w-3 h-3 mr-1" />
+                      {route.vehicle ? "Alterar Veículo" : "Definir Veículo"}
+                    </Button>
+                  </div>
                   
                   <div className="flex gap-2">
                     <Button 
@@ -1573,6 +1699,153 @@ export function TeamBuilderPage() {
           <div className="flex justify-end">
             <Button variant="ghost" onClick={() => setShowFinishedExportModal(false)}>
               Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Seleção de Veículo */}
+      <Dialog open={showVehicleModal} onOpenChange={setShowVehicleModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Car className="w-5 h-5" />
+              Selecionar Veículo
+            </DialogTitle>
+            <DialogDescription>
+              Escolha um veículo para a rota ou registre um novo
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium">Veículos Disponíveis</h3>
+              <Button
+                onClick={() => setShowNewVehicleModal(true)}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                data-testid="button-new-vehicle"
+              >
+                <Plus className="w-4 h-4" />
+                Registrar Novo
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+              {vehicles.filter(v => v.active).map((vehicle) => (
+                <div 
+                  key={vehicle.id}
+                  className="border rounded-lg p-3 hover:bg-accent cursor-pointer transition-colors"
+                  onClick={() => handleSelectVehicle(vehicle)}
+                  data-testid={`card-vehicle-${vehicle.id}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-lg" data-testid={`text-vehicle-plate-${vehicle.id}`}>{vehicle.plate}</h4>
+                      <p className="text-sm text-muted-foreground" data-testid={`text-vehicle-model-${vehicle.id}`}>{vehicle.model}</p>
+                      <p className="text-xs text-muted-foreground" data-testid={`text-vehicle-year-${vehicle.id}`}>Ano: {vehicle.year}</p>
+                    </div>
+                    <div className="text-2xl">
+                      🚛
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {vehicles.filter(v => v.active).length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Car className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Nenhum veículo cadastrado</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowVehicleModal(false);
+                setSelectedRouteForVehicle(null);
+              }}
+              data-testid="button-cancel-vehicle-selection"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Registro de Novo Veículo */}
+      <Dialog open={showNewVehicleModal} onOpenChange={setShowNewVehicleModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Registrar Novo Veículo
+            </DialogTitle>
+            <DialogDescription>
+              Cadastre um novo veículo na frota
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Placa do Veículo *</label>
+              <input
+                type="text"
+                value={newVehicleData.plate}
+                onChange={(e) => setNewVehicleData(prev => ({ ...prev, plate: e.target.value }))}
+                placeholder="Ex: ABC-1234"
+                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                data-testid="input-vehicle-plate"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Modelo</label>
+              <input
+                type="text"
+                value={newVehicleData.model}
+                onChange={(e) => setNewVehicleData(prev => ({ ...prev, model: e.target.value }))}
+                placeholder="Ex: Mercedes-Benz Atego"
+                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                data-testid="input-vehicle-model"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Ano</label>
+              <input
+                type="number"
+                value={newVehicleData.year}
+                onChange={(e) => setNewVehicleData(prev => ({ ...prev, year: e.target.value }))}
+                placeholder={`Ex: ${new Date().getFullYear()}`}
+                min="1900"
+                max={new Date().getFullYear() + 1}
+                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                data-testid="input-vehicle-year"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowNewVehicleModal(false);
+                setNewVehicleData({ plate: "", model: "", year: "" });
+              }}
+              data-testid="button-cancel-new-vehicle"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleCreateVehicle}
+              data-testid="button-register-vehicle"
+            >
+              Registrar Veículo
             </Button>
           </div>
         </DialogContent>
