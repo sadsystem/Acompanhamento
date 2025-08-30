@@ -104,7 +104,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       {currentUser && (
         <header className="bg-card border-b border-border sticky top-0 z-50">
@@ -119,7 +119,7 @@ function AppContent() {
                   </div>
                   <div>
                     <h1 className="text-sm sm:text-lg font-semibold text-foreground">
-                      Sistema de Acompanhamento Diário
+                      Acompanhamento Diário
                     </h1>
                     <p className="text-xs text-muted-foreground">
                       Versão 0.12a
@@ -287,7 +287,7 @@ function AppContent() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col overflow-auto">
         {currentRoute === "login" && (
           <LoginPage onLoggedIn={handleLoggedIn} />
         )}
@@ -322,9 +322,9 @@ function AppContent() {
         )}
       </main>
       
-      <footer className="border-t bg-muted/30 py-4 mt-auto">
+      <footer className="border-t bg-muted/30 py-4 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 text-center text-sm text-muted-foreground">
-          Sistema de Acompanhamento Diário © 2025. Criado por Jucélio Verissimo.
+          Acompanhamento Diário © 2025. Criado por Jucélio Verissimo.
         </div>
       </footer>
       
