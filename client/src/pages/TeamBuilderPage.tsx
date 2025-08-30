@@ -70,6 +70,9 @@ export function TeamBuilderPage() {
   const [showNewVehicleModal, setShowNewVehicleModal] = useState(false);
   const [selectedRouteForVehicle, setSelectedRouteForVehicle] = useState<TravelRouteWithTeam | null>(null);
   const [newVehicleData, setNewVehicleData] = useState({ plate: "", model: "", year: "" });
+  
+  // Route limit modal state
+  const [showRouteLimitModal, setShowRouteLimitModal] = useState(false);
 
   const handleConfirmRoute = async (route: TravelRouteWithTeam) => {
     try {
@@ -425,7 +428,7 @@ export function TeamBuilderPage() {
     // Verificar limite de formações de rota (máximo 2)
     const formationRoutes = routes.filter(r => r.status === "formation");
     if (formationRoutes.length >= 2) {
-      alert("Limite máximo de 2 formações de rota simultâneas atingido. Finalize ou exclua uma formação existente para criar uma nova.");
+      setShowRouteLimitModal(true);
       return;
     }
 
@@ -1938,6 +1941,53 @@ export function TeamBuilderPage() {
               data-testid="button-register-vehicle"
             >
               Registrar Veículo
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Limite de Rotas */}
+      <Dialog open={showRouteLimitModal} onOpenChange={setShowRouteLimitModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Limite de Formações Atingido
+            </DialogTitle>
+            <DialogDescription>
+              Não é possível criar mais rotas no momento
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>Limite máximo atingido:</strong> Você pode formar apenas <strong>2 rotas simultaneamente</strong> para garantir melhor organização e controle.
+              </p>
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              <p className="mb-2"><strong>Para criar uma nova rota:</strong></p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Complete a formação das rotas em andamento (adicione motorista e ajudantes)</li>
+                <li>Confirme as rotas para colocá-las em execução</li>
+                <li>Ou exclua uma formação que não será utilizada</li>
+              </ul>
+            </div>
+            
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 <strong>Dica:</strong> Rotas confirmadas não contam para este limite, apenas as que estão em formação.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => setShowRouteLimitModal(false)}
+              className="px-6"
+            >
+              Entendi
             </Button>
           </div>
         </DialogContent>
