@@ -24,11 +24,12 @@ export function DashboardPage() {
   const [selectedUser, setSelectedUser] = useState("all");
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [dataSource, setDataSource] = useState<"database" | "localStorage">("localStorage");
   
   const storage = useStorage();
 
   useEffect(() => {
-    loadData();
+    loadSyncedData(); // Sempre carregar dados do banco primeiro
   }, [dateFrom, dateTo, selectedUser]);
 
   const loadData = async () => {
@@ -43,6 +44,7 @@ export function DashboardPage() {
     
     setEvaluations(allEvaluations);
     setUsers(allUsers);
+    setDataSource("localStorage");
   };
 
   const loadSyncedData = async () => {
@@ -64,8 +66,9 @@ export function DashboardPage() {
         
         setEvaluations(serverEvaluations);
         setUsers(serverUsers);
+        setDataSource("database");
         
-        alert(`Carregados dados sincronizados: ${serverEvaluations.length} avaliações de todos os dispositivos.`);
+        console.log(`Carregados dados sincronizados: ${serverEvaluations.length} avaliações de todos os dispositivos.`);
       } else {
         throw new Error("Erro ao buscar dados do servidor");
       }
@@ -73,6 +76,78 @@ export function DashboardPage() {
       console.error("Erro ao carregar dados sincronizados:", error);
       alert("Erro ao carregar dados sincronizados. Usando dados locais.");
       await loadData(); // Fallback to local data
+    }
+  };
+
+  const migrateToDatabaseBulk = async () => {
+    try {
+      if (!navigator.onLine) {
+        alert("Sem conexão com a internet. Conecte-se e tente novamente.");
+        return;
+      }
+
+      // Pegar TODAS as avaliações do localStorage
+      const allLocalEvaluations = await storage.getEvaluations();
+      
+      if (allLocalEvaluations.length === 0) {
+        alert("Nenhuma avaliação encontrada no localStorage para migrar.");
+        return;
+      }
+
+      const response = await fetch('/api/sync/migrate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ evaluations: allLocalEvaluations })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Marcar todas como sincronizadas no localStorage
+        const updatedEvaluations = allLocalEvaluations.map(evaluation => ({
+          ...evaluation,
+          status: "synced" as const
+        }));
+        
+        await storage.setEvaluations(updatedEvaluations);
+        
+        // Recarregar dados do banco
+        await loadSyncedData();
+        
+        alert(`Migração completa! ${result.syncedCount} avaliações enviadas para o banco PostgreSQL. Agora todos os dispositivos verão os mesmos dados.`);
+      } else {
+        throw new Error("Erro na migração");
+      }
+    } catch (error) {
+      console.error("Erro na migração:", error);
+      alert("Erro ao migrar dados. Verifique sua conexão e tente novamente.");
+    }
+  };
+
+  const resetAndLoadFromDatabase = async () => {
+    try {
+      if (!navigator.onLine) {
+        alert("Sem conexão com a internet. Conecte-se e tente novamente.");
+        return;
+      }
+
+      const confirmed = confirm("Isso irá limpar todos os dados locais e carregar apenas os dados do banco PostgreSQL. Deseja continuar?");
+      if (!confirmed) return;
+
+      // Limpar localStorage
+      if (storage.clearAllData) {
+        await storage.clearAllData();
+      }
+
+      // Forçar carregamento do banco
+      await loadSyncedData();
+      
+      alert("Dados locais limpos! Agora exibindo apenas dados sincronizados do banco PostgreSQL.");
+    } catch (error) {
+      console.error("Erro ao resetar dados:", error);
+      alert("Erro ao resetar dados.");
     }
   };
 
@@ -349,6 +424,18 @@ export function DashboardPage() {
     <div className="max-w-7xl mx-auto p-4 space-y-6">
       {/* Header com filtros */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Filtros e Controles</h2>
+          <div className="flex items-center gap-2">
+            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+              dataSource === "database" 
+                ? "bg-green-100 text-green-800" 
+                : "bg-orange-100 text-orange-800"
+            }`}>
+              {dataSource === "database" ? "🔄 Dados Sincronizados" : "📱 Dados Locais"}
+            </div>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <Label htmlFor="date-from" className="text-sm font-medium">De</Label>
@@ -403,6 +490,12 @@ export function DashboardPage() {
             </Button>
             <Button onClick={loadSyncedData} variant="outline" size="sm" data-testid="button-load-synced">
               Ver Todos os Dados
+            </Button>
+            <Button onClick={migrateToDatabaseBulk} variant="outline" size="sm" data-testid="button-migrate-bulk">
+              Migrar Tudo
+            </Button>
+            <Button onClick={resetAndLoadFromDatabase} variant="destructive" size="sm" data-testid="button-reset-load">
+              Limpar e Recarregar
             </Button>
           </div>
         </div>

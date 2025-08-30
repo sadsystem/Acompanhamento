@@ -263,6 +263,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk sync route for migrating localStorage to database
+  app.post("/api/sync/migrate", async (req, res) => {
+    try {
+      const { evaluations } = req.body;
+      
+      if (!Array.isArray(evaluations)) {
+        return res.status(400).json({ error: "Formato inválido - esperado array de avaliações" });
+      }
+      
+      let syncedCount = 0;
+      const errors = [];
+      
+      for (const evaluation of evaluations) {
+        try {
+          await storage.createEvaluation(evaluation);
+          syncedCount++;
+        } catch (error) {
+          errors.push(`Erro ao sincronizar avaliação ${evaluation.id}: ${error}`);
+        }
+      }
+      
+      res.json({
+        success: true,
+        syncedCount,
+        totalReceived: evaluations.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Erro na migração em lote" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

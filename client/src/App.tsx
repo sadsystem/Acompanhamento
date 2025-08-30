@@ -38,10 +38,57 @@ function AppContent() {
     initializeApp();
   }, []);
 
+  const syncLocalDataToDatabase = async () => {
+    try {
+      // Pegar avaliações do localStorage
+      const localEvaluations = await storageAdapter.getEvaluations();
+      const pendingEvaluations = localEvaluations.filter(e => e.status === "queued");
+      
+      if (pendingEvaluations.length > 0) {
+        console.log(`Sincronizando ${pendingEvaluations.length} avaliações pendentes para o banco...`);
+        
+        // Enviar para o banco
+        for (const evaluation of pendingEvaluations) {
+          try {
+            const response = await fetch('/api/evaluations', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(evaluation)
+            });
+            
+            if (response.ok) {
+              console.log(`Avaliação ${evaluation.id} sincronizada com sucesso`);
+            }
+          } catch (error) {
+            console.error(`Erro ao sincronizar avaliação ${evaluation.id}:`, error);
+          }
+        }
+        
+        // Marcar como sincronizadas no localStorage
+        const updatedEvaluations = localEvaluations.map(evaluation => ({
+          ...evaluation,
+          status: evaluation.status === "queued" ? "synced" as const : evaluation.status
+        }));
+        
+        await storageAdapter.setEvaluations(updatedEvaluations);
+        console.log("Dados sincronizados com o banco PostgreSQL");
+      }
+    } catch (error) {
+      console.error("Erro na sincronização automática:", error);
+    }
+  };
+
   const initializeApp = async () => {
     try {
       // Seed initial data
       await seedUsers(storageAdapter);
+      
+      // Sincronizar dados pendentes automaticamente
+      if (navigator.onLine) {
+        await syncLocalDataToDatabase();
+      }
       
       // Check for remembered session
       await authService.ensureFirstLogin();

@@ -118,7 +118,30 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved, accessibili
         return;
       }
       
-      await storage.createEvaluation(evaluation);
+      // Salvar direto no banco PostgreSQL para sincronização real
+      try {
+        const response = await fetch('/api/evaluations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(evaluation)
+        });
+
+        if (response.ok) {
+          // Também salvar no localStorage como backup
+          await storage.createEvaluation(evaluation);
+          console.log("Avaliação salva no banco PostgreSQL e localStorage");
+        } else {
+          // Se falhar no banco, salvar apenas no localStorage
+          await storage.createEvaluation(evaluation);
+          console.log("Avaliação salva apenas no localStorage (offline)");
+        }
+      } catch (error) {
+        // Em caso de erro de rede, salvar no localStorage
+        await storage.createEvaluation(evaluation);
+        console.log("Avaliação salva no localStorage (sem conexão)");
+      }
       
       setPhase("success");
       setTimeout(() => {
