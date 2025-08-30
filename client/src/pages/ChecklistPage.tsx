@@ -158,7 +158,8 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved }: Checklist
       <Card className={accessibilityMode ? 'accessibility-mode' : ''}>
         <CardContent className="pt-6">
           <div className="mb-4">
-            <div className="flex justify-center items-center relative">
+            {/* Layout para telas grandes */}
+            <div className="hidden sm:flex justify-center items-center relative">
               <button
                 onClick={() => setAccessibilityMode(!accessibilityMode)}
                 className={`absolute left-0 px-3 py-2 text-sm rounded-md border border-gray-200 hover:bg-gray-50 transition-colors ${
@@ -170,6 +171,23 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved }: Checklist
                 <Eye className="w-4 h-4" />
               </button>
               <h2 className="text-xl font-semibold">Acompanhamento Diário</h2>
+            </div>
+            
+            {/* Layout para telas pequenas */}
+            <div className="sm:hidden">
+              <div className="flex justify-start mb-2">
+                <button
+                  onClick={() => setAccessibilityMode(!accessibilityMode)}
+                  className={`px-3 py-2 text-sm rounded-md border border-gray-200 hover:bg-gray-50 transition-colors ${
+                    accessibilityMode ? 'bg-blue-50 border-blue-200 text-blue-700' : 'text-gray-600'
+                  }`}
+                  data-testid="button-accessibility-mobile"
+                  title="Modo de Acessibilidade"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              </div>
+              <h2 className="text-xl font-semibold text-center">Acompanhamento Diário</h2>
             </div>
             <div className="text-center mt-2">
               <div className="text-sm text-gray-600">
