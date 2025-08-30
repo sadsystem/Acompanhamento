@@ -55,7 +55,7 @@ export function DashboardPage() {
       if (dateTo) params.append('dateTo', dateTo);
       if (selectedUser !== "all") params.append('evaluated', selectedUser);
 
-      console.log("Carregando dados do banco com filtros:", params.toString());
+      console.log("🔄 CARREGANDO DO BANCO com filtros:", params.toString());
       
       const [evaluationsResponse, usersResponse] = await Promise.all([
         fetch(`/api/evaluations?${params}`),
@@ -66,11 +66,19 @@ export function DashboardPage() {
         const serverEvaluations = await evaluationsResponse.json();
         const serverUsers = await usersResponse.json();
         
+        console.log("📊 DADOS DO BANCO RECEBIDOS:", {
+          totalEvaluations: serverEvaluations.length,
+          scores: serverEvaluations.map((e: any) => e.score),
+          averageScore: serverEvaluations.reduce((sum: number, e: any) => sum + e.score, 0) / serverEvaluations.length,
+          selectedUser: selectedUser,
+          filteredUser: selectedUser !== "all" ? selectedUser : "TODOS"
+        });
+        
         setEvaluations(serverEvaluations);
         setUsers(serverUsers);
         setDataSource("database");
         
-        console.log(`Carregados dados sincronizados: ${serverEvaluations.length} avaliações de todos os dispositivos.`);
+        console.log(`✅ Carregados ${serverEvaluations.length} avaliações sincronizadas do PostgreSQL`);
       } else {
         throw new Error("Erro ao buscar dados do servidor");
       }
@@ -153,47 +161,6 @@ export function DashboardPage() {
     }
   };
 
-  const forceFromDatabase = async () => {
-    try {
-      // Limpar localStorage sem confirmação
-      if (storage.clearAllData) {
-        await storage.clearAllData();
-      }
-
-      // Recarregar FORÇADAMENTE do banco
-      const params = new URLSearchParams();
-      if (dateFrom) params.append('dateFrom', dateFrom);
-      if (dateTo) params.append('dateTo', dateTo);
-      if (selectedUser !== "all") params.append('evaluated', selectedUser);
-
-      console.log("FORÇANDO carregamento do banco com filtros:", params.toString());
-      
-      const response = await fetch(`/api/evaluations?${params}`);
-      const usersResponse = await fetch('/api/users/team');
-      
-      if (response.ok && usersResponse.ok) {
-        const serverEvaluations = await response.json();
-        const serverUsers = await usersResponse.json();
-        
-        console.log("Dados FORÇADOS do banco:", {
-          evaluations: serverEvaluations,
-          count: serverEvaluations.length,
-          scores: serverEvaluations.map(e => e.score)
-        });
-        
-        setEvaluations(serverEvaluations);
-        setUsers(serverUsers);
-        setDataSource("database");
-        
-        alert(`FORÇADO: ${serverEvaluations.length} avaliações carregadas do banco PostgreSQL.`);
-      } else {
-        alert("Erro ao forçar carregamento do banco.");
-      }
-    } catch (error) {
-      console.error("Erro ao forçar carregamento:", error);
-      alert("Erro ao forçar carregamento do banco.");
-    }
-  };
 
   const stats = useMemo(() => {
     if (evaluations.length === 0) {
@@ -540,9 +507,6 @@ export function DashboardPage() {
             </Button>
             <Button onClick={resetAndLoadFromDatabase} variant="destructive" size="sm" data-testid="button-reset-load">
               Limpar e Recarregar
-            </Button>
-            <Button onClick={forceFromDatabase} variant="secondary" size="sm" data-testid="button-force-db">
-              🔄 Só Banco
             </Button>
           </div>
         </div>
