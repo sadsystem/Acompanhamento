@@ -213,7 +213,7 @@ export function DashboardPage() {
         e.answers.filter(a => a.questionId === question.id)
       );
       const goodAnswers = categoryAnswers.filter(a => a.value === question.goodWhenYes).length;
-      const percentage = categoryAnswers.length > 0 ? (goodAnswers / categoryAnswers.length) * 100 : 0;
+      const percentage = categoryAnswers.length > 0 ? (goodAnswers / categoryAnswers.length) : 0;
       
       return {
         name: question.text.slice(0, 25) + '...',
@@ -239,7 +239,7 @@ export function DashboardPage() {
       
       weeklyTrend.push({
         date: date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }),
-        score: Number(avgScore.toFixed(2)),
+        score: Number((avgScore * 100).toFixed(2)),
         count: dayEvaluations.length
       });
     }
@@ -254,7 +254,7 @@ export function DashboardPage() {
     ];
     
     evaluations.forEach(evaluation => {
-      const scorePercent = evaluation.score;
+      const scorePercent = evaluation.score * 100; // Converter para 0-100
       const range = scoreRanges.find(r => scorePercent >= r.min && scorePercent <= r.max);
       if (range) range.count++;
     });
@@ -294,7 +294,7 @@ export function DashboardPage() {
     return Array.from(problemsByUserAndQuestion.entries())
       .map(([key, stats]) => {
         const [username, questionId] = key.split("|");
-        const percentage = stats.total > 0 ? stats.bad / stats.total : 0;
+        const percentage = stats.total > 0 ? (stats.bad / stats.total) : 0;
         return {
           username,
           questionId,
@@ -762,11 +762,11 @@ export function DashboardPage() {
                   <div key={category.name} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-medium">{category.fullName}</h4>
-                      <Badge variant={category.percentage >= 80 ? "default" : category.percentage >= 60 ? "secondary" : "destructive"}>
-                        {category.percentage.toFixed(1)}%
+                      <Badge variant={category.percentage >= 0.8 ? "default" : category.percentage >= 0.6 ? "secondary" : "destructive"}>
+                        {(category.percentage * 100).toFixed(1)}%
                       </Badge>
                     </div>
-                    <Progress value={category.percentage} className="mb-2" />
+                    <Progress value={category.percentage * 100} className="mb-2" />
                     <div className="text-xs text-gray-600">
                       {category.good} de {category.total} respostas positivas
                     </div>
