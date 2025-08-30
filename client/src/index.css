@@ -121,56 +121,56 @@
 }
 
 /* Accessibility Mode Styles - Card Specific Only */
-/* Restrict to card content only, exclude header and footer */
-.accessibility-mode.card h2 {
+/* Apply only to content within cards, not header or footer */
+.accessibility-mode h2 {
   font-size: 1.8rem !important;
   font-weight: 700 !important;
   line-height: 1.4 !important;
   letter-spacing: 0.02em !important;
 }
 
-.accessibility-mode.card .text-lg {
+.accessibility-mode .text-lg {
   font-size: 1.4rem !important;
   font-weight: 600 !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode.card .text-sm {
+.accessibility-mode .text-sm {
   font-size: 1.2rem !important;
   line-height: 1.5 !important;
   font-weight: 500 !important;
 }
 
-.accessibility-mode.card .text-xs {
+.accessibility-mode .text-xs {
   font-size: 1.1rem !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode.card .text-xl {
+.accessibility-mode .text-xl {
   font-size: 2rem !important;
   font-weight: 700 !important;
   line-height: 1.4 !important;
 }
 
-.accessibility-mode.card p {
+.accessibility-mode p {
   font-size: 1.3rem !important;
   line-height: 1.6 !important;
   letter-spacing: 0.01em !important;
   font-weight: 500 !important;
 }
 
-.accessibility-mode.card span {
+.accessibility-mode span:not(header span):not(footer span) {
   font-size: 1.2rem !important;
   line-height: 1.5 !important;
   font-weight: 500 !important;
 }
 
-.accessibility-mode.card div {
+.accessibility-mode div:not(header div):not(footer div) {
   font-size: 1.2rem !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode.card button:not([data-testid*="accessibility"]):not([data-testid*="mobile-menu"]) {
+.accessibility-mode button:not([data-testid*="accessibility"]):not([data-testid*="mobile-menu"]):not(header button):not(footer button) {
   font-size: 1.4rem !important;
   font-weight: 600 !important;
   padding: 1rem 2rem !important;
@@ -178,21 +178,35 @@
   letter-spacing: 0.02em !important;
 }
 
-.accessibility-mode.card strong {
+.accessibility-mode strong:not(header strong):not(footer strong) {
   font-size: 1.3rem !important;
   font-weight: 700 !important;
   line-height: 1.5 !important;
 }
 
-.accessibility-mode.card label {
+.accessibility-mode label {
   font-size: 1.2rem !important;
   font-weight: 600 !important;
   line-height: 1.4 !important;
 }
 
-.accessibility-mode.card textarea {
+.accessibility-mode textarea {
   font-size: 1.2rem !important;
   padding: 0.8rem !important;
   min-height: 3rem !important;
   line-height: 1.4 !important;
+}
+
+/* Explicitly exclude header and footer from accessibility styles */
+header .accessibility-mode,
+footer .accessibility-mode {
+  font-size: inherit !important;
+}
+
+header * {
+  font-size: inherit !important;
+}
+
+footer * {
+  font-size: inherit !important;
 }
