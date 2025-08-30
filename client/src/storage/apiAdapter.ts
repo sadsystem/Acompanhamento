@@ -12,7 +12,8 @@ export class ApiStorageAdapter implements StorageAdapter {
 
   async setUsers(users: User[]): Promise<void> {
     // Not needed with API - users are managed individually
-    throw new Error('setUsers not implemented in API adapter');
+    // This method is disabled to prevent any localStorage seeds
+    return;
   }
 
   async createUser(user: User): Promise<User> {
