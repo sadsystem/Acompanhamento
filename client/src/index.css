@@ -120,220 +120,87 @@
   background-color: hsl(45.4 93.4% 47.5%); 
 }
 
-/* Accessibility Mode Styles */
+/* Accessibility Mode Styles - Simplified and Safe */
 .accessibility-mode {
-  font-size: 1.1em;
+  /* Only apply basic font size increase to root */
 }
 
-/* Exclude header from accessibility mode aggressive styling */
-.accessibility-mode header,
-.accessibility-mode header *,
-.accessibility-mode nav,
-.accessibility-mode nav * {
-  font-size: inherit !important;
-  padding: inherit !important;
-  margin: inherit !important;
-  border: inherit !important;
-  min-height: inherit !important;
-}
-
-/* Target only main content area */
-.accessibility-mode main h1,
-.accessibility-mode main h2,
-.accessibility-mode main h3,
-.accessibility-mode main h4,
-.accessibility-mode main h5,
-.accessibility-mode main h6,
-.accessibility-mode .flex-1 h1,
-.accessibility-mode .flex-1 h2,
-.accessibility-mode .flex-1 h3,
-.accessibility-mode .flex-1 h4,
-.accessibility-mode .flex-1 h5,
-.accessibility-mode .flex-1 h6 {
-  font-size: 1.4em !important;
+/* Target specific text elements for better readability */
+.accessibility-mode h1 {
+  font-size: 2.5rem !important;
   font-weight: 700 !important;
-  letter-spacing: 0.02em !important;
-  line-height: 1.5 !important;
-  margin-bottom: 1rem !important;
+  line-height: 1.4 !important;
 }
 
-.accessibility-mode main p,
-.accessibility-mode main span:not(header span):not(nav span),
-.accessibility-mode main div:not(header div):not(nav div),
-.accessibility-mode .flex-1 p,
-.accessibility-mode .flex-1 span,
-.accessibility-mode .flex-1 div {
-  font-size: 1.1em !important;
+.accessibility-mode h2 {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+}
+
+.accessibility-mode h3 {
+  font-size: 1.7rem !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+.accessibility-mode .text-lg {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+}
+
+.accessibility-mode .text-sm {
+  font-size: 1.1rem !important;
+  line-height: 1.5 !important;
+}
+
+.accessibility-mode .text-xs {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Content area paragraphs and text */
+.accessibility-mode p {
+  font-size: 1.2rem !important;
   line-height: 1.6 !important;
   letter-spacing: 0.01em !important;
 }
 
-.accessibility-mode main button:not(header button):not(nav button),
-.accessibility-mode .flex-1 button {
-  font-size: 1.2em !important;
+.accessibility-mode span {
+  font-size: 1.1rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Buttons in content area only */
+.accessibility-mode button:not(header button) {
+  font-size: 1.3rem !important;
   font-weight: 600 !important;
-  padding: 1rem 1.5rem !important;
-  border-radius: 0.5rem !important;
-  border: 2px solid hsl(var(--border)) !important;
-  min-height: 3rem !important;
+  padding: 0.8rem 1.5rem !important;
+  min-height: 3.2rem !important;
   letter-spacing: 0.02em !important;
 }
 
-.accessibility-mode main input,
-.accessibility-mode main textarea,
-.accessibility-mode main select,
-.accessibility-mode .flex-1 input,
-.accessibility-mode .flex-1 textarea,
-.accessibility-mode .flex-1 select {
-  font-size: 1.2em !important;
-  padding: 1rem !important;
-  border: 2px solid hsl(var(--border)) !important;
-  border-radius: 0.5rem !important;
+/* Form elements */
+.accessibility-mode input:not(header input),
+.accessibility-mode textarea,
+.accessibility-mode select {
+  font-size: 1.2rem !important;
+  padding: 0.8rem !important;
   min-height: 3rem !important;
+  line-height: 1.4 !important;
 }
 
-.accessibility-mode main .text-sm,
-.accessibility-mode .flex-1 .text-sm {
-  font-size: 1.1em !important;
+/* Labels and descriptions */
+.accessibility-mode label {
+  font-size: 1.2rem !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
 }
 
-.accessibility-mode main .text-xs,
-.accessibility-mode .flex-1 .text-xs {
-  font-size: 1em !important;
-}
-
-.accessibility-mode main .text-lg,
-.accessibility-mode .flex-1 .text-lg {
-  font-size: 1.4em !important;
-}
-
-.accessibility-mode main .text-xl,
-.accessibility-mode .flex-1 .text-xl {
-  font-size: 1.6em !important;
-}
-
-.accessibility-mode main .text-2xl,
-.accessibility-mode .flex-1 .text-2xl {
-  font-size: 1.8em !important;
-}
-
-.accessibility-mode main .gap-1,
-.accessibility-mode .flex-1 .gap-1 {
-  gap: 0.75rem !important;
-}
-
-.accessibility-mode main .gap-2,
-.accessibility-mode .flex-1 .gap-2 {
-  gap: 1rem !important;
-}
-
-.accessibility-mode main .gap-3,
-.accessibility-mode .flex-1 .gap-3 {
-  gap: 1.25rem !important;
-}
-
-.accessibility-mode main .gap-4,
-.accessibility-mode .flex-1 .gap-4 {
-  gap: 1.5rem !important;
-}
-
-.accessibility-mode main .p-2,
-.accessibility-mode .flex-1 .p-2 {
-  padding: 1rem !important;
-}
-
-.accessibility-mode main .p-3,
-.accessibility-mode .flex-1 .p-3 {
-  padding: 1.25rem !important;
-}
-
-.accessibility-mode main .p-4,
-.accessibility-mode .flex-1 .p-4 {
-  padding: 1.5rem !important;
-}
-
-.accessibility-mode main .m-2,
-.accessibility-mode .flex-1 .m-2 {
-  margin: 1rem !important;
-}
-
-.accessibility-mode main .m-3,
-.accessibility-mode .flex-1 .m-3 {
-  margin: 1.25rem !important;
-}
-
-.accessibility-mode main .m-4,
-.accessibility-mode .flex-1 .m-4 {
-  margin: 1.5rem !important;
-}
-
-.accessibility-mode main .mb-2,
-.accessibility-mode .flex-1 .mb-2 {
-  margin-bottom: 1rem !important;
-}
-
-.accessibility-mode main .mb-3,
-.accessibility-mode .flex-1 .mb-3 {
-  margin-bottom: 1.25rem !important;
-}
-
-.accessibility-mode main .mb-4,
-.accessibility-mode .flex-1 .mb-4 {
-  margin-bottom: 1.5rem !important;
-}
-
-.accessibility-mode main .mt-2,
-.accessibility-mode .flex-1 .mt-2 {
-  margin-top: 1rem !important;
-}
-
-.accessibility-mode main .mt-3,
-.accessibility-mode .flex-1 .mt-3 {
-  margin-top: 1.25rem !important;
-}
-
-.accessibility-mode main .mt-4,
-.accessibility-mode .flex-1 .mt-4 {
-  margin-top: 1.5rem !important;
-}
-
-.accessibility-mode main .space-y-2 > * + *,
-.accessibility-mode .flex-1 .space-y-2 > * + * {
-  margin-top: 1rem !important;
-}
-
-.accessibility-mode main .space-y-3 > * + *,
-.accessibility-mode .flex-1 .space-y-3 > * + * {
-  margin-top: 1.25rem !important;
-}
-
-.accessibility-mode main .space-y-4 > * + *,
-.accessibility-mode .flex-1 .space-y-4 > * + * {
-  margin-top: 1.5rem !important;
-}
-
-.accessibility-mode main .rounded-md,
-.accessibility-mode .flex-1 .rounded-md {
-  border-radius: 0.5rem !important;
-}
-
-.accessibility-mode main .rounded-lg,
-.accessibility-mode .flex-1 .rounded-lg {
-  border-radius: 0.75rem !important;
-}
-
-.accessibility-mode main .border,
-.accessibility-mode .flex-1 .border {
-  border-width: 2px !important;
-}
-
-.accessibility-mode main .border-t,
-.accessibility-mode main .border-b,
-.accessibility-mode main .border-l,
-.accessibility-mode main .border-r,
-.accessibility-mode .flex-1 .border-t,
-.accessibility-mode .flex-1 .border-b,
-.accessibility-mode .flex-1 .border-l,
-.accessibility-mode .flex-1 .border-r {
-  border-width: 2px !important;
+/* Alert and card content */
+.accessibility-mode .card-content p,
+.accessibility-mode .alert p {
+  font-size: 1.1rem !important;
+  line-height: 1.6 !important;
 }
