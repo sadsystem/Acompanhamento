@@ -144,6 +144,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteUser(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(400).json({ error: "Erro ao excluir usuário" });
+    }
+  });
+
   // Evaluations routes
   app.get("/api/evaluations", async (req, res) => {
     try {

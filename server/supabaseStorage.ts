@@ -60,6 +60,10 @@ export class SupabaseStorage implements IStorage {
     return result[0];
   }
 
+  async deleteUser(id: string): Promise<void> {
+    await this.db.delete(users).where(eq(users.id, id));
+  }
+
   // Evaluations
   async getEvaluations(filters?: {
     dateFrom?: string;
@@ -227,23 +231,29 @@ export class SupabaseStorage implements IStorage {
       }
     }
 
-    // Seed test users if they don't exist
-    const testUsernames = ["87999001001", "87999001002", "87999002001", "87999002002", "87999002003", "87999002004"];
+    // Only seed test users ONCE when database is completely empty
+    // Check if there are any other users besides the admin
+    const allUsers = await this.getUsers();
     
-    for (const username of testUsernames) {
-      const existingUser = await this.getUserByUsername(username);
-      if (!existingUser) {
-        const testUser = {
-          username,
-          phone: `(87) 9 ${username.slice(2, 6)}-${username.slice(6)}`,
-          password: "123456",
-          displayName: username.includes("001") ? "Motorista Teste" : "Ajudante Teste",
-          role: "colaborador" as const,
-          permission: "Colaborador" as const,
-          active: true,
-          cargo: username.includes("001") ? "Motorista" : "Ajudante"
-        };
-        await this.createUser(testUser);
+    // Only create test users if we have only the admin user (first setup)
+    if (allUsers.length <= 1) {
+      const testUsernames = ["87999001001", "87999001002", "87999002001", "87999002002", "87999002003", "87999002004"];
+      
+      for (const username of testUsernames) {
+        const existingUser = await this.getUserByUsername(username);
+        if (!existingUser) {
+          const testUser = {
+            username,
+            phone: `(87) 9 ${username.slice(2, 6)}-${username.slice(6)}`,
+            password: "123456",
+            displayName: username.includes("001") ? "Motorista Teste" : "Ajudante Teste",
+            role: "colaborador" as const,
+            permission: "Colaborador" as const,
+            active: true,
+            cargo: username.includes("001") ? "Motorista" : "Ajudante"
+          };
+          await this.createUser(testUser);
+        }
       }
     }
   }
