@@ -68,7 +68,9 @@ export function AdminPage() {
   const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deletedUserName, setDeletedUserName] = useState("");
   const storage = useStorage();
   const authService = new AuthService(storage);
 
@@ -325,10 +327,10 @@ export function AdminPage() {
       await storage.setUsers(filteredUsers);
       
       await loadUsers();
+      setDeletedUserName(userToDelete.displayName);
       setShowDeleteModal(false);
       setUserToDelete(null);
-      
-      alert(`Usuário ${userToDelete.displayName} foi excluído permanentemente do sistema.`);
+      setShowDeleteSuccessModal(true);
     } catch (error) {
       console.error("Error deleting user:", error);
       alert("Erro ao excluir usuário. Tente novamente.");
@@ -771,16 +773,6 @@ export function AdminPage() {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Trash2 className="w-5 h-5 text-red-600" />
-                <span className="font-medium text-red-800">Atenção: Exclusão Permanente</span>
-              </div>
-              <p className="text-sm text-red-700">
-                O usuário será removido completamente do sistema e todos os seus dados serão perdidos.
-              </p>
-            </div>
-            
             {userToDelete && (
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800">
@@ -814,6 +806,48 @@ export function AdminPage() {
               className="px-6"
             >
               Sim, Excluir Permanentemente
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Sucesso da Exclusão */}
+      <Dialog open={showDeleteSuccessModal} onOpenChange={setShowDeleteSuccessModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="w-6 h-6" />
+              Usuário Excluído com Sucesso!
+            </DialogTitle>
+            <DialogDescription>
+              O usuário foi removido permanentemente do sistema
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <span className="font-medium text-green-800">Exclusão Concluída</span>
+              </div>
+              <p className="text-sm text-green-700">
+                <strong>{deletedUserName}</strong> foi removido permanentemente do sistema e não terá mais acesso.
+              </p>
+            </div>
+            
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 <strong>Processo finalizado:</strong> Todos os dados do usuário foram excluídos de forma irreversível.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => setShowDeleteSuccessModal(false)}
+              className="px-6"
+            >
+              Entendi
             </Button>
           </div>
         </DialogContent>
