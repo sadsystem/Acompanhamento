@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "../components/ui/dialog";
 import { useStorage } from "../hooks/useStorage";
 import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam } from "../config/types";
 import { toDateRefBR } from "../utils/time";
@@ -633,6 +633,9 @@ export function TeamBuilderPage() {
             <DialogTitle>
               {editingRoute ? "Editar Rota" : "Criar Nova Rota"}
             </DialogTitle>
+            <DialogDescription>
+              {editingRoute ? "Modifique as informações da rota existente" : "Configure uma nova rota selecionando cidades e definindo a data de início"}
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -1050,6 +1053,9 @@ export function TeamBuilderPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Ações da Rota</DialogTitle>
+            <DialogDescription>
+              Escolha uma ação para executar nesta rota
+            </DialogDescription>
           </DialogHeader>
           
           {selectedRoute && (
@@ -1096,6 +1102,9 @@ export function TeamBuilderPage() {
               <AlertTriangle className="w-5 h-5" />
               Confirmar Ação
             </DialogTitle>
+            <DialogDescription>
+              Esta ação requer confirmação. Revise as informações antes de prosseguir.
+            </DialogDescription>
           </DialogHeader>
           
           {selectedRoute && pendingAction && (
