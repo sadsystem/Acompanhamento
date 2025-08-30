@@ -7,20 +7,20 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 import { useStorage } from "../hooks/useStorage";
 import { User, TravelRouteWithTeam } from "../config/types";
 import { toDateRefBR } from "../utils/time";
-import { Users, RefreshCw, Eye } from "lucide-react";
+import { Users, RefreshCw } from "lucide-react";
 
 interface SelectPartnerPageProps {
   currentUser: User;
   onSelected: (username: string) => void;
+  accessibilityMode: boolean;
 }
 
-export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPageProps) {
+export function SelectPartnerPage({ currentUser, onSelected, accessibilityMode }: SelectPartnerPageProps) {
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [alreadyEvaluated, setAlreadyEvaluated] = useState<Set<string>>(new Set());
   const [currentRoute, setCurrentRoute] = useState<TravelRouteWithTeam | null>(null);
   const [hasActiveRoute, setHasActiveRoute] = useState<boolean | null>(null);
-  const [accessibilityMode, setAccessibilityMode] = useState(false);
   
   const storage = useStorage();
   const today = toDateRefBR();
@@ -125,43 +125,9 @@ export function SelectPartnerPage({ currentUser, onSelected }: SelectPartnerPage
     <div className="flex-1 flex flex-col justify-center max-w-3xl mx-auto p-4">
       <Card className={accessibilityMode ? 'accessibility-mode' : ''}>
         <CardContent className="pt-6">
-          <div className="mb-4">
-            {/* Layout para telas grandes */}
-            <div className="hidden sm:flex justify-center items-center relative">
-              <button
-                onClick={() => setAccessibilityMode(!accessibilityMode)}
-                className={`absolute left-0 px-3 py-2 text-sm rounded-md border border-gray-200 hover:bg-gray-50 transition-colors ${
-                  accessibilityMode ? 'bg-blue-50 border-blue-200 text-blue-700' : 'text-gray-600'
-                }`}
-                data-testid="button-accessibility"
-                title="Modo de Acessibilidade"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-              <h2 className="text-lg font-semibold uppercase tracking-wide">
-                SELECIONE O PARCEIRO DE EQUIPE
-              </h2>
-            </div>
-            
-            {/* Layout para telas pequenas */}
-            <div className="sm:hidden">
-              <div className="flex justify-start mb-2">
-                <button
-                  onClick={() => setAccessibilityMode(!accessibilityMode)}
-                  className={`px-3 py-2 text-sm rounded-md border border-gray-200 hover:bg-gray-50 transition-colors ${
-                    accessibilityMode ? 'bg-blue-50 border-blue-200 text-blue-700' : 'text-gray-600'
-                  }`}
-                  data-testid="button-accessibility-mobile"
-                  title="Modo de Acessibilidade"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
-              </div>
-              <h2 className="text-lg font-semibold uppercase tracking-wide text-center">
-                SELECIONE O PARCEIRO DE EQUIPE
-              </h2>
-            </div>
-          </div>
+          <h2 className="text-lg font-semibold mb-4 text-center uppercase tracking-wide">
+            SELECIONE O PARCEIRO DE EQUIPE
+          </h2>
           
           
           {hasActiveRoute === false && (
