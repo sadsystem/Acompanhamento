@@ -828,8 +828,8 @@ export function TeamBuilderPage() {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`min-h-[300px] p-2 rounded-lg ${
-                      snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5" : ""
+                    className={`min-h-[300px] rounded-lg ${
+                      snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5 p-2" : ""
                     }`}
                   >
                     {availableAssistants
@@ -841,14 +841,14 @@ export function TeamBuilderPage() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`p-2 mb-2 bg-card border rounded-lg cursor-move shadow-lg hover:shadow-xl transition-shadow duration-200 ${
+                            className={`p-3 mb-2 bg-card border rounded-lg cursor-move shadow-lg hover:shadow-xl transition-shadow duration-200 ${
                               snapshot.isDragging ? "shadow-2xl" : ""
                             }`}
                           >
-                            <div className="font-medium text-xs">
+                            <div className="font-medium text-sm">
                               {assistant.displayName.split(' ').slice(0, 2).join(' ')}
                             </div>
-                            <Badge variant="outline">Ajudante</Badge>
+                            <Badge variant="outline" className="text-xs mt-1">Ajudante</Badge>
                           </div>
                         )}
                       </Draggable>
@@ -1004,8 +1004,8 @@ export function TeamBuilderPage() {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`min-h-[300px] p-2 rounded-lg ${
-                      snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5" : ""
+                    className={`min-h-[300px] rounded-lg ${
+                      snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5 p-2" : ""
                     }`}
                   >
                     {availableDrivers
@@ -1017,14 +1017,14 @@ export function TeamBuilderPage() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`p-2 mb-2 bg-card border rounded-lg cursor-move shadow-lg hover:shadow-xl transition-shadow duration-200 ${
+                            className={`p-3 mb-2 bg-card border rounded-lg cursor-move shadow-lg hover:shadow-xl transition-shadow duration-200 ${
                               snapshot.isDragging ? "shadow-2xl" : ""
                             }`}
                           >
-                            <div className="font-medium text-xs">
+                            <div className="font-medium text-sm">
                               {driver.displayName.split(' ').slice(0, 2).join(' ')}
                             </div>
-                            <Badge variant="outline">Motorista</Badge>
+                            <Badge variant="outline" className="text-xs mt-1">Motorista</Badge>
                           </div>
                         )}
                       </Draggable>
