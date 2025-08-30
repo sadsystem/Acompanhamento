@@ -23,6 +23,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await storage.seedInitialData();
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
+    console.log("DEBUG: Login endpoint hit"); // Test log visibility
     try {
       const { username, password, remember } = loginSchema.parse(req.body);
       

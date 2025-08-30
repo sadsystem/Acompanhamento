@@ -82,13 +82,10 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async createEvaluation(evaluationData: InsertEvaluation): Promise<Evaluation> {
     const evaluations = await this.getEvaluations();
-    // Generate ID for localStorage and convert Date to string for storage
+    // Generate ID for localStorage
     const evaluation: Evaluation = {
       id: `eval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ...evaluationData,
-      createdAt: evaluationData.createdAt instanceof Date 
-        ? evaluationData.createdAt.toISOString() 
-        : evaluationData.createdAt
+      ...evaluationData
     };
     evaluations.unshift(evaluation);
     await this.setEvaluations(evaluations);

@@ -94,7 +94,7 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved, accessibili
       
       // Create evaluation data without ID (backend will generate it)
       const evaluationData = {
-        createdAt: brNow, // Use Date object, not string
+        createdAt: brNow.toISOString(), // Convert to ISO string for API
         dateRef: ref,
         evaluator: currentUser.username,
         evaluated: evaluatedUser.username,
