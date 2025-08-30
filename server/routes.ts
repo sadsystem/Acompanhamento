@@ -17,7 +17,6 @@ const createUserSchema = insertUserSchema.extend({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Storage is ready
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -87,15 +86,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Users routes
-  app.get("/api/users/admin", async (req, res) => {
-    try {
-      const users = await storage.getUsers();
-      res.json(users);
-    } catch (error) {
-      res.status(500).json({ error: "Erro ao buscar usuários" });
-    }
-  });
-
   app.get("/api/users/team", async (req, res) => {
     try {
       const users = await storage.getUsers();
@@ -147,16 +137,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(400).json({ error: "Erro ao atualizar usuário" });
-    }
-  });
-
-  app.delete("/api/users/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      await storage.deleteUser(id);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(400).json({ error: "Erro ao excluir usuário" });
     }
   });
 

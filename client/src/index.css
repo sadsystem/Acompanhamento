@@ -171,36 +171,11 @@ main .accessibility-mode div {
 }
 
 main .accessibility-mode button:not([data-testid*="accessibility"]):not([data-testid*="mobile-menu"]) {
-  font-size: 1.2rem !important;
+  font-size: 1.4rem !important;
   font-weight: 600 !important;
-  padding: 0.8rem 1.5rem !important;
-  min-height: 3rem !important;
+  padding: 1rem 2rem !important;
+  min-height: 3.5rem !important;
   letter-spacing: 0.02em !important;
-}
-
-/* Mobile-specific accessibility adjustments */
-@media (max-width: 768px) {
-  main .accessibility-mode {
-    padding: 0.5rem !important;
-  }
-  
-  main .accessibility-mode .text-xl {
-    font-size: 1.5rem !important;
-  }
-  
-  main .accessibility-mode h2 {
-    font-size: 1.4rem !important;
-  }
-  
-  main .accessibility-mode p {
-    font-size: 1.1rem !important;
-  }
-  
-  main .accessibility-mode button:not([data-testid*="accessibility"]):not([data-testid*="mobile-menu"]) {
-    font-size: 1.1rem !important;
-    padding: 0.7rem 1.2rem !important;
-    min-height: 2.8rem !important;
-  }
 }
 
 main .accessibility-mode strong {
@@ -220,12 +195,4 @@ main .accessibility-mode textarea {
   padding: 0.8rem !important;
   min-height: 3rem !important;
   line-height: 1.4 !important;
-}
-
-@media (max-width: 768px) {
-  main .accessibility-mode textarea {
-    font-size: 1.1rem !important;
-    padding: 0.6rem !important;
-    min-height: 2.5rem !important;
-  }
 }

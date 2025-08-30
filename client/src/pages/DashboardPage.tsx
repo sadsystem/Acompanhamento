@@ -5,13 +5,6 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { Progress } from "../components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend 
-} from "recharts";
-import { TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, Award, Target, Activity } from "lucide-react";
 import { useStorage } from "../hooks/useStorage";
 import { User, Evaluation } from "../config/types";
 import { QUESTIONS } from "../config/questions";
@@ -46,48 +39,13 @@ export function DashboardPage() {
   };
 
   const stats = useMemo(() => {
-    if (evaluations.length === 0) {
-      return {
-        totalEvaluations: 0,
-        uniqueUsers: 0,
-        averageScore: 0,
-        topPerformers: [],
-        performanceByCategory: [],
-        weeklyTrend: [],
-        distributionData: [],
-        individualStats: new Map()
-      };
-    }
-
-    // Estatísticas gerais
-    const totalEvaluations = evaluations.length;
-    const uniqueUsers = new Set(evaluations.map(e => e.evaluated)).size;
-    const averageScore = evaluations.reduce((sum, e) => sum + e.score, 0) / totalEvaluations;
-
-    // Top performers por média
-    const userStats = new Map<string, { count: number; scoreSum: number; categories: Record<string, { good: number; total: number }> }>();
+    // Top performers by average score
+    const userStats = new Map<string, { count: number; scoreSum: number }>();
     
     evaluations.forEach(evaluation => {
-      const current = userStats.get(evaluation.evaluated) || { 
-        count: 0, 
-        scoreSum: 0, 
-        categories: Object.fromEntries(QUESTIONS.map(q => [q.id, { good: 0, total: 0 }]))
-      };
-      
+      const current = userStats.get(evaluation.evaluated) || { count: 0, scoreSum: 0 };
       current.count += 1;
       current.scoreSum += evaluation.score;
-      
-      // Performance por categoria
-      evaluation.answers.forEach(answer => {
-        const question = QUESTIONS.find(q => q.id === answer.questionId);
-        if (question) {
-          current.categories[question.id].total += 1;
-          if (answer.value === question.goodWhenYes) {
-            current.categories[question.id].good += 1;
-          }
-        }
-      });
-      
       userStats.set(evaluation.evaluated, current);
     });
     
@@ -95,74 +53,12 @@ export function DashboardPage() {
       .map(([username, stats]) => ({
         username,
         average: stats.scoreSum / stats.count,
-        count: stats.count,
-        categories: stats.categories
+        count: stats.count
       }))
       .sort((a, b) => b.average - a.average)
       .slice(0, 5);
 
-    // Performance por categoria (geral)
-    const performanceByCategory = QUESTIONS.map(question => {
-      const categoryAnswers = evaluations.flatMap(e => 
-        e.answers.filter(a => a.questionId === question.id)
-      );
-      const goodAnswers = categoryAnswers.filter(a => a.value === question.goodWhenYes).length;
-      const percentage = categoryAnswers.length > 0 ? (goodAnswers / categoryAnswers.length) * 100 : 0;
-      
-      return {
-        name: question.text.slice(0, 25) + '...',
-        fullName: question.text,
-        percentage,
-        good: goodAnswers,
-        total: categoryAnswers.length
-      };
-    });
-
-    // Trend semanal
-    const weeklyTrend = [];
-    const today = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      const dayEvaluations = evaluations.filter(e => e.dateRef === dateStr);
-      const avgScore = dayEvaluations.length > 0 
-        ? dayEvaluations.reduce((sum, e) => sum + e.score, 0) / dayEvaluations.length 
-        : 0;
-      
-      weeklyTrend.push({
-        date: date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }),
-        score: Number(avgScore.toFixed(2)),
-        count: dayEvaluations.length
-      });
-    }
-
-    // Distribuição de scores
-    const scoreRanges = [
-      { range: '0-20%', min: 0, max: 20, count: 0, color: '#ef4444' },
-      { range: '21-40%', min: 21, max: 40, count: 0, color: '#f97316' },
-      { range: '41-60%', min: 41, max: 60, count: 0, color: '#eab308' },
-      { range: '61-80%', min: 61, max: 80, count: 0, color: '#84cc16' },
-      { range: '81-100%', min: 81, max: 100, count: 0, color: '#22c55e' }
-    ];
-    
-    evaluations.forEach(evaluation => {
-      const scorePercent = evaluation.score;
-      const range = scoreRanges.find(r => scorePercent >= r.min && scorePercent <= r.max);
-      if (range) range.count++;
-    });
-
-    return {
-      totalEvaluations,
-      uniqueUsers,
-      averageScore,
-      topPerformers,
-      performanceByCategory,
-      weeklyTrend,
-      distributionData: scoreRanges.filter(r => r.count > 0),
-      individualStats: userStats
-    };
+    return { topPerformers };
   }, [evaluations]);
 
   const alerts = useMemo(() => {
@@ -199,8 +95,6 @@ export function DashboardPage() {
       .filter(alert => alert.percentage >= CONFIG.alertThreshold)
       .sort((a, b) => b.percentage - a.percentage);
   }, [evaluations]);
-
-  const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   const exportCSV = () => {
     const headers = [
@@ -259,491 +153,217 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-6">
-      {/* Header com filtros */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <Label htmlFor="date-from" className="text-sm font-medium">De</Label>
-            <Input
-              id="date-from"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              data-testid="input-date-from"
-              className="mt-1"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="date-to" className="text-sm font-medium">Até</Label>
-            <Input
-              id="date-to"
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              data-testid="input-date-to"
-              className="mt-1"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="user-filter" className="text-sm font-medium">Colaborador</Label>
-            <Select value={selectedUser} onValueChange={setSelectedUser}>
-              <SelectTrigger data-testid="select-user-filter" className="mt-1">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {users
-                  .filter(u => u.role === "colaborador")
-                  .map(user => (
-                    <SelectItem key={user.username} value={user.username}>
-                      {user.displayName}
-                    </SelectItem>
-                  ))
-                }
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-end gap-2">
-            <Button onClick={exportCSV} variant="outline" size="sm" data-testid="button-export-csv">
-              Exportar CSV
-            </Button>
-            <Button onClick={simulateSync} variant="outline" size="sm" data-testid="button-sync">
-              Sincronizar
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* KPIs principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600">Total Avaliações</p>
-                <p className="text-3xl font-bold text-blue-900" data-testid="stat-total-evaluations">
-                  {stats.totalEvaluations}
-                </p>
-              </div>
-              <Calendar className="h-8 w-8 text-blue-500" />
+    <div className="max-w-6xl mx-auto p-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-500">Total de avaliações</div>
+            <div className="text-2xl font-semibold" data-testid="stat-total-evaluations">
+              {evaluations.length}
             </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-600">Colaboradores</p>
-                <p className="text-3xl font-bold text-green-900" data-testid="stat-unique-evaluated">
-                  {stats.uniqueUsers}
-                </p>
-              </div>
-              <Users className="h-8 w-8 text-green-500" />
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-500">Colaboradores avaliados</div>
+            <div className="text-2xl font-semibold" data-testid="stat-unique-evaluated">
+              {new Set(evaluations.map(e => e.evaluated)).size}
             </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-600">Score Médio</p>
-                <p className="text-3xl font-bold text-orange-900" data-testid="stat-average-score">
-                  {stats.averageScore.toFixed(1)}%
-                </p>
-              </div>
-              <Target className="h-8 w-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-red-600">Alertas Ativos</p>
-                <p className="text-3xl font-bold text-red-900" data-testid="stat-alerts-count">
-                  {alerts.length}
-                </p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-500">Exportação</div>
+            <div className="mt-2 flex gap-2">
+              <Button onClick={exportCSV} data-testid="button-export-csv">
+                CSV
+              </Button>
+              <Button variant="secondary" onClick={simulateSync} data-testid="button-sync">
+                Simular Sync
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Dashboard Principal */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview" data-testid="tab-overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="performance" data-testid="tab-performance">Performance</TabsTrigger>
-          <TabsTrigger value="individual" data-testid="tab-individual">Individual</TabsTrigger>
-          <TabsTrigger value="reports" data-testid="tab-reports">Relatórios</TabsTrigger>
-        </TabsList>
-
-        {/* Aba Visão Geral */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Gráfico de Tendência Semanal */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Tendência Semanal
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={stats.weeklyTrend}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip formatter={(value, name) => [`${value}%`, 'Score Médio']} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="score" 
-                      stroke="#22c55e" 
-                      strokeWidth={3}
-                      dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Distribuição de Scores */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5" />
-                  Distribuição de Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={stats.distributionData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                      label={({ range, count }) => `${range}: ${count}`}
-                    >
-                      {stats.distributionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <Label htmlFor="date-from">De</Label>
+              <Input
+                id="date-from"
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                data-testid="input-date-from"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="date-to">Até</Label>
+              <Input
+                id="date-to"
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                data-testid="input-date-to"
+              />
+            </div>
+            
+            <div className="md:col-span-2">
+              <Label htmlFor="user-filter">Filtrar por colaborador (avaliado)</Label>
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger data-testid="select-user-filter">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {users
+                    .filter(u => u.role === "colaborador")
+                    .map(user => (
+                      <SelectItem key={user.username} value={user.username}>
+                        {user.displayName}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Performance por Categoria */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance por Categoria</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={stats.performanceByCategory} margin={{ left: 20, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip 
-                    formatter={(value, name) => [`${Number(value).toFixed(1)}%`, 'Performance']}
-                    labelFormatter={(label) => {
-                      const category = stats.performanceByCategory.find(c => c.name === label);
-                      return category?.fullName || label;
-                    }}
-                  />
-                  <Bar dataKey="percentage" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Aba Performance */}
-        <TabsContent value="performance" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Top Performers */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-yellow-500" />
-                  Top Performers
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {stats.topPerformers.map((performer, index) => (
-                    <div 
-                      key={performer.username}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      data-testid={`top-performer-${performer.username}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                          index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-orange-600' : 'bg-blue-500'
-                        }`}>
-                          {index + 1}
-                        </div>
-                        <div>
-                          <div className="font-medium">{getUserDisplayName(performer.username)}</div>
-                          <div className="text-xs text-gray-500">{performer.count} avaliações</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg">{performer.average.toFixed(1)}%</div>
-                        <Progress value={performer.average} className="w-16" />
-                      </div>
-                    </div>
-                  ))}
-                  {stats.topPerformers.length === 0 && (
-                    <div className="text-center text-gray-500 py-6">Nenhum dado disponível</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Alertas Detalhados */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
-                  Áreas de Atenção
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {alerts.map(alert => {
-                    const question = QUESTIONS.find(q => q.id === alert.questionId);
-                    const severity = alert.percentage >= 0.7 ? 'high' : alert.percentage >= 0.5 ? 'medium' : 'low';
-                    
-                    return (
-                      <div
-                        key={`${alert.username}-${alert.questionId}`}
-                        className={`p-4 rounded-lg border-l-4 ${
-                          severity === 'high' ? 'bg-red-50 border-red-500' :
-                          severity === 'medium' ? 'bg-orange-50 border-orange-500' :
-                          'bg-yellow-50 border-yellow-500'
-                        }`}
-                        data-testid={`alert-${alert.username}-${alert.questionId}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium">{getUserDisplayName(alert.username)}</div>
-                            <div className="text-sm text-gray-600">{question?.text}</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-gray-900">
-                              {Math.round(alert.percentage * 100)}%
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {alert.total} avaliações
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {alerts.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <Award className="h-12 w-12 mx-auto mb-2 text-green-500" />
-                      <p>Excelente! Nenhum alerta de performance.</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Performance detalhada por categoria */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Análise Detalhada por Categoria</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {stats.performanceByCategory.map((category, index) => (
-                  <div key={category.name} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium">{category.fullName}</h4>
-                      <Badge variant={category.percentage >= 80 ? "default" : category.percentage >= 60 ? "secondary" : "destructive"}>
-                        {category.percentage.toFixed(1)}%
-                      </Badge>
-                    </div>
-                    <Progress value={category.percentage} className="mb-2" />
-                    <div className="text-xs text-gray-600">
-                      {category.good} de {category.total} respostas positivas
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Top Performers */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-500">
+              Média por colaborador (top 5)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {stats.topPerformers.map(performer => (
+                <div 
+                  key={performer.username}
+                  className="flex items-center justify-between"
+                  data-testid={`top-performer-${performer.username}`}
+                >
+                  <div className="text-sm">
+                    {getUserDisplayName(performer.username)}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  <Badge>{performer.average.toFixed(2)}</Badge>
+                </div>
+              ))}
+              {stats.topPerformers.length === 0 && (
+                <div className="text-sm text-gray-600">—</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Aba Individual */}
-        <TabsContent value="individual" className="space-y-6">
-          {selectedUser !== "all" ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Relatório Individual - {getUserDisplayName(selectedUser)}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {stats.individualStats.has(selectedUser) ? (
-                  <div className="space-y-6">
-                    {/* Métricas individuais */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-900">
-                          {stats.individualStats.get(selectedUser)?.count || 0}
-                        </div>
-                        <div className="text-sm text-blue-600">Avaliações Recebidas</div>
-                      </div>
-                      <div className="text-center p-4 bg-green-50 rounded-lg">
-                        <div className="text-2xl font-bold text-green-900">
-                          {((stats.individualStats.get(selectedUser)?.scoreSum || 0) / (stats.individualStats.get(selectedUser)?.count || 1)).toFixed(1)}%
-                        </div>
-                        <div className="text-sm text-green-600">Score Médio</div>
-                      </div>
-                      <div className="text-center p-4 bg-purple-50 rounded-lg">
-                        <div className="text-2xl font-bold text-purple-900">
-                          {stats.topPerformers.findIndex(p => p.username === selectedUser) + 1 || 'N/A'}º
-                        </div>
-                        <div className="text-sm text-purple-600">Posição no Ranking</div>
-                      </div>
+        {/* Alerts */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-500">
+              Alertas (≥ {Math.round(CONFIG.alertThreshold * 100)}%)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {alerts.map(alert => {
+                const question = QUESTIONS.find(q => q.id === alert.questionId);
+                return (
+                  <div
+                    key={`${alert.username}-${alert.questionId}`}
+                    className="flex items-center justify-between border rounded-xl px-3 py-2"
+                    data-testid={`alert-${alert.username}-${alert.questionId}`}
+                  >
+                    <div className="text-sm">
+                      <strong>{getUserDisplayName(alert.username)}</strong> — {question?.text}
                     </div>
+                    <Badge>
+                      {Math.round(alert.percentage * 100)}% ({alert.total})
+                    </Badge>
+                  </div>
+                );
+              })}
+              {alerts.length === 0 && (
+                <div className="text-sm text-gray-600">
+                  Sem alertas no período.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-                    {/* Performance por categoria individual */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Performance por Categoria</h4>
-                      {QUESTIONS.map(question => {
-                        const categoryData = stats.individualStats.get(selectedUser)?.categories[question.id];
-                        const percentage = categoryData ? (categoryData.good / categoryData.total) * 100 : 0;
-                        
+      {/* Detailed Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm text-gray-500">Tabela detalhada</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="py-2 pr-2">Data</th>
+                  <th className="py-2 pr-2">Avaliador</th>
+                  <th className="py-2 pr-2">Avaliado</th>
+                  <th className="py-2 pr-2">Score</th>
+                  <th className="py-2 pr-2">Status</th>
+                  <th className="py-2 pr-2">Respostas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {evaluations.map(evaluation => (
+                  <tr key={evaluation.id} className="border-b" data-testid={`evaluation-row-${evaluation.id}`}>
+                    <td className="py-2 pr-2 whitespace-nowrap">
+                      {formatDateTimeBRdash(new Date(evaluation.createdAt))}
+                    </td>
+                    <td className="py-2 pr-2">
+                      {getUserDisplayName(evaluation.evaluator)}
+                    </td>
+                    <td className="py-2 pr-2">
+                      {getUserDisplayName(evaluation.evaluated)}
+                    </td>
+                    <td className="py-2 pr-2">{evaluation.score}</td>
+                    <td className="py-2 pr-2">
+                      {evaluation.status === "synced" ? "Sincronizado" : 
+                       evaluation.status === "queued" ? "Pendente" : 
+                       evaluation.status}
+                    </td>
+                    <td className="py-2 pr-2">
+                      {evaluation.answers.map(answer => {
+                        const question = QUESTIONS.find(q => q.id === answer.questionId);
                         return (
-                          <div key={question.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div>
-                              <div className="font-medium">{question.text}</div>
-                              <div className="text-sm text-gray-600">
-                                {categoryData?.good || 0} de {categoryData?.total || 0} respostas positivas
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold">{percentage.toFixed(1)}%</div>
-                              <Progress value={percentage} className="w-20" />
-                            </div>
+                          <div key={answer.questionId}>
+                            <strong>{question?.order}.</strong> {answer.value ? "SIM" : "NÃO"}
+                            {answer.reason && <> — <em>{answer.reason}</em></>}
                           </div>
                         );
                       })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    Nenhuma avaliação encontrada para este colaborador no período selecionado.
-                  </div>
+                    </td>
+                  </tr>
+                ))}
+                {evaluations.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-4 text-center text-gray-600">
+                      Sem registros.
+                    </td>
+                  </tr>
                 )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">Selecione um colaborador específico para ver o relatório individual detalhado.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Aba Relatórios */}
-        <TabsContent value="reports" className="space-y-6">
-          {/* Tabela detalhada com melhor design */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Avaliações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-auto rounded-lg border">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Data</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Avaliador</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Avaliado</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Score</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Status</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Detalhes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {evaluations.map(evaluation => (
-                      <tr key={evaluation.id} className="hover:bg-gray-50" data-testid={`evaluation-row-${evaluation.id}`}>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {formatDateTimeBRdash(new Date(evaluation.createdAt))}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {getUserDisplayName(evaluation.evaluator)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {getUserDisplayName(evaluation.evaluated)}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <Badge variant={evaluation.score >= 80 ? "default" : evaluation.score >= 60 ? "secondary" : "destructive"}>
-                            {evaluation.score.toFixed(1)}%
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <Badge variant={evaluation.status === "synced" ? "default" : "outline"}>
-                            {evaluation.status === "synced" ? "Sincronizado" : "Pendente"}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          <div className="space-y-1">
-                            {evaluation.answers.map(answer => {
-                              const question = QUESTIONS.find(q => q.id === answer.questionId);
-                              const isGood = answer.value === question?.goodWhenYes;
-                              return (
-                                <div key={answer.questionId} className="flex items-center gap-2">
-                                  <span className={`w-2 h-2 rounded-full ${
-                                    isGood ? 'bg-green-500' : 'bg-red-500'
-                                  }`}></span>
-                                  <span className="text-xs">
-                                    {question?.order}. {answer.value ? "SIM" : "NÃO"}
-                                    {answer.reason && <span className="text-gray-500"> • {answer.reason}</span>}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {evaluations.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                          Nenhuma avaliação encontrada no período selecionado.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
