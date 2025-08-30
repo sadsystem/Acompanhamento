@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StorageProvider } from "./context/StorageContext";
-import { LocalStorageAdapter } from "./storage/localStorage";
+import { ApiStorageAdapter } from "./storage/apiAdapter";
 import { AuthService } from "./auth/service";
 import { User, AppRoute } from "./config/types";
 import { CONFIG } from "./config/constants";
@@ -21,7 +21,7 @@ import { TeamBuilderPage } from "./pages/TeamBuilderPage.tsx";
 import NotFound from "@/pages/not-found";
 
 // Create storage adapter instance
-const storageAdapter = new LocalStorageAdapter();
+const storageAdapter = new ApiStorageAdapter();
 
 function AppContent() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>("login");
