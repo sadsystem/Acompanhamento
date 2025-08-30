@@ -1,0 +1,26 @@
+Warning: Encountered two children with the same key, `u6`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+div
+Droppable@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@hello-pangea_dnd.js?v=24455635:8590:50
+ConnectFunction@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@hello-pangea_dnd.js?v=24455635:1014:74
+div
+_c9@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/src/components/ui/card.tsx:114:9
+div
+_c@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/src/components/ui/card.tsx:20:8
+div
+Provider@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@hello-pangea_dnd.js?v=24455635:1188:53
+App@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@hello-pangea_dnd.js?v=24455635:7397:7
+ErrorBoundary@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@hello-pangea_dnd.js?v=24455635:1605:5
+DragDropContext@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@hello-pangea_dnd.js?v=24455635:7504:21
+div
+TeamBuilderPage@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/src/pages/TeamBuilderPage.tsx:33:41
+main
+div
+AppContent@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/src/App.tsx?v=PdRqAeAmspc0zJsSUrttJ:39:51
+Route@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=24455635:265:13
+Switch@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=24455635:321:14
+Router
+StorageProvider@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/src/context/StorageContext.tsx:19:32
+Provider@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-XXI3UTWJ.js?v=24455635:58:47
+TooltipProvider@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=24455635:61:7
+QueryClientProvider@https://b1a1e590-20fb-4fe3-9779-8841b701923c-00-7st39xqlu73n.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=24455635:2804:27
+App

@@ -263,7 +263,14 @@ export function TeamBuilderPage() {
             : t
         ));
         
-        setAvailableDrivers(prev => [...prev, driverToRemove]);
+        setAvailableDrivers(prev => {
+          // Evitar duplicatas verificando se o motorista já existe na lista
+          const alreadyExists = prev.some(d => d.id === driverToRemove.id);
+          if (alreadyExists) {
+            return prev;
+          }
+          return [...prev, driverToRemove];
+        });
         saveTeam(updatedTeam);
       }
     }
@@ -295,7 +302,14 @@ export function TeamBuilderPage() {
             : t
         ));
         
-        setAvailableAssistants(prev => [...prev, draggedAssistant]);
+        setAvailableAssistants(prev => {
+          // Evitar duplicatas verificando se o assistente já existe na lista
+          const alreadyExists = prev.some(a => a.id === draggedAssistant.id);
+          if (alreadyExists) {
+            return prev;
+          }
+          return [...prev, draggedAssistant];
+        });
         saveTeam(updatedTeam);
       }
     }
@@ -723,7 +737,7 @@ export function TeamBuilderPage() {
                     {availableAssistants
                       .filter(assistant => assistant.id && assistant.id.trim() !== "")
                       .map((assistant, index) => (
-                      <Draggable key={assistant.id} draggableId={assistant.id} index={index}>
+                      <Draggable key={`available-assistant-${assistant.id}-${index}`} draggableId={assistant.id} index={index}>
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
@@ -814,7 +828,7 @@ export function TeamBuilderPage() {
                             }`}
                           >
                             {route.team?.driver && route.team.driver.username && route.team.driver.id && (
-                              <Draggable draggableId={route.team.driver.id} index={0}>
+                              <Draggable key={`team-driver-${route.id}-${route.team.driver.id}`} draggableId={route.team.driver.id} index={0})>
                                 {(provided, snapshot) => (
                                   <div
                                     ref={provided.innerRef}
@@ -836,7 +850,7 @@ export function TeamBuilderPage() {
                             {route.team?.assistantUsers
                               .filter(assistant => assistant.id && assistant.id.trim() !== "")
                               .map((assistant, assistantIndex) => (
-                              <Draggable key={assistant.id} draggableId={assistant.id} index={assistantIndex + 1}>
+                              <Draggable key={`team-assistant-${route.id}-${assistant.id}-${assistantIndex}`} draggableId={assistant.id} index={assistantIndex + 1}>
                                 {(provided, snapshot) => (
                                   <div
                                     ref={provided.innerRef}
@@ -899,7 +913,7 @@ export function TeamBuilderPage() {
                     {availableDrivers
                       .filter(driver => driver.id && driver.id.trim() !== "")
                       .map((driver, index) => (
-                      <Draggable key={driver.id} draggableId={driver.id} index={index}>
+                      <Draggable key={`available-driver-${driver.id}-${index}`} draggableId={driver.id} index={index}>
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
