@@ -11,7 +11,7 @@ import { User, Team, TeamWithMembers, TravelRoute, TravelRouteWithTeam } from ".
 import { toDateRefBR } from "../utils/time";
 import { uuid } from "../utils/calc";
 import { searchCities } from "../data/cities-pe";
-import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle, Check } from "lucide-react";
+import { Edit, Plus, Trash2, MapPin, Calendar, Users as UsersIcon, X, AlertTriangle, CheckCircle, Check, Download } from "lucide-react";
 
 interface NewRouteForm {
   cities: string[];
@@ -38,6 +38,9 @@ export function TeamBuilderPage() {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<TravelRouteWithTeam | null>(null);
   const [pendingAction, setPendingAction] = useState<'finish' | 'delete' | null>(null);
+  
+  // Export modal state
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const handleConfirmRoute = async (route: TravelRouteWithTeam) => {
     try {
@@ -604,6 +607,95 @@ export function TeamBuilderPage() {
     };
   };
 
+  // Export functions
+  const exportToXLSX = async () => {
+    const XLSX = await import('xlsx');
+    const activeRoutes = routes.filter(r => r.status === "active");
+    
+    const data = activeRoutes.map((route, index) => ({
+      'Nº': index + 1,
+      'Rota': getAllCitiesFormatted(route),
+      'Data de Início': route.startDate,
+      'Status': 'Ativa',
+      'Motorista': route.team?.driver?.displayName || 'Não definido',
+      'Ajudantes': route.team?.assistantUsers?.map(a => a.displayName).join(', ') || 'Nenhum',
+      'CPF Motorista': route.team?.driver?.cpf || 'Não informado',
+      'Telefone Motorista': route.team?.driver?.phone || 'Não informado'
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Rotas Ativas");
+    
+    // Auto-size columns
+    const cols = [
+      { wch: 5 },   // Nº
+      { wch: 40 },  // Rota
+      { wch: 15 },  // Data
+      { wch: 10 },  // Status
+      { wch: 25 },  // Motorista
+      { wch: 30 },  // Ajudantes
+      { wch: 20 },  // CPF
+      { wch: 20 }   // Telefone
+    ];
+    ws['!cols'] = cols;
+    
+    const now = new Date();
+    const timestamp = now.toISOString().split('T')[0];
+    XLSX.writeFile(wb, `rotas-ativas-${timestamp}.xlsx`);
+    setShowExportModal(false);
+  };
+  
+  const exportToPDF = async () => {
+    const jsPDF = (await import('jspdf')).default;
+    const autoTable = (await import('jspdf-autotable')).default;
+    
+    const activeRoutes = routes.filter(r => r.status === "active");
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.text('Relatório de Rotas Ativas', 14, 22);
+    doc.setFontSize(12);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 32);
+    
+    // Table data
+    const tableData = activeRoutes.map((route, index) => [
+      index + 1,
+      getAllCitiesFormatted(route),
+      route.startDate,
+      route.team?.driver?.displayName || 'Não definido',
+      route.team?.assistantUsers?.map(a => a.displayName).join(', ') || 'Nenhum'
+    ]);
+    
+    autoTable(doc, {
+      head: [['Nº', 'Rota', 'Data', 'Motorista', 'Ajudantes']],
+      body: tableData,
+      startY: 40,
+      styles: {
+        fontSize: 10,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 15 },
+        1: { cellWidth: 60 },
+        2: { halign: 'center', cellWidth: 25 },
+        3: { cellWidth: 45 },
+        4: { cellWidth: 45 }
+      }
+    });
+    
+    const now = new Date();
+    const timestamp = now.toISOString().split('T')[0];
+    doc.save(`rotas-ativas-${timestamp}.pdf`);
+    setShowExportModal(false);
+  };
+
   const getAllCitiesFormatted = (route: TravelRouteWithTeam) => {
     // Usa a lista de cidades se disponível, senão usa o campo city
     const cities = route.cities && route.cities.length > 0 ? route.cities : [route.city || "Equipe Sem Rota"];
@@ -720,7 +812,7 @@ export function TeamBuilderPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           
           {/* Ajudantes Disponíveis - Coluna 1 */}
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-200">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <UsersIcon className="w-5 h-5" />
@@ -746,8 +838,8 @@ export function TeamBuilderPage() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`p-2 mb-2 bg-card border rounded-lg cursor-move ${
-                              snapshot.isDragging ? "shadow-lg" : ""
+                            className={`p-2 mb-2 bg-card border rounded-lg cursor-move shadow-lg hover:shadow-xl transition-shadow duration-200 ${
+                              snapshot.isDragging ? "shadow-2xl" : ""
                             }`}
                           >
                             <div className="font-medium text-xs">
@@ -771,14 +863,14 @@ export function TeamBuilderPage() {
           </Card>
 
           {/* Teams with City Names */}
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-200">
             <CardHeader>
               <CardTitle className="text-lg">Formação de Rota</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {routes.filter(r => r.status === "formation").map((route) => (
-                  <div key={route.id} className="border rounded-lg p-4">
+                  <div key={route.id} className="border rounded-lg p-4 shadow-lg hover:shadow-xl transition-shadow duration-200">
                     <div className="text-center">
                       {/* Data no topo */}
                       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mb-3">
@@ -896,7 +988,7 @@ export function TeamBuilderPage() {
           </Card>
 
           {/* Motoristas Disponíveis - Coluna 3 */}
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-200">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <UsersIcon className="w-5 h-5" />
@@ -922,8 +1014,8 @@ export function TeamBuilderPage() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`p-2 mb-2 bg-card border rounded-lg cursor-move ${
-                              snapshot.isDragging ? "shadow-lg" : ""
+                            className={`p-2 mb-2 bg-card border rounded-lg cursor-move shadow-lg hover:shadow-xl transition-shadow duration-200 ${
+                              snapshot.isDragging ? "shadow-2xl" : ""
                             }`}
                           >
                             <div className="font-medium text-xs">
@@ -952,7 +1044,18 @@ export function TeamBuilderPage() {
       {routes.filter(r => r.status === "active").length > 0 && (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="text-lg">Rotas Ativas</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg">Rotas Ativas</CardTitle>
+              <Button
+                onClick={() => setShowExportModal(true)}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Exportar
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1156,6 +1259,55 @@ export function TeamBuilderPage() {
                   Confirmar Exclusão
                 </>
               )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Exportação */}
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Exportar Rotas Ativas
+            </DialogTitle>
+            <DialogDescription>
+              Escolha o formato de exportação dos dados das rotas ativas
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              Total de rotas ativas: {routes.filter(r => r.status === "active").length}
+            </div>
+            
+            <div className="space-y-2">
+              <Button
+                onClick={exportToXLSX}
+                className="w-full flex items-center justify-center gap-2"
+                variant="default"
+                disabled={routes.filter(r => r.status === "active").length === 0}
+              >
+                <Download className="w-4 h-4" />
+                Exportar como XLSX
+              </Button>
+              
+              <Button
+                onClick={exportToPDF}
+                className="w-full flex items-center justify-center gap-2"
+                variant="outline"
+                disabled={routes.filter(r => r.status === "active").length === 0}
+              >
+                <Download className="w-4 h-4" />
+                Exportar como PDF
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => setShowExportModal(false)}>
+              Cancelar
             </Button>
           </div>
         </DialogContent>
