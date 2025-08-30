@@ -90,6 +90,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Users routes
+  app.get("/api/users/admin", async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao buscar usuários" });
+    }
+  });
+
   app.get("/api/users/team", async (req, res) => {
     try {
       const users = await storage.getUsers();
