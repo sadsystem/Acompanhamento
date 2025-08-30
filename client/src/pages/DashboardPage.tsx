@@ -244,14 +244,20 @@ export function DashboardPage() {
   };
 
   const simulateSync = async () => {
-    const updatedEvaluations = evaluations.map(evaluation => ({
+    // CORREÇÃO: Pegar TODAS as avaliações, não apenas as filtradas
+    const allEvaluations = await storage.getEvaluations(); // Sem filtros = todas
+    
+    // Atualizar apenas as que estão pendentes para "synced"
+    const updatedEvaluations = allEvaluations.map(evaluation => ({
       ...evaluation,
-      status: "synced" as const
+      status: evaluation.status === "queued" ? "synced" as const : evaluation.status
     }));
     
     await storage.setEvaluations(updatedEvaluations);
-    await loadData();
-    alert(`Sincronizados: ${evaluations.length} registros`);
+    await loadData(); // Recarregar com filtros atuais
+    
+    const syncedCount = allEvaluations.filter(e => e.status === "queued").length;
+    alert(`Sincronizados: ${syncedCount} registros pendentes. Total de ${allEvaluations.length} registros preservados.`);
   };
 
   const getUserDisplayName = (username: string) => {
