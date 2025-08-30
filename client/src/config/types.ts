@@ -105,3 +105,8 @@ export type TravelRouteWithTeam = TravelRoute & {
   team?: TeamWithMembers;
   vehicle?: Vehicle;
 };
+
+// Import evaluation insert type from shared schema
+import { z } from "zod";
+import { insertEvaluationSchema } from "@shared/schema";
+export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;

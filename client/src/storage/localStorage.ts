@@ -1,5 +1,5 @@
 import { StorageAdapter } from './adapter';
-import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle } from '../config/types';
+import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle, InsertEvaluation } from '../config/types';
 import { LS_KEYS } from '../config/constants';
 
 export class LocalStorageAdapter implements StorageAdapter {
@@ -80,8 +80,16 @@ export class LocalStorageAdapter implements StorageAdapter {
     this.writeLS(LS_KEYS.evaluations, evaluations);
   }
 
-  async createEvaluation(evaluation: Evaluation): Promise<Evaluation> {
+  async createEvaluation(evaluationData: InsertEvaluation): Promise<Evaluation> {
     const evaluations = await this.getEvaluations();
+    // Generate ID for localStorage and convert Date to string for storage
+    const evaluation: Evaluation = {
+      id: `eval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...evaluationData,
+      createdAt: evaluationData.createdAt instanceof Date 
+        ? evaluationData.createdAt.toISOString() 
+        : evaluationData.createdAt
+    };
     evaluations.unshift(evaluation);
     await this.setEvaluations(evaluations);
     return evaluation;

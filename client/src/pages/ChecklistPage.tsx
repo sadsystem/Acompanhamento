@@ -92,15 +92,15 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved, accessibili
       const brNow = nowInBrazil();
       const ref = toDateRefBR(brNow);
       
-      const evaluation: Evaluation = {
-        id: uuid(),
-        createdAt: brNow.toISOString(),
+      // Create evaluation data without ID (backend will generate it)
+      const evaluationData = {
+        createdAt: brNow, // Use Date object, not string
         dateRef: ref,
         evaluator: currentUser.username,
         evaluated: evaluatedUser.username,
         answers,
         score,
-        status: "queued"
+        status: "queued" as const
       };
       
       // Check for existing evaluation
@@ -118,7 +118,7 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved, accessibili
         return;
       }
       
-      await storage.createEvaluation(evaluation);
+      await storage.createEvaluation(evaluationData);
       
       setPhase("success");
       setTimeout(() => {

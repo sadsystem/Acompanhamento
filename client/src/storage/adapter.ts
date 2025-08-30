@@ -1,4 +1,4 @@
-import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle } from '../config/types';
+import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle, InsertEvaluation } from '../config/types';
 
 export interface StorageAdapter {
   // Users
@@ -11,7 +11,7 @@ export interface StorageAdapter {
   // Evaluations
   getEvaluations(filters?: EvaluationFilters): Promise<Evaluation[]>;
   setEvaluations(evaluations: Evaluation[]): Promise<void>;
-  createEvaluation(evaluation: Evaluation): Promise<Evaluation>;
+  createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation>;
 
   // Session
   getSession(): Promise<Session | null>;

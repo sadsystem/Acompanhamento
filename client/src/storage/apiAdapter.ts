@@ -1,5 +1,5 @@
 import { StorageAdapter } from './adapter';
-import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle } from '../config/types';
+import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle, InsertEvaluation } from '../config/types';
 import { apiRequest } from '@/lib/queryClient';
 
 export class ApiStorageAdapter implements StorageAdapter {
@@ -92,8 +92,8 @@ export class ApiStorageAdapter implements StorageAdapter {
     throw new Error('setEvaluations not implemented in API adapter');
   }
 
-  async createEvaluation(evaluation: Evaluation): Promise<Evaluation> {
-    const response = await apiRequest('POST', '/api/evaluations', evaluation);
+  async createEvaluation(evaluationData: InsertEvaluation): Promise<Evaluation> {
+    const response = await apiRequest('POST', '/api/evaluations', evaluationData);
     return response.json();
   }
 
