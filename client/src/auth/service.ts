@@ -60,6 +60,9 @@ export class AuthService {
     const session: Session = { username: targetUser.username };
     await this.storage.setSession(session);
     
+    // Set remember to true to prevent session from being cleared on page reload
+    await this.storage.setRemember(true);
+    
     return { ok: true, user: targetUser };
   }
 }
