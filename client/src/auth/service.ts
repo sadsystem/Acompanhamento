@@ -1,6 +1,7 @@
 import { StorageAdapter } from '../storage/adapter';
 import { User, LoginResult, Session } from '../config/types';
 import { queryClient } from '@/lib/queryClient';
+import { API_BASE_URL } from '../config/config';
 
 export class AuthService {
   constructor(private storage: StorageAdapter) {}
@@ -10,11 +11,14 @@ export class AuthService {
       // Convert phone to username format for API call
       const phoneDigits = username.replace(/\D/g, '');
       
+      console.log('Attempting login with:', { phoneDigits });
+      
       // Call login API directly
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           username: phoneDigits,
@@ -23,9 +27,24 @@ export class AuthService {
         })
       });
       
-      const result = await response.json();
+      console.log('Login response status:', response.status);
+      
+      // Log raw response for debugging
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse response:', e);
+        return { ok: false, error: "Erro no formato da resposta do servidor" };
+      }
+      
+      console.log('Parsed response:', result);
       
       if (!response.ok || !result.success) {
+        console.error('Login failed:', result.error || "Credenciais inválidas");
         return { ok: false, error: result.error || "Credenciais inválidas" };
       }
       
@@ -36,7 +55,10 @@ export class AuthService {
       return { ok: true, user: result.data.user };
     } catch (error) {
       console.error('Login error:', error);
-      return { ok: false, error: "Telefone não encontrado" };
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return { ok: false, error: "Erro ao conectar com o servidor" };
+      }
+      return { ok: false, error: "Erro ao tentar fazer login" };
     }
   }
 
