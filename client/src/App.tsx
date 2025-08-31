@@ -56,10 +56,22 @@ function AppContent() {
   };
 
   const handleLoggedIn = async () => {
-    const user = await authService.getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-      setCurrentRoute(user.role === "admin" ? "dashboard" : "selectPartner");
+    try {
+      const user = await authService.getCurrentUser();
+      console.log('Current user after login:', user);
+      
+      if (user) {
+        setCurrentUser(user);
+        const nextRoute = user.role === "admin" ? "dashboard" : "selectPartner";
+        console.log('Navigating to:', nextRoute);
+        setCurrentRoute(nextRoute);
+      } else {
+        console.error('No user found after login');
+        setCurrentRoute("login");
+      }
+    } catch (error) {
+      console.error('Error in handleLoggedIn:', error);
+      setCurrentRoute("login");
     }
   };
 
@@ -85,6 +97,7 @@ function AppContent() {
   };
 
   const navigateTo = (route: AppRoute) => {
+    console.log('Navigating to route:', route);
     setCurrentRoute(route);
   };
 
@@ -286,6 +299,11 @@ function AppContent() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-auto">
+        {(() => { 
+          console.log('Rendering route:', currentRoute, 'User:', currentUser?.role);
+          return null;
+        })()}
+        
         {currentRoute === "login" && (
           <LoginPage onLoggedIn={handleLoggedIn} />
         )}
