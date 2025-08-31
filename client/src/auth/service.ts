@@ -13,13 +13,15 @@ export class AuthService {
       
       console.log('Attempting login with:', { phoneDigits });
       
-      // Use absolute URL with deployed API
-      const apiUrl = window.location.origin + '/api/auth/login';
+      // Determine if we're in development or production
+      const baseUrl = window.location.hostname === 'localhost' ? '' : '';
+      const apiUrl = baseUrl + '/api/auth/login';
       console.log('Calling API at:', apiUrl);
       
-      // Call login API directly
+      // Call login API directly with credentials
       const response = await fetch(apiUrl, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'

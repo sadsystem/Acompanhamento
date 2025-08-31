@@ -58,6 +58,10 @@ function AppContent() {
   const handleLoggedIn = async () => {
     try {
       console.log('Starting handleLoggedIn flow...');
+      
+      // Clear any previous errors
+      console.clear();
+      
       const user = await authService.getCurrentUser();
       console.log('Current user after login:', user);
       
@@ -74,7 +78,13 @@ function AppContent() {
           console.log('Setting route to:', nextRoute);
           setCurrentRoute(nextRoute);
           console.log('Current route should now be:', nextRoute);
-        }, 100);
+          
+          // Use window.location for a hard redirect if needed
+          if (window.location.pathname === '/login') {
+            console.log('Forcing navigation from /login');
+            window.location.href = nextRoute === "dashboard" ? "/dashboard" : "/select-partner";
+          }
+        }, 300);
       } else {
         console.error('No user found after login');
         setCurrentRoute("login");
