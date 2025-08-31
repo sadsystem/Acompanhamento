@@ -57,14 +57,24 @@ function AppContent() {
 
   const handleLoggedIn = async () => {
     try {
+      console.log('Starting handleLoggedIn flow...');
       const user = await authService.getCurrentUser();
       console.log('Current user after login:', user);
       
       if (user) {
+        console.log('Setting current user:', user);
         setCurrentUser(user);
+        
+        // Determine next route
         const nextRoute = user.role === "admin" ? "dashboard" : "selectPartner";
-        console.log('Navigating to:', nextRoute);
-        setCurrentRoute(nextRoute);
+        console.log('Determined next route:', nextRoute);
+        
+        // Force a small delay to ensure state updates properly
+        setTimeout(() => {
+          console.log('Setting route to:', nextRoute);
+          setCurrentRoute(nextRoute);
+          console.log('Current route should now be:', nextRoute);
+        }, 100);
       } else {
         console.error('No user found after login');
         setCurrentRoute("login");
@@ -98,6 +108,8 @@ function AppContent() {
 
   const navigateTo = (route: AppRoute) => {
     console.log('Navigating to route:', route);
+    // Forçar atualização do estado para garantir que a rota seja alterada
+    setCurrentRoute(route);
     setCurrentRoute(route);
   };
 
