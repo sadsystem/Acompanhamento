@@ -1247,7 +1247,7 @@ export function TeamBuilderPage() {
                             ref={provided.innerRef}
                             {...provided.droppableProps}
                             className={`min-h-[80px] p-2 rounded space-y-1 ${
-                              snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5" : "border border-border"
+                              snapshot.isDraggingOver ? "border-2 border-primary border-dashed bg-primary/5" : "border border-gray-300"
                             }`}
                           >
                             {route.team?.driver && route.team.driver.username && route.team.driver.id && (

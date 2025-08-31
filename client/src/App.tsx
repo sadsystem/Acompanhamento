@@ -103,7 +103,7 @@ function AppContent() {
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       {currentUser && (
-        <header className="bg-card border-b border-border sticky top-0 z-50">
+  <header className="bg-card border-b border-gray-300 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-4">
@@ -207,9 +207,9 @@ function AppContent() {
 
             {/* Mobile Menu Dropdown */}
             {isMobileMenuOpen && (
-              <div className="lg:hidden border-t border-border bg-card">
+              <div className="lg:hidden border-t border-gray-300 bg-card">
                 <div className="px-4 py-3 space-y-2">
-                  <div className="text-sm text-muted-foreground pb-2 border-b border-border">
+                  <div className="text-sm text-muted-foreground pb-2 border-b border-gray-300">
                     {currentUser.displayName.split(' ').slice(0, 2).join(' ')}
                   </div>
                   
