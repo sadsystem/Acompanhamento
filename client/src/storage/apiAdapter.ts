@@ -5,16 +5,34 @@ import { apiRequest } from '@/lib/queryClient';
 export class ApiStorageAdapter implements StorageAdapter {
   // Users
   async getUsers(): Promise<User[]> {
-    const timestamp = Date.now();
-    const response = await fetch(`/api/users/admin?_t=${timestamp}`, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+    try {
+      const timestamp = Date.now();
+      const url = `/api/users/admin?_t=${timestamp}`;
+      console.log('ApiStorageAdapter: Fetching users from:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
+      console.log('ApiStorageAdapter: Users fetch response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('ApiStorageAdapter: Failed to fetch users:', response.status, errorText);
+        throw new Error(`Failed to fetch users: ${response.status} ${errorText}`);
       }
-    });
-    if (!response.ok) throw new Error('Failed to fetch users');
-    return response.json();
+      
+      const users = await response.json();
+      console.log('ApiStorageAdapter: Successfully fetched users count:', users.length);
+      return users;
+    } catch (error) {
+      console.error('ApiStorageAdapter: Error in getUsers:', error);
+      throw error;
+    }
   }
 
   async setUsers(users: User[]): Promise<void> {
@@ -35,9 +53,14 @@ export class ApiStorageAdapter implements StorageAdapter {
 
   async getUserByUsername(username: string): Promise<User | null> {
     try {
+      console.log('ApiStorageAdapter: Getting user by username:', username);
       const users = await this.getUsers();
-      return users.find(u => u.username === username) || null;
-    } catch {
+      console.log('ApiStorageAdapter: Retrieved users count:', users.length);
+      const user = users.find(u => u.username === username) || null;
+      console.log('ApiStorageAdapter: Found user:', user ? `${user.displayName} (${user.role})` : 'null');
+      return user;
+    } catch (error) {
+      console.error('ApiStorageAdapter: Error getting user by username:', error);
       return null;
     }
   }
@@ -46,17 +69,22 @@ export class ApiStorageAdapter implements StorageAdapter {
   async getSession(): Promise<Session | null> {
     try {
       const raw = localStorage.getItem('sad_session');
-      return raw ? JSON.parse(raw) : null;
-    } catch {
+      const session = raw ? JSON.parse(raw) : null;
+      console.log('ApiStorageAdapter: Retrieved session:', session);
+      return session;
+    } catch (error) {
+      console.error('ApiStorageAdapter: Error getting session:', error);
       return null;
     }
   }
 
   async setSession(session: Session): Promise<void> {
+    console.log('ApiStorageAdapter: Setting session:', session);
     localStorage.setItem('sad_session', JSON.stringify(session));
   }
 
   async clearSession(): Promise<void> {
+    console.log('ApiStorageAdapter: Clearing session');
     localStorage.removeItem('sad_session');
   }
 

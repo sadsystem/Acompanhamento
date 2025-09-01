@@ -10,6 +10,7 @@ import { AuthService } from "./auth/service";
 import { User, AppRoute } from "./config/types";
 import { CONFIG } from "./config/constants";
 import { Menu, X, Eye } from "lucide-react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Pages
 import { LoginPage } from "./pages/LoginPage";
@@ -39,28 +40,39 @@ function AppContent() {
 
   const initializeApp = async () => {
     try {
+      console.log('App initialization started...');
+      setLoading(true);
+      
       // Check for remembered session
       await authService.ensureFirstLogin();
       
       // Check current user
       const user = await authService.getCurrentUser();
+      console.log('initializeApp: Current user:', user ? `${user.displayName} (${user.role})` : 'none');
+      
       if (user) {
         setCurrentUser(user);
-        setCurrentRoute(user.role === "admin" ? "dashboard" : "selectPartner");
+        const initialRoute = user.role === "admin" ? "dashboard" : "selectPartner";
+        console.log('initializeApp: Setting initial route to:', initialRoute);
+        setCurrentRoute(initialRoute);
+      } else {
+        console.log('initializeApp: No user found, showing login');
+        setCurrentRoute("login");
       }
     } catch (error) {
       console.error("App initialization error:", error);
+      // On error, show login page
+      setCurrentRoute("login");
+      setCurrentUser(null);
     } finally {
       setLoading(false);
+      console.log('App initialization completed');
     }
   };
 
   const handleLoggedIn = async () => {
     try {
       console.log('Starting handleLoggedIn flow...');
-      
-      // Clear any previous errors
-      console.clear();
       
       const user = await authService.getCurrentUser();
       console.log('Current user after login:', user);
@@ -73,24 +85,17 @@ function AppContent() {
         const nextRoute = user.role === "admin" ? "dashboard" : "selectPartner";
         console.log('Determined next route:', nextRoute);
         
-        // Force a small delay to ensure state updates properly
-        setTimeout(() => {
-          console.log('Setting route to:', nextRoute);
-          setCurrentRoute(nextRoute);
-          console.log('Current route should now be:', nextRoute);
-          
-          // Use window.location for a hard redirect if needed
-          if (window.location.pathname === '/login') {
-            console.log('Forcing navigation from /login');
-            window.location.href = nextRoute === "dashboard" ? "/dashboard" : "/select-partner";
-          }
-        }, 300);
+        // Update route state immediately without setTimeout to avoid timing issues
+        setCurrentRoute(nextRoute);
+        console.log('Route set to:', nextRoute);
       } else {
-        console.error('No user found after login');
+        console.error('No user found after login - redirecting to login');
+        setCurrentUser(null);
         setCurrentRoute("login");
       }
     } catch (error) {
       console.error('Error in handleLoggedIn:', error);
+      setCurrentUser(null);
       setCurrentRoute("login");
     }
   };
@@ -322,7 +327,7 @@ function AppContent() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-auto">
         {(() => { 
-          console.log('Rendering route:', currentRoute, 'User:', currentUser?.role);
+          console.log('Rendering route:', currentRoute, 'User:', currentUser?.role, 'Loading:', loading);
           return null;
         })()}
         
@@ -358,6 +363,26 @@ function AppContent() {
         {currentRoute === "admin" && currentUser && (
           <AdminPage />
         )}
+        
+        {/* Fallback content for debugging - shows when no route matches */}
+        {!["login", "selectPartner", "checklist", "dashboard", "teamBuilder", "admin"].includes(currentRoute) && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center p-8">
+              <div className="text-lg font-semibold text-gray-900 mb-2">Estado da Aplicação</div>
+              <div className="text-sm text-gray-600 space-y-1">
+                <div>Rota atual: {currentRoute}</div>
+                <div>Usuário: {currentUser ? `${currentUser.displayName} (${currentUser.role})` : 'Nenhum'}</div>
+                <div>Carregando: {loading ? 'Sim' : 'Não'}</div>
+              </div>
+              <button 
+                onClick={() => setCurrentRoute("login")} 
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Ir para Login
+              </button>
+            </div>
+          </div>
+        )}
       </main>
       
       <footer className="border-t bg-muted/30 py-4 flex-shrink-0">
@@ -382,13 +407,15 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <StorageProvider adapter={storageAdapter}>
-          <Router />
-        </StorageProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <StorageProvider adapter={storageAdapter}>
+            <Router />
+          </StorageProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

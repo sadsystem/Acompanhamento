@@ -69,10 +69,22 @@ export class AuthService {
   }
 
   async getCurrentUser(): Promise<User | null> {
-    const session = await this.storage.getSession();
-    if (!session) return null;
-    
-    return await this.storage.getUserByUsername(session.username);
+    try {
+      console.log('getCurrentUser: Checking session...');
+      const session = await this.storage.getSession();
+      if (!session) {
+        console.log('getCurrentUser: No session found');
+        return null;
+      }
+      
+      console.log('getCurrentUser: Session found for username:', session.username);
+      const user = await this.storage.getUserByUsername(session.username);
+      console.log('getCurrentUser: User retrieved:', user ? `${user.displayName} (${user.role})` : 'null');
+      return user;
+    } catch (error) {
+      console.error('getCurrentUser: Error retrieving user:', error);
+      return null;
+    }
   }
 
   async logout(): Promise<void> {
