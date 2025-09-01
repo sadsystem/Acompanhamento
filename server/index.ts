@@ -6,13 +6,23 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Enable CORS for all routes
+// Enable CORS for all routes - configuração mais permissiva para desenvolvimento
 app.use(cors({
-  origin: true,
+  origin: function(origin, callback) {
+    // Permitir qualquer origem em desenvolvimento
+    callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  preflightContinue: true,
+  optionsSuccessStatus: 204
 }));
+
+// Adicionar um handler específico para OPTIONS para CORS preflight
+app.options('*', (req, res) => {
+  res.status(204).end();
+});
 
 // Disable caching for all API routes - force fresh data
 app.use('/api', (req, res, next) => {

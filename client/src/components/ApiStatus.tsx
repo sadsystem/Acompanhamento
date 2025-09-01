@@ -12,8 +12,10 @@ export function ApiStatus() {
     const checkApi = async () => {
       try {
         const startTime = Date.now();
+        // Use window.location.origin to ensure we're using the correct base URL
+        const baseUrl = window.location.origin;
         // Add cache busting timestamp parameter
-        const response = await fetch(`/api/health?_t=${Date.now()}`, { 
+        const response = await fetch(`${baseUrl}/api/health?_t=${Date.now()}`, { 
           method: 'GET',
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',

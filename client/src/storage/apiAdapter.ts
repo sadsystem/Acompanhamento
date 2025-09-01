@@ -6,7 +6,8 @@ export class ApiStorageAdapter implements StorageAdapter {
   // Users
   async getUsers(): Promise<User[]> {
     const timestamp = Date.now();
-    const response = await fetch(`/api/users/admin?_t=${timestamp}`, {
+    const baseUrl = window.location.origin;
+    const response = await fetch(`${baseUrl}/api/users/admin?_t=${timestamp}`, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',

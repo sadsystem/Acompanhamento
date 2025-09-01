@@ -47,7 +47,17 @@ EOF
 
 # Deploy para Vercel
 echo "🚀 Iniciando deploy para Vercel..."
-vercel --prod
+
+# Definir variáveis de ambiente para o Vercel CLI
+export VERCEL_PROJECT_ID="prj_JXbU1wKU5JQbkGlyfRlfXoCPXlFA"
+export VERCEL_ORG_ID="team_YourOrgID"
+
+# Deploy com forçar rebuild
+vercel --prod --force
 
 echo "✅ Deploy concluído!"
 echo "🔗 Acesse o sistema em: https://ponto2.ecoexpedicao.site"
+echo ""
+echo "⚠️  IMPORTANTE: Se o erro persistir, verifique:"
+echo "1. Se a API está acessível em https://ponto2.ecoexpedicao.site/api/health"
+echo "2. Se o CORS está configurado corretamente nas Variáveis de Ambiente do Vercel"

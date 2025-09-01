@@ -12,9 +12,21 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  // Ensure we're using absolute URLs
+  const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+  
+  console.log(`[API Request] ${method} ${fullUrl}`);
+  
+  const res = await fetch(fullUrl, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: data ? { 
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache"
+    } : {
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache"
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });

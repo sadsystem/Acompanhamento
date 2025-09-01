@@ -1,0 +1,55 @@
+# Acompanhamento Diário
+
+## Correções para o Deploy no Vercel
+
+Foram feitas diversas alterações no código para garantir o funcionamento correto da aplicação no ambiente do Vercel:
+
+### Problemas corrigidos:
+
+1. **Erro 404 nas chamadas de API**:
+   - Modificamos o arquivo `vercel.json` para rotear corretamente as chamadas de API
+   - Adicionamos suporte a CORS para permitir chamadas entre domínios diferentes
+   - Garantimos que todas as chamadas de API usem URLs absolutas com `window.location.origin`
+
+2. **Tela branca após login**:
+   - Melhoramos o tratamento de erros na autenticação
+   - Adicionamos logs adicionais para depuração
+   - Ajustamos a estrutura de arquivos para que o Vercel sirva os arquivos estáticos corretamente
+
+3. **Problemas de CORS**:
+   - Configuramos cabeçalhos CORS corretos no servidor Express
+   - Adicionamos uma rota OPTIONS específica para lidar com preflight requests
+
+### Como fazer deploy:
+
+1. **Uso do script de deploy**:
+   ```bash
+   ./deploy.sh
+   ```
+
+2. **Verificação das variáveis de ambiente no Vercel**:
+   - `NODE_ENV`: production
+   - `DATABASE_URL`: sua_url_do_banco
+
+3. **Domínio personalizado**:
+   - Configurado para `ponto2.ecoexpedicao.site`
+
+### Troubleshooting:
+
+Se ainda encontrar problemas após o deploy:
+
+1. **Verifique os logs do Vercel**:
+   ```bash
+   vercel logs
+   ```
+
+2. **Teste a API diretamente**:
+   Acesse `https://ponto2.ecoexpedicao.site/api/health` para verificar se a API está respondendo
+
+3. **Reconstrua e force o deploy**:
+   ```bash
+   vercel --prod --force
+   ```
+
+4. **Depuração no navegador**:
+   Abra o Console do navegador (F12) para verificar se há erros de JavaScript ou requisições de rede falhando
