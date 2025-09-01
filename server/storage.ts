@@ -189,6 +189,13 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
+  async deleteUser(id: string): Promise<void> {
+    if (!this.users.has(id)) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    this.users.delete(id);
+  }
+
   // Evaluation methods
   async getEvaluations(filters?: {
     dateFrom?: string;

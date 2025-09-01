@@ -8,10 +8,10 @@ export class AuthService {
 
   async login(username: string, password: string): Promise<LoginResult> {
     try {
-      // Convert phone to username format for API call
-      const phoneDigits = username.replace(/\D/g, '');
+      // Use the username as provided (don't extract digits for admin/test users)
+      const cleanUsername = username.trim();
       
-      console.log('Attempting login with:', { phoneDigits });
+      console.log('Attempting login with:', { username: cleanUsername });
       
       // Determine if we're in development or production
       const baseUrl = window.location.hostname === 'localhost' ? '' : '';
@@ -27,7 +27,7 @@ export class AuthService {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          username: phoneDigits,
+          username: cleanUsername,
           password: password,
           remember: false
         })

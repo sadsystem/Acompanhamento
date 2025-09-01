@@ -28,8 +28,19 @@ export class SupabaseStorage implements IStorage {
       throw new Error("DATABASE_URL is required for Supabase connection");
     }
     
-    const client = postgres(process.env.DATABASE_URL, { prepare: false });
-    this.db = drizzle(client);
+    try {
+      const client = postgres(process.env.DATABASE_URL, { 
+        prepare: false,
+        connect_timeout: 5,
+        idle_timeout: 20,
+        max_lifetime: 60 * 30,
+      });
+      this.db = drizzle(client);
+      console.log("🔗 Supabase connection established");
+    } catch (error) {
+      console.error("Failed to establish Supabase connection:", error);
+      throw error;
+    }
   }
 
   // Users
@@ -173,88 +184,96 @@ export class SupabaseStorage implements IStorage {
 
   // Seed initial data
   async seedInitialData(): Promise<void> {
-    // Check if admin user exists
-    const adminUser = await this.getUserByUsername("87999461725");
-    
-    if (!adminUser) {
-      // Seed admin user
-      await this.createUser({
-        username: "87999461725",
-        phone: "(87) 9 9946-1725",
-        password: "admin",
-        displayName: "Jucélio Verissimo Dias da Silva",
-        role: "admin",
-        permission: "ADM",
-        active: true,
-        cargo: "Assistente de Logística"
-      });
-    }
-
-    // Check if questions exist
-    const existingQuestions = await this.getQuestions();
-    
-    if (existingQuestions.length === 0) {
-      // Seed questions
-      const seedQuestions = [
-        {
-          id: "pontualidade",
-          text: "Chegou dentro do horário estipulado?",
-          order: 1,
-          goodWhenYes: true,
-          requireReasonWhen: "no"
-        },
-        {
-          id: "conduta",
-          text: "Foi educado e prestativo nas atividades de hoje?",
-          order: 2,
-          goodWhenYes: true,
-          requireReasonWhen: "no"
-        },
-        {
-          id: "desvio_rota",
-          text: "Houve desvio de rota ao longo do dia?",
-          order: 3,
-          goodWhenYes: false,
-          requireReasonWhen: "yes"
-        },
-        {
-          id: "avaria",
-          text: "Causou alguma avaria ao manusear os produtos?",
-          order: 4,
-          goodWhenYes: false,
-          requireReasonWhen: "yes"
-        },
-      ];
-
-      for (const question of seedQuestions) {
-        await this.createQuestion(question);
-      }
-    }
-
-    // Only seed test users ONCE when database is completely empty
-    // Check if there are any other users besides the admin
-    const allUsers = await this.getUsers();
-    
-    // Only create test users if we have only the admin user (first setup)
-    if (allUsers.length <= 1) {
-      const testUsernames = ["87999001001", "87999001002", "87999002001", "87999002002", "87999002003", "87999002004"];
+    try {
+      // Check if admin user exists
+      const adminUser = await this.getUserByUsername("87999461725");
       
-      for (const username of testUsernames) {
-        const existingUser = await this.getUserByUsername(username);
-        if (!existingUser) {
-          const testUser = {
-            username,
-            phone: `(87) 9 ${username.slice(2, 6)}-${username.slice(6)}`,
-            password: "123456",
-            displayName: username.includes("001") ? "Motorista Teste" : "Ajudante Teste",
-            role: "colaborador" as const,
-            permission: "Colaborador" as const,
-            active: true,
-            cargo: username.includes("001") ? "Motorista" : "Ajudante"
-          };
-          await this.createUser(testUser);
-        }
+      if (!adminUser) {
+        // Seed admin user
+        await this.createUser({
+          username: "87999461725",
+          phone: "(87) 9 9946-1725",
+          password: "admin",
+          displayName: "Jucélio Verissimo Dias da Silva",
+          role: "admin",
+          permission: "ADM",
+          active: true,
+          cargo: "Assistente de Logística"
+        });
+        console.log("✅ Admin user created");
       }
+
+      // Check if questions exist
+      const existingQuestions = await this.getQuestions();
+      
+      if (existingQuestions.length === 0) {
+        // Seed questions
+        const seedQuestions = [
+          {
+            id: "pontualidade",
+            text: "Chegou dentro do horário estipulado?",
+            order: 1,
+            goodWhenYes: true,
+            requireReasonWhen: "no"
+          },
+          {
+            id: "conduta",
+            text: "Foi educado e prestativo nas atividades de hoje?",
+            order: 2,
+            goodWhenYes: true,
+            requireReasonWhen: "no"
+          },
+          {
+            id: "desvio_rota",
+            text: "Houve desvio de rota ao longo do dia?",
+            order: 3,
+            goodWhenYes: false,
+            requireReasonWhen: "yes"
+          },
+          {
+            id: "avaria",
+            text: "Causou alguma avaria ao manusear os produtos?",
+            order: 4,
+            goodWhenYes: false,
+            requireReasonWhen: "yes"
+          },
+        ];
+
+        for (const question of seedQuestions) {
+          await this.createQuestion(question);
+        }
+        console.log("✅ Questions seeded");
+      }
+
+      // Only seed test users ONCE when database is completely empty
+      // Check if there are any other users besides the admin
+      const allUsers = await this.getUsers();
+      
+      // Only create test users if we have only the admin user (first setup)
+      if (allUsers.length <= 1) {
+        const testUsernames = ["87999001001", "87999001002", "87999002001", "87999002002", "87999002003", "87999002004"];
+        
+        for (const username of testUsernames) {
+          const existingUser = await this.getUserByUsername(username);
+          if (!existingUser) {
+            const testUser = {
+              username,
+              phone: `(87) 9 ${username.slice(2, 6)}-${username.slice(6)}`,
+              password: "123456",
+              displayName: username.includes("001") ? "Motorista Teste" : "Ajudante Teste",
+              role: "colaborador" as const,
+              permission: "Colaborador" as const,
+              active: true,
+              cargo: username.includes("001") ? "Motorista" : "Ajudante"
+            };
+            await this.createUser(testUser);
+          }
+        }
+        console.log("✅ Test users seeded");
+      }
+    } catch (error) {
+      console.error("❌ Error seeding initial data:", error);
+      throw error;
     }
   }
 }

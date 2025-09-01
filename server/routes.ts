@@ -1,10 +1,31 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { SupabaseStorage } from "./supabaseStorage";
-
-const storage = new SupabaseStorage();
+import { MemStorage, type IStorage } from "./storage";
 import { z } from "zod";
 import { insertUserSchema, insertEvaluationSchema } from "@shared/schema";
+
+// Initialize storage with fallback mechanism
+let storage: IStorage;
+
+async function initializeStorage(): Promise<IStorage> {
+  // Try Supabase first if DATABASE_URL is available
+  if (process.env.DATABASE_URL) {
+    try {
+      const supabaseStorage = new SupabaseStorage();
+      // Test the connection by trying to get users
+      await supabaseStorage.getUsers();
+      console.log("✅ Using Supabase storage");
+      return supabaseStorage;
+    } catch (error) {
+      console.error("❌ Supabase connection failed, falling back to memory storage:", error);
+      return new MemStorage();
+    }
+  } else {
+    console.log("⚠️  No DATABASE_URL found, using memory storage");
+    return new MemStorage();
+  }
+}
 
 // Authentication endpoints
 const loginSchema = z.object({
@@ -19,8 +40,21 @@ const createUserSchema = insertUserSchema.extend({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize Supabase storage and seed data
-  await storage.seedInitialData();
+  // Initialize storage with proper fallback handling
+  storage = await initializeStorage();
+  
+  // Initialize storage and seed data with error handling
+  try {
+    if (storage instanceof SupabaseStorage) {
+      await storage.seedInitialData();
+      console.log("✅ Supabase storage initialized and seeded");
+    } else {
+      console.log("✅ Memory storage initialized with seed data");
+    }
+  } catch (error) {
+    console.error("⚠️  Failed to seed initial data:", error);
+    console.log("📊 Proceeding with existing data...");
+  }
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     console.log("DEBUG: Login endpoint hit"); // Test log visibility
