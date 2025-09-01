@@ -19,9 +19,11 @@ npm install -g vercel
 ```
 Settings → Environment Variables → Add:
 
-DATABASE_URL = sua-url-supabase-completa
+DATABASE_URL = postgresql://postgres.bppbdcbtudnzzojmnjrw:9qoCu5vnxzDAMhCF@aws-1-sa-east-1.pooler.supabase.com:6543/postgres
 NODE_ENV = production
 ```
+
+⚠️ **IMPORTANTE**: Use o transaction pooler do Supabase (porta 6543) para compatibilidade serverless.
 
 ### 3️⃣ FAZER DEPLOY
 

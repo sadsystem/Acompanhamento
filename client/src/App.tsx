@@ -59,9 +59,6 @@ function AppContent() {
     try {
       console.log('Starting handleLoggedIn flow...');
       
-      // Clear any previous errors
-      console.clear();
-      
       const user = await authService.getCurrentUser();
       console.log('Current user after login:', user);
       
@@ -73,25 +70,25 @@ function AppContent() {
         const nextRoute = user.role === "admin" ? "dashboard" : "selectPartner";
         console.log('Determined next route:', nextRoute);
         
-        // Force a small delay to ensure state updates properly
+        // Set the route with a small delay for better UX
         setTimeout(() => {
           console.log('Setting route to:', nextRoute);
           setCurrentRoute(nextRoute);
-          console.log('Current route should now be:', nextRoute);
-          
-          // Use window.location for a hard redirect if needed
-          if (window.location.pathname === '/login') {
-            console.log('Forcing navigation from /login');
-            window.location.href = nextRoute === "dashboard" ? "/dashboard" : "/select-partner";
-          }
-        }, 300);
+          console.log('Route set successfully');
+        }, 100);
       } else {
-        console.error('No user found after login');
+        console.error('No user found after login - redirecting to login');
+        setCurrentUser(null);
         setCurrentRoute("login");
       }
     } catch (error) {
       console.error('Error in handleLoggedIn:', error);
+      // Ensure we don't get stuck in a white screen - always set a route
+      setCurrentUser(null);
       setCurrentRoute("login");
+      
+      // Optionally show an error message to the user
+      // You could add a toast notification here
     }
   };
 

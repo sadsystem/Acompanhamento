@@ -31,20 +31,31 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
       const result = await authService.login(username.trim(), password);
       
       if (!result.ok) {
-        setError(result.error || "Falha no login");
+        const errorMessage = result.error || "Falha no login";
+        console.error('Login failed:', errorMessage);
+        setError(errorMessage);
         setLoading(false);
         return;
       }
 
       await authService.setRememberLogin(remember);
       
-      // Simulate loading time for better UX
+      console.log('Login successful, transitioning...');
+      // Add a brief loading state for better UX
       setTimeout(() => {
-        onLoggedIn();
-        setLoading(false);
-      }, 700);
+        try {
+          onLoggedIn();
+        } catch (error) {
+          console.error('Error in onLoggedIn callback:', error);
+          setError("Erro ao redirecionar após login");
+        } finally {
+          setLoading(false);
+        }
+      }, 500);
+      
     } catch (err) {
-      setError("Erro interno do sistema");
+      console.error('Unexpected login error:', err);
+      setError("Erro inesperado. Tente novamente.");
       setLoading(false);
     }
   };
