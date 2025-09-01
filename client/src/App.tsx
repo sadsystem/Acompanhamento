@@ -56,42 +56,10 @@ function AppContent() {
   };
 
   const handleLoggedIn = async () => {
-    try {
-      console.log('Starting handleLoggedIn flow...');
-      
-      // Clear any previous errors
-      console.clear();
-      
-      const user = await authService.getCurrentUser();
-      console.log('Current user after login:', user);
-      
-      if (user) {
-        console.log('Setting current user:', user);
-        setCurrentUser(user);
-        
-        // Determine next route
-        const nextRoute = user.role === "admin" ? "dashboard" : "selectPartner";
-        console.log('Determined next route:', nextRoute);
-        
-        // Force a small delay to ensure state updates properly
-        setTimeout(() => {
-          console.log('Setting route to:', nextRoute);
-          setCurrentRoute(nextRoute);
-          console.log('Current route should now be:', nextRoute);
-          
-          // Use window.location for a hard redirect if needed
-          if (window.location.pathname === '/login') {
-            console.log('Forcing navigation from /login');
-            window.location.href = nextRoute === "dashboard" ? "/dashboard" : "/select-partner";
-          }
-        }, 300);
-      } else {
-        console.error('No user found after login');
-        setCurrentRoute("login");
-      }
-    } catch (error) {
-      console.error('Error in handleLoggedIn:', error);
-      setCurrentRoute("login");
+    const user = await authService.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      setCurrentRoute(user.role === "admin" ? "dashboard" : "selectPartner");
     }
   };
 
@@ -117,9 +85,6 @@ function AppContent() {
   };
 
   const navigateTo = (route: AppRoute) => {
-    console.log('Navigating to route:', route);
-    // Forçar atualização do estado para garantir que a rota seja alterada
-    setCurrentRoute(route);
     setCurrentRoute(route);
   };
 
@@ -321,11 +286,6 @@ function AppContent() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-auto">
-        {(() => { 
-          console.log('Rendering route:', currentRoute, 'User:', currentUser?.role);
-          return null;
-        })()}
-        
         {currentRoute === "login" && (
           <LoginPage onLoggedIn={handleLoggedIn} />
         )}
