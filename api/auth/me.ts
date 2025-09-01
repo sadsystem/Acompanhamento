@@ -1,6 +1,6 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { SupabaseStorage } from "../../../../server/supabaseStorage";
-import { MemStorage } from "../../../../server/storage";
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { SupabaseStorage } from "../../server/supabaseStorage";
+import { MemStorage } from "../../server/storage";
 
 type MeSuccessResponse = {
   id: string;
@@ -17,8 +17,8 @@ type MeErrorResponse = {
 type MeResponse = MeSuccessResponse | MeErrorResponse;
 
 export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<MeResponse>
+  req: VercelRequest,
+  res: VercelResponse
 ) {
   // Only allow GET method
   if (req.method !== 'GET') {
@@ -43,7 +43,7 @@ export default async function handler(
     }
     
     // Get token from Authorization header
-    const token = req.headers.authorization?.replace("Bearer ", "");
+    const token = req.headers.authorization?.replace("Bearer ", "") as string;
     
     if (!token) {
       return res.status(401).json({ 

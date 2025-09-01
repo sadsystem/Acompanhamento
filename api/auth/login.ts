@@ -1,7 +1,7 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from "zod";
-import { SupabaseStorage } from "../../../../server/supabaseStorage";
-import { MemStorage } from "../../../../server/storage";
+import { SupabaseStorage } from "../../server/supabaseStorage";
+import { MemStorage } from "../../server/storage";
 
 // Login request validation schema
 const loginSchema = z.object({
@@ -33,8 +33,8 @@ type LoginErrorResponse = {
 type LoginResponse = LoginSuccessResponse | LoginErrorResponse;
 
 export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<LoginResponse>
+  req: VercelRequest,
+  res: VercelResponse
 ) {
   // Only allow POST method
   if (req.method !== 'POST') {
