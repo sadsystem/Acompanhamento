@@ -11,42 +11,44 @@ export class AuthService {
       // Convert phone to username format for API call
       const phoneDigits = username.replace(/\D/g, '');
       
-      console.log('Attempting login with:', { phoneDigits });
+      // Use absolute URL for API calls to ensure it works in all environments
+      const apiUrl = `/api/auth/login`;
       
-      // Use absolute URL for API calls
-      const apiUrl = '/api/auth/login';
-      console.log('Calling API at:', apiUrl, 'from host:', window.location.hostname);
+      // Add timestamp to prevent caching
+      const apiUrlWithCache = `${apiUrl}?_t=${Date.now()}`;
       
       // Call login API directly with credentials
-      const response = await fetch(apiUrl, {
+      const response = await fetch(apiUrlWithCache, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
         body: JSON.stringify({
           username: phoneDigits,
           password: password,
-          remember: false
+          remember: true
         })
       });
       
-      console.log('Login response status:', response.status);
-      
-      // Log raw response for debugging
-      const responseText = await response.text();
-      console.log('Raw response:', responseText);
-      
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-        console.error('Failed to parse response:', e);
-        return { ok: false, error: "Erro no formato da resposta do servidor" };
+      // Handle network error or non-JSON response
+      if (!response.ok) {
+        console.error('API Error:', response.status, response.statusText);
+        
+        if (response.status === 404) {
+          return { ok: false, error: "API não encontrada (404). Servidor pode estar offline." };
+        }
+        
+        return { ok: false, error: `Erro do servidor: ${response.status}` };
       }
       
-      console.log('Parsed response:', result);
+      // Parse response
+      const result = await response.json();
+      console.log('Login result:', result);
       
       if (!response.ok || !result.success) {
         console.error('Login failed:', result.error || "Credenciais inválidas");
