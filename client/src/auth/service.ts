@@ -13,10 +13,9 @@ export class AuthService {
       
       console.log('Attempting login with:', { phoneDigits });
       
-      // Determine if we're in development or production
-      const baseUrl = window.location.hostname === 'localhost' ? '' : '';
-      const apiUrl = baseUrl + '/api/auth/login';
-      console.log('Calling API at:', apiUrl);
+      // Use absolute URL for API calls
+      const apiUrl = '/api/auth/login';
+      console.log('Calling API at:', apiUrl, 'from host:', window.location.hostname);
       
       // Call login API directly with credentials
       const response = await fetch(apiUrl, {

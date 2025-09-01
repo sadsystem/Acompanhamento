@@ -21,18 +21,40 @@ const createUserSchema = insertUserSchema.extend({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Supabase storage and seed data
   await storage.seedInitialData();
+  
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV
+    });
+  });
+  
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
-    console.log("DEBUG: Login endpoint hit"); // Test log visibility
+    console.log("DEBUG: Login endpoint hit with", req.body); // Test log visibility
     try {
       const { username, password, remember } = loginSchema.parse(req.body);
+      console.log("DEBUG: Parsed request data:", { username, remember });
       
-      const user = await storage.getUserByUsername(username);
-      
-      if (!user || user.password !== password) {
-        return res.status(401).json({ 
+      let user;
+      try {
+        user = await storage.getUserByUsername(username);
+        console.log("DEBUG: User search result:", user ? "User found" : "User not found");
+        
+        if (!user || user.password !== password) {
+          console.log("DEBUG: Authentication failed");
+          return res.status(401).json({ 
+            success: false, 
+            error: "Credenciais inválidas" 
+          });
+        }
+      } catch (dbError) {
+        console.error("DEBUG: Database error:", dbError);
+        return res.status(500).json({ 
           success: false, 
-          error: "Credenciais inválidas" 
+          error: "Erro interno no servidor" 
         });
       }
       
