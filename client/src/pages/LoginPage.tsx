@@ -7,6 +7,7 @@ import { PhoneInput } from "../components/forms/PhoneInput";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { AuthService } from "../auth/service";
 import { useStorage } from "../hooks/useStorage";
+import { VERSION } from "../constants/version";
 
 interface LoginPageProps {
   onLoggedIn: () => void;
@@ -51,6 +52,11 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
 
   return (
     <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-100 via-gray-50 to-green-100 overflow-hidden relative">
+      {/* Version display */}
+      <div className="absolute top-2 left-2 text-xs text-gray-500 z-20 select-none">
+        {VERSION}
+      </div>
+      
       {/* Padrão geométrico de fundo */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 left-10 w-32 h-32 bg-green-600 rounded-full blur-3xl"></div>
