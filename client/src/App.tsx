@@ -10,6 +10,7 @@ import { AuthService } from "./auth/service";
 import { User, AppRoute } from "./config/types";
 import { CONFIG } from "./config/constants";
 import { Menu, X, Eye } from "lucide-react";
+import { VersionDisplay } from "./components/VersionDisplay";
 
 // Pages
 import { LoginPage } from "./pages/LoginPage";
@@ -345,6 +346,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <StorageProvider adapter={storageAdapter}>
+          <VersionDisplay />
           <Router />
         </StorageProvider>
       </TooltipProvider>
