@@ -1,4 +1,17 @@
-# 🚀 Guia de Deploy - Sistema Acompanhamento Diário
+# 🚀 Guias de Deploy - Sistema Acompanhamento Diário
+
+## 📋 OPÇÕES DE DEPLOY
+
+### ⚡ **NOVO: Deploy Automático via GitHub** 
+**👉 [Ver guia completo: DEPLOY_GITHUB.md](DEPLOY_GITHUB.md)**
+- ✅ Deploy automático a cada push
+- ✅ Editar direto no GitHub
+- ✅ 2 opções: Vercel + GitHub Pages
+- ⏱️ **Setup: 5 minutos**
+
+---
+
+### 🖥️ **Deploy Tradicional (Servidor Próprio)**
 
 ## 📦 1. EXPORTAR DO REPLIT
 

@@ -1,0 +1,50 @@
+name: 🚀 Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+
+    - name: 🔨 Build application
+      run: npm run build
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        NODE_ENV: production
+
+    - name: 🚀 Deploy to Vercel (Preview)
+      if: github.event_name == 'pull_request'
+      run: |
+        npx vercel --token ${{ secrets.VERCEL_TOKEN }} --confirm
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    - name: 🌍 Deploy to Vercel (Production)
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --confirm
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

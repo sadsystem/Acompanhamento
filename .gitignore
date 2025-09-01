@@ -4,3 +4,12 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Vercel
+.vercel
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
