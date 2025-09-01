@@ -57,6 +57,7 @@ function AppContent() {
         setCurrentRoute(initialRoute);
       } else {
         console.log('initializeApp: No user found, showing login');
+        setCurrentUser(null);
         setCurrentRoute("login");
       }
     } catch (error) {
@@ -66,7 +67,7 @@ function AppContent() {
       setCurrentUser(null);
     } finally {
       setLoading(false);
-      console.log('App initialization completed');
+      console.log('App initialization completed, final state:', { currentRoute, user: currentUser?.displayName });
     }
   };
 
@@ -366,20 +367,39 @@ function AppContent() {
         
         {/* Fallback content for debugging - shows when no route matches */}
         {!["login", "selectPartner", "checklist", "dashboard", "teamBuilder", "admin"].includes(currentRoute) && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center p-8">
-              <div className="text-lg font-semibold text-gray-900 mb-2">Estado da Aplicação</div>
-              <div className="text-sm text-gray-600 space-y-1">
-                <div>Rota atual: {currentRoute}</div>
-                <div>Usuário: {currentUser ? `${currentUser.displayName} (${currentUser.role})` : 'Nenhum'}</div>
-                <div>Carregando: {loading ? 'Sim' : 'Não'}</div>
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md">
+              <div className="text-lg font-semibold text-red-600 mb-4">Estado Inesperado da Aplicação</div>
+              <div className="text-sm text-gray-600 space-y-2 mb-4">
+                <div><strong>Rota atual:</strong> "{currentRoute}"</div>
+                <div><strong>Usuário:</strong> {currentUser ? `${currentUser.displayName} (${currentUser.role})` : 'Nenhum'}</div>
+                <div><strong>Carregando:</strong> {loading ? 'Sim' : 'Não'}</div>
+                <div><strong>Partner:</strong> {selectedPartner ? selectedPartner.displayName : 'Nenhum'}</div>
               </div>
-              <button 
-                onClick={() => setCurrentRoute("login")} 
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Ir para Login
-              </button>
+              <div className="text-xs text-gray-500 mb-4">
+                Esta mensagem só aparece quando há problemas de roteamento. Se você vê isto após fazer login, algo deu errado.
+              </div>
+              <div className="space-y-2">
+                <button 
+                  onClick={() => {
+                    console.log('Manual navigation to login');
+                    setCurrentRoute("login");
+                    setCurrentUser(null);
+                  }} 
+                  className="block w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Ir para Login
+                </button>
+                <button 
+                  onClick={() => {
+                    console.log('Manual refresh');
+                    window.location.reload();
+                  }} 
+                  className="block w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                >
+                  Recarregar Página
+                </button>
+              </div>
             </div>
           </div>
         )}

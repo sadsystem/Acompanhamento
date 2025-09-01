@@ -99,6 +99,12 @@ ls -la
 vercel --force
 ```
 
+**Problema: Tela branca após login**
+- Abrir F12 → Console para ver erros
+- Verificar se API está respondendo
+- Logs no Vercel: `vercel logs`
+- Se persistir: `vercel --prod --force`
+
 **Problema: Banco não conecta**
 - Verificar DATABASE_URL nas env vars do Vercel
 - Testar conexão no painel Supabase
