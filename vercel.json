@@ -2,13 +2,19 @@
   "version": 2,
   "functions": {
     "api/index.js": {
-      "runtime": "nodejs18.x",
-      "maxDuration": 25
+      "runtime": "nodejs20.x",
+      "maxDuration": 30
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
@@ -28,9 +34,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "DATABASE_URL": "postgresql://neondb_owner:npg_4qUlh1Bkmenu@ep-round-salad-ac2npaut-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
-    "NODE_ENV": "production"
-  }
+  ]
 }
