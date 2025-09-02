@@ -24,6 +24,25 @@ app.options('*', (_req, res) => {
   res.status(204).end();
 });
 
+// In Vercel, requests may arrive without the "/api" prefix due to routing
+// configuration. This middleware transparently adds the prefix for known API
+// routes so the existing route handlers continue to work both locally and in
+// the serverless environment.
+if (process.env.VERCEL) {
+  const apiPrefixes = ["/auth", "/users", "/evaluations", "/reports"];
+  app.use((req, _res, next) => {
+    if (!req.path.startsWith("/api")) {
+      for (const prefix of apiPrefixes) {
+        if (req.path.startsWith(prefix)) {
+          req.url = `/api${req.url}`;
+          break;
+        }
+      }
+    }
+    next();
+  });
+}
+
 // Disable caching for all API routes - force fresh data
 app.use('/api', (_req, res, next) => {
   res.set({
