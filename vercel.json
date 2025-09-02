@@ -9,26 +9,11 @@
       }
     }
   ],
-  "routes": [
-    {
-      "src": "/api/health",
-      "dest": "/api/health.ts"
-    },
-    {
-      "src": "/api/auth/login",
-      "dest": "/api/auth/login.ts"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.ts"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+  "rewrites": [
+    { "source": "/api/health", "destination": "/api/health.ts" },
+    { "source": "/api/auth/login", "destination": "/api/auth/login.ts" },
+    { "source": "/api/(.*)", "destination": "/api/index.ts" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
