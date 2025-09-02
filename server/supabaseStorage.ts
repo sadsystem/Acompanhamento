@@ -28,7 +28,10 @@ export class SupabaseStorage implements IStorage {
       throw new Error("DATABASE_URL is required for Supabase connection");
     }
     
-    const client = postgres(process.env.DATABASE_URL, { prepare: false });
+    const client = postgres(process.env.DATABASE_URL, {
+      ssl: 'require',
+      prepare: false
+    });
     this.db = drizzle(client);
   }
 
