@@ -93,7 +93,7 @@ vercel domains
 ```bash
 # Verificar se está na pasta certa
 ls -la
-# Deve ter: vercel.json, package.json, server/, client/
+# Deve ter: vercel.json, package.json, api/, server/, client/
 
 # Forçar rebuild
 vercel --force
@@ -104,8 +104,9 @@ vercel --force
 - Testar conexão no painel Supabase
 
 **Problema: 404 nas rotas**
-- vercel.json está configurado corretamente
-- Fazer redeploy: `vercel --prod`
+  - Verifique se o arquivo `api/index.ts` existe e exporta o Express app
+  - Confirme se o `vercel.json` está configurado corretamente
+  - Fazer redeploy: `vercel --prod`
 
 ---
 

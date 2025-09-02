@@ -1,13 +1,12 @@
 {
   "version": 2,
+  "functions": {
+    "api/index.ts": {
+      "runtime": "@vercel/node",
+      "includeFiles": ["server/**/*", "shared/**/*"]
+    }
+  },
   "builds": [
-    {
-      "src": "server/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["server/**/*", "shared/**/*"]
-      }
-    },
     {
       "src": "package.json",
       "use": "@vercel/static-build",
@@ -17,6 +16,10 @@
     }
   ],
   "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.ts" },
+    { "handle": "filesystem" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/(.*)", "dest": "/index.html" },
     { "src": "/api/(.*)", "dest": "server/index.ts" },
     { "handle": "filesystem" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
@@ -36,7 +39,6 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-
   ],
   "env": {
     "NODE_ENV": "production",
