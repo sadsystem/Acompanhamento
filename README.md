@@ -4,6 +4,6 @@
 
 Configure as variáveis de ambiente necessárias antes de executar o projeto:
 
-- `VITE_API_URL`: URL base da API usada pelo frontend (por exemplo, `https://<seu-domínio>.vercel.app/api`).
+- `VITE_API_URL`: caminho base da API usado pelo frontend (geralmente `/api` no mesmo domínio).
 
 Outras variáveis podem ser vistas em `.env.example`.
