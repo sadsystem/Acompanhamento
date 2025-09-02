@@ -9,11 +9,9 @@ import "dotenv/config";
 import express2 from "express";
 import cors from "cors";
 
-// server/storageHybrid.ts
-import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
-import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
+// server/storageNeon.ts
+import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool, neonConfig } from "@neondatabase/serverless";
-import postgres from "postgres";
 
 // shared/schema.ts
 var schema_exports = {};
@@ -113,104 +111,108 @@ var insertRouteSchema = createInsertSchema(routes).omit({
   updatedAt: true
 });
 
-// server/storageHybrid.ts
+// server/storageNeon.ts
 import { eq, sql, desc, and } from "drizzle-orm";
 import { randomUUID as randomUUID2 } from "crypto";
 import bcrypt from "bcryptjs";
-var isNeonUrl = (url) => url.includes("neon.tech") || url.includes("pooler.supabase.com");
-var StorageHybrid = class _StorageHybrid {
+neonConfig.fetchConnectionCache = true;
+neonConfig.useSecureWebSocket = false;
+if (process.env.NODE_ENV === "production") {
+  neonConfig.poolQueryViaFetch = true;
+}
+var StorageNeon = class _StorageNeon {
   db;
   static instance;
+  pool;
   constructor() {
     if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL is required for database connection");
+      throw new Error("DATABASE_URL is required for Neon database connection");
     }
     const databaseUrl = process.env.DATABASE_URL;
-    console.log(`Initializing database connection: ${databaseUrl.split("@")[0]}@***`);
-    if (isNeonUrl(databaseUrl)) {
-      console.log("Using Neon serverless adapter");
-      neonConfig.fetchConnectionCache = true;
-      neonConfig.useSecureWebSocket = false;
-      const pool = new Pool({
-        connectionString: databaseUrl,
-        ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
-      });
-      this.db = drizzleNeon(pool, { schema: schema_exports });
-    } else {
-      console.log("Using postgres-js adapter for Supabase/PostgreSQL");
-      const queryClient = postgres(databaseUrl, {
-        ssl: process.env.NODE_ENV === "production" ? "require" : "prefer",
-        max: 1
-        // Limit connections for serverless
-      });
-      this.db = drizzlePostgres(queryClient, { schema: schema_exports });
-    }
+    console.log(`\u{1F517} Connecting to Neon: ${databaseUrl.split("@")[0]}@***`);
+    this.pool = new Pool({
+      connectionString: databaseUrl,
+      ssl: process.env.NODE_ENV === "production",
+      max: 1,
+      // Serverless works best with single connections
+      idleTimeoutMillis: 0,
+      // No idle timeout for serverless
+      connectionTimeoutMillis: 1e4
+      // 10s connection timeout
+    });
+    this.db = drizzle(this.pool, { schema: schema_exports });
+    console.log("\u2705 Neon database connection initialized");
   }
+  // Singleton pattern for connection reuse
   static getInstance() {
-    if (!_StorageHybrid.instance) {
-      _StorageHybrid.instance = new _StorageHybrid();
+    if (!_StorageNeon.instance) {
+      _StorageNeon.instance = new _StorageNeon();
     }
-    return _StorageHybrid.instance;
+    return _StorageNeon.instance;
   }
+  // User management
   async getUsers() {
     const result = await this.db.select().from(users);
     return result;
   }
-  async getUser(id) {
-    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+  async getUserById(id) {
+    const result = await this.db.select().from(users).where(eq(users.id, id));
     return result[0];
   }
   async getUserByUsername(username) {
-    const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+    const result = await this.db.select().from(users).where(eq(users.username, username));
     return result[0];
   }
-  async createUser(userData) {
-    const newUser = {
+  async createUser(user) {
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+    const userData = {
+      ...user,
       id: randomUUID2(),
-      ...userData,
+      password: hashedPassword,
       createdAt: /* @__PURE__ */ new Date()
     };
-    const result = await this.db.insert(users).values(newUser).returning();
+    const result = await this.db.insert(users).values(userData).returning();
     return result[0];
   }
   async updateUser(id, updates) {
-    const result = await this.db.update(users).set(updates).where(eq(users.id, id)).returning();
-    if (result.length === 0) {
-      throw new Error(`User with id ${id} not found`);
+    if (updates.password) {
+      updates.password = await bcrypt.hash(updates.password, 10);
     }
+    const result = await this.db.update(users).set(updates).where(eq(users.id, id)).returning();
     return result[0];
   }
   async deleteUser(id) {
     await this.db.delete(users).where(eq(users.id, id));
   }
+  // Questions management
   async getQuestions() {
-    const result = await this.db.select().from(questions).orderBy(desc(questions.createdAt));
+    const result = await this.db.select().from(questions).orderBy(questions.order);
     return result;
   }
-  async createQuestion(questionData) {
-    const newQuestion = {
-      id: randomUUID2(),
-      ...questionData,
-      createdAt: /* @__PURE__ */ new Date()
+  async createQuestion(question) {
+    const questionData = {
+      ...question,
+      id: randomUUID2()
     };
-    const result = await this.db.insert(questions).values(newQuestion).returning();
+    const result = await this.db.insert(questions).values(questionData).returning();
     return result[0];
   }
+  // Evaluations management
   async getEvaluations(filters) {
     let query = this.db.select().from(evaluations);
     if (filters) {
       const conditions = [];
       if (filters.dateFrom) {
-        conditions.push(sql`${evaluations.createdAt} >= ${filters.dateFrom}`);
+        conditions.push(sql`${evaluations.dateRef} >= ${filters.dateFrom}`);
       }
       if (filters.dateTo) {
-        conditions.push(sql`${evaluations.createdAt} <= ${filters.dateTo}`);
+        conditions.push(sql`${evaluations.dateRef} <= ${filters.dateTo}`);
       }
       if (filters.evaluator) {
-        conditions.push(eq(evaluations.evaluatorId, filters.evaluator));
+        conditions.push(eq(evaluations.evaluator, filters.evaluator));
       }
       if (filters.evaluated) {
-        conditions.push(eq(evaluations.evaluatedId, filters.evaluated));
+        conditions.push(eq(evaluations.evaluated, filters.evaluated));
       }
       if (filters.status) {
         conditions.push(eq(evaluations.status, filters.status));
@@ -222,13 +224,13 @@ var StorageHybrid = class _StorageHybrid {
     const result = await query.orderBy(desc(evaluations.createdAt));
     return result;
   }
-  async createEvaluation(evaluationData) {
-    const newEvaluation = {
+  async createEvaluation(evaluation) {
+    const evaluationData = {
+      ...evaluation,
       id: randomUUID2(),
-      ...evaluationData,
       createdAt: /* @__PURE__ */ new Date()
     };
-    const result = await this.db.insert(evaluations).values(newEvaluation).returning();
+    const result = await this.db.insert(evaluations).values(evaluationData).returning();
     return result[0];
   }
   async setEvaluations(evaluations2) {
@@ -236,52 +238,112 @@ var StorageHybrid = class _StorageHybrid {
     await this.db.delete(evaluations);
     await this.db.insert(evaluations).values(evaluations2);
   }
-  // Seed data methods (for initialization)
+  // Teams management
+  async getTeams() {
+    const result = await this.db.select().from(teams).orderBy(desc(teams.createdAt));
+    return result;
+  }
+  async createTeam(team) {
+    const teamData = {
+      ...team,
+      id: randomUUID2(),
+      createdAt: /* @__PURE__ */ new Date(),
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    const result = await this.db.insert(teams).values(teamData).returning();
+    return result[0];
+  }
+  async updateTeam(id, updates) {
+    const result = await this.db.update(teams).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(teams.id, id)).returning();
+    return result[0];
+  }
+  async deleteTeam(id) {
+    await this.db.delete(teams).where(eq(teams.id, id));
+  }
+  // Routes management
+  async getRoutes() {
+    const result = await this.db.select().from(routes).orderBy(desc(routes.createdAt));
+    return result;
+  }
+  async createRoute(route) {
+    const routeData = {
+      ...route,
+      id: randomUUID2(),
+      createdAt: /* @__PURE__ */ new Date(),
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    const result = await this.db.insert(routes).values(routeData).returning();
+    return result[0];
+  }
+  async updateRoute(id, updates) {
+    const result = await this.db.update(routes).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(routes.id, id)).returning();
+    return result[0];
+  }
+  async deleteRoute(id) {
+    await this.db.delete(routes).where(eq(routes.id, id));
+  }
+  // Seed initial data
   async seedInitialData() {
     try {
-      const adminUser = await this.getUserByUsername("admin");
+      const adminUser = await this.getUserByUsername("87999461725");
       if (!adminUser) {
-        console.log("Creating admin user...");
-        const hashedPassword = await bcrypt.hash("admin123", 10);
         await this.createUser({
-          username: "admin",
-          password: hashedPassword,
+          username: "87999461725",
+          phone: "(87) 9 9946-1725",
+          password: "admin123",
+          // Will be hashed automatically
+          displayName: "Administrador",
           role: "admin",
-          name: "Administrator",
-          email: "admin@example.com"
+          permission: "ADM",
+          active: true,
+          cargo: "ADM",
+          cpf: null
         });
-        console.log("Admin user created successfully");
+        console.log("Admin user created");
       }
       const questions2 = await this.getQuestions();
       if (questions2.length === 0) {
-        console.log("Creating sample questions...");
-        const sampleQuestions = [
+        const defaultQuestions = [
           {
-            text: "Como voc\xEA avalia a comunica\xE7\xE3o da pessoa avaliada?",
-            type: "scale",
-            scale: { min: 1, max: 5, labels: { 1: "P\xE9ssima", 5: "Excelente" } }
+            id: "1",
+            text: "Chegou no hor\xE1rio?",
+            order: 1,
+            goodWhenYes: true,
+            requireReasonWhen: "no"
           },
           {
-            text: "Quais s\xE3o os pontos fortes da pessoa avaliada?",
-            type: "text"
+            id: "2",
+            text: "Uniforme completo?",
+            order: 2,
+            goodWhenYes: true,
+            requireReasonWhen: "no"
           },
           {
-            text: "Que \xE1reas precisam de melhoria?",
-            type: "text"
+            id: "3",
+            text: "Atendimento adequado?",
+            order: 3,
+            goodWhenYes: true,
+            requireReasonWhen: "no"
+          },
+          {
+            id: "4",
+            text: "Organizou o ve\xEDculo?",
+            order: 4,
+            goodWhenYes: true,
+            requireReasonWhen: "no"
           }
         ];
-        for (const question of sampleQuestions) {
-          await this.createQuestion(question);
+        for (const question of defaultQuestions) {
+          await this.db.insert(questions).values(question);
         }
-        console.log("Sample questions created successfully");
+        console.log("Default questions created");
       }
     } catch (error) {
       console.error("Error seeding data:", error);
-      throw error;
     }
   }
 };
-var storageHybrid = StorageHybrid.getInstance();
+var storageNeon = StorageNeon.getInstance();
 
 // server/routes.ts
 import { z } from "zod";
@@ -289,7 +351,7 @@ var seedInitialized = false;
 var ensureSeedData = async () => {
   if (!seedInitialized) {
     try {
-      await storageHybrid.seedInitialData();
+      await storageNeon.seedInitialData();
       seedInitialized = true;
     } catch (error) {
       console.error("Seed initialization error:", error);
@@ -317,14 +379,12 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/health", async (req, res) => {
     try {
-      const start = Date.now();
-      await storageHybrid.getUsers();
-      const responseTime = Date.now() - start;
+      const healthResult = await storageNeon.healthCheck();
       res.json({
-        status: "healthy",
+        status: healthResult.status,
         timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-        database: "connected",
-        responseTime: `${responseTime}ms`,
+        database: healthResult.database,
+        responseTime: `${healthResult.responseTime}ms`,
         environment: process.env.NODE_ENV || "development"
       });
     } catch (error) {
@@ -341,7 +401,7 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/questions", async (_req, res) => {
     try {
-      const qs = await storageHybrid.getQuestions();
+      const qs = await storageNeon.getQuestions();
       res.json(qs);
     } catch (error) {
       res.status(500).json({ error: "Erro interno" });
@@ -349,7 +409,7 @@ async function registerRoutes(app2) {
   });
   app2.get("/questions", async (_req, res) => {
     try {
-      const qs = await storageHybrid.getQuestions();
+      const qs = await storageNeon.getQuestions();
       res.json(qs);
     } catch {
       res.status(500).json({ error: "Erro" });
@@ -375,23 +435,23 @@ async function registerRoutes(app2) {
       return { present, missing };
     });
     await run("dbConnection", async () => {
-      const users2 = await storageHybrid.getUsers();
+      const users2 = await storageNeon.getUsers();
       return { usersSample: users2.slice(0, 1).map((u) => ({ id: u.id, username: u.username })), totalUsers: users2.length };
     });
     await run("questions", async () => {
-      const qs = await storageHybrid.getQuestions();
+      const qs = await storageNeon.getQuestions();
       return { count: qs.length, ids: qs.map((q) => q.id) };
     });
     await run("evaluationsCount", async () => {
       try {
-        const evals = await storageHybrid.getEvaluations();
+        const evals = await storageNeon.getEvaluations();
         return { count: evals.length };
       } catch (e) {
         throw new Error("Falha ao consultar avalia\xE7\xF5es: " + e.message);
       }
     });
     await run("seedAdminUser", async () => {
-      const admin = await storageHybrid.getUserByUsername("87999461725");
+      const admin = await storageNeon.getUserByUsername("87999461725");
       return { exists: !!admin };
     });
     const summaryOk = Object.values(checks).every((c) => c.ok);
@@ -416,10 +476,10 @@ async function registerRoutes(app2) {
       uptimeSec: Math.round(process.uptime())
     };
     try {
-      const users2 = await storageHybrid.getUsers();
+      const users2 = await storageNeon.getUsers();
       let evalCount = 0;
       try {
-        const evaluations2 = await storageHybrid.getEvaluations();
+        const evaluations2 = await storageNeon.getEvaluations();
         evalCount = evaluations2.length;
       } catch (e) {
         info.dbEvaluationsError = e.message;
@@ -456,7 +516,7 @@ async function registerRoutes(app2) {
       console.log("DEBUG: Parsed request data:", { username, remember });
       let user;
       try {
-        user = await storageHybrid.getUserByUsername(username);
+        user = await storageNeon.getUserByUsername(username);
         console.log("DEBUG: User search result:", user ? "User found" : "User not found");
         if (!user || user.password !== password) {
           console.log("DEBUG: Authentication failed");
@@ -502,7 +562,7 @@ async function registerRoutes(app2) {
       return res.status(401).json({ error: "Token n\xE3o fornecido" });
     }
     const userId = token.replace("token-", "");
-    const user = await storageHybrid.getUser(userId);
+    const user = await storageNeon.getUser(userId);
     if (!user) {
       return res.status(401).json({ error: "Token inv\xE1lido" });
     }
@@ -516,7 +576,7 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/users/admin", async (req, res) => {
     try {
-      const users2 = await storageHybrid.getUsers();
+      const users2 = await storageNeon.getUsers();
       res.json(users2);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar usu\xE1rios" });
@@ -524,7 +584,7 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/users/team", async (req, res) => {
     try {
-      const users2 = await storageHybrid.getUsers();
+      const users2 = await storageNeon.getUsers();
       const teamMembers = users2.filter((u) => u.role === "colaborador" && u.active).map((u) => ({
         id: u.id,
         username: u.username,
@@ -552,7 +612,7 @@ async function registerRoutes(app2) {
         cargo: validation.data.cargo || null,
         cpf: validation.data.cpf || null
       };
-      const user = await storageHybrid.createUser(userData);
+      const user = await storageNeon.createUser(userData);
       res.status(201).json({
         id: user.id,
         username: user.username,
@@ -568,7 +628,7 @@ async function registerRoutes(app2) {
     try {
       const { id } = req.params;
       const updates = req.body;
-      const user = await storageHybrid.updateUser(id, updates);
+      const user = await storageNeon.updateUser(id, updates);
       res.json({
         id: user.id,
         username: user.username,
@@ -584,7 +644,7 @@ async function registerRoutes(app2) {
   app2.delete("/api/users/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      await storageHybrid.deleteUser(id);
+      await storageNeon.deleteUser(id);
       res.json({ success: true });
     } catch (error) {
       res.status(400).json({ error: "Erro ao excluir usu\xE1rio" });
@@ -599,7 +659,7 @@ async function registerRoutes(app2) {
       if (evaluator) filters.evaluator = String(evaluator);
       if (evaluated) filters.evaluated = String(evaluated);
       if (status) filters.status = String(status);
-      const evaluations2 = await storageHybrid.getEvaluations(filters);
+      const evaluations2 = await storageNeon.getEvaluations(filters);
       res.json(evaluations2);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar avalia\xE7\xF5es" });
@@ -613,7 +673,7 @@ async function registerRoutes(app2) {
         status: req.body.status || "queued"
       };
       console.log("POST /api/evaluations - Parsed data:", JSON.stringify(evaluationData, null, 2));
-      const evaluation = await storageHybrid.createEvaluation(evaluationData);
+      const evaluation = await storageNeon.createEvaluation(evaluationData);
       res.status(201).json(evaluation);
     } catch (error) {
       console.error("POST /api/evaluations - Validation error:", error);
@@ -625,7 +685,7 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/evaluations/stats", async (req, res) => {
     try {
-      const evaluations2 = await storageHybrid.getEvaluations();
+      const evaluations2 = await storageNeon.getEvaluations();
       const totalEvaluations = evaluations2.length;
       const uniqueEvaluated = new Set(evaluations2.map((e) => e.evaluated)).size;
       const averageScore = evaluations2.length > 0 ? evaluations2.reduce((sum, e) => sum + e.score, 0) / evaluations2.length : 0;
@@ -640,8 +700,8 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/reports/dashboard", async (req, res) => {
     try {
-      const evaluations2 = await storageHybrid.getEvaluations();
-      const users2 = await storageHybrid.getUsers();
+      const evaluations2 = await storageNeon.getEvaluations();
+      const users2 = await storageNeon.getUsers();
       res.json({
         evaluations: evaluations2.length,
         users: users2.length
@@ -654,7 +714,7 @@ async function registerRoutes(app2) {
   app2.get("/api/reports/export", async (req, res) => {
     try {
       const { format } = req.query;
-      const evaluations2 = await storageHybrid.getEvaluations();
+      const evaluations2 = await storageNeon.getEvaluations();
       if (format === "csv") {
         const csvHeaders = ["id", "createdAt", "evaluator", "evaluated", "score"];
         const csvRows = evaluations2.map(
@@ -673,7 +733,7 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/reports/alerts", async (req, res) => {
     try {
-      const evaluations2 = await storageHybrid.getEvaluations();
+      const evaluations2 = await storageNeon.getEvaluations();
       const threshold = 0.3;
       const alerts = evaluations2.filter((e) => e.score < threshold).map((e) => ({
         id: e.id,

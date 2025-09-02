@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { storageHybrid } from "./storageHybrid";
+import { storageNeon } from "./storageNeon";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { insertUserSchema, insertEvaluationSchema } from "@shared/schema";
@@ -10,7 +10,7 @@ let seedInitialized = false;
 const ensureSeedData = async () => {
   if (!seedInitialized) {
     try {
-      await storageHybrid.seedInitialData();
+      await storageNeon.seedInitialData();
       seedInitialized = true;
     } catch (error) {
       console.error('Seed initialization error:', error);
@@ -46,16 +46,14 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
     try {
-      // Quick health check - just verify connection
-      const start = Date.now();
-      await storageHybrid.getUsers();
-      const responseTime = Date.now() - start;
+      // Use optimized health check
+      const healthResult = await storageNeon.healthCheck();
       
       res.json({
-        status: "healthy",
+        status: healthResult.status,
         timestamp: new Date().toISOString(),
-        database: "connected",
-        responseTime: `${responseTime}ms`,
+        database: healthResult.database,
+        responseTime: `${healthResult.responseTime}ms`,
         environment: process.env.NODE_ENV || "development"
       });
     } catch (error) {
@@ -76,7 +74,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     // Questions public endpoint (read-only) - facilita comparar frontend vs backend
   app.get("/api/questions", async (_req, res) => {
     try {
-      const qs = await storageHybrid.getQuestions();
+      const qs = await storageNeon.getQuestions();
       res.json(qs);
     } catch (error) {
       res.status(500).json({ error: "Erro interno" });
@@ -84,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   app.get("/questions", async (_req, res) => {
-    try { const qs = await storageHybrid.getQuestions(); res.json(qs); } catch { res.status(500).json({ error: "Erro" }); }
+    try { const qs = await storageNeon.getQuestions(); res.json(qs); } catch { res.status(500).json({ error: "Erro" }); }
   });
 
   // Diagnostics endpoint (NÃO deixar em produção aberta permanentemente; proteger depois)
@@ -113,18 +111,18 @@ export async function registerRoutes(app: Express): Promise<void> {
 
     await run("dbConnection", async () => {
       // usa getUsers simples para testar conexão
-      const users = await storageHybrid.getUsers();
+      const users = await storageNeon.getUsers();
       return { usersSample: users.slice(0, 1).map(u => ({ id: u.id, username: u.username })), totalUsers: users.length };
     });
 
     await run("questions", async () => {
-      const qs = await storageHybrid.getQuestions();
+      const qs = await storageNeon.getQuestions();
       return { count: qs.length, ids: qs.map(q => q.id) };
     });
 
     await run("evaluationsCount", async () => {
       try {
-        const evals = await storageHybrid.getEvaluations();
+        const evals = await storageNeon.getEvaluations();
         return { count: evals.length };
       } catch (e: any) {
         throw new Error("Falha ao consultar avaliações: " + e.message);
@@ -132,7 +130,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     });
 
     await run("seedAdminUser", async () => {
-      const admin = await storageHybrid.getUserByUsername("87999461725");
+      const admin = await storageNeon.getUserByUsername("87999461725");
       return { exists: !!admin };
     });
 
@@ -164,10 +162,10 @@ export async function registerRoutes(app: Express): Promise<void> {
 
     // Teste básico de banco
     try {
-      const users = await storageHybrid.getUsers();
+      const users = await storageNeon.getUsers();
       let evalCount = 0;
       try {
-        const evaluations = await storageHybrid.getEvaluations();
+        const evaluations = await storageNeon.getEvaluations();
         evalCount = evaluations.length;
       } catch (e) {
         // ignorar erro de evaluations separado
@@ -217,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       let user;
       try {
-        user = await storageHybrid.getUserByUsername(username);
+        user = await storageNeon.getUserByUsername(username);
         console.log("DEBUG: User search result:", user ? "User found" : "User not found");
         
         if (!user || user.password !== password) {
@@ -274,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     
     // Mock token validation - extract user ID
     const userId = token.replace("token-", "");
-    const user = await storageHybrid.getUser(userId);
+    const user = await storageNeon.getUser(userId);
     
     if (!user) {
       return res.status(401).json({ error: "Token inválido" });
@@ -292,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Users routes
   app.get("/api/users/admin", async (req, res) => {
     try {
-      const users = await storageHybrid.getUsers();
+      const users = await storageNeon.getUsers();
       res.json(users);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar usuários" });
@@ -301,7 +299,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.get("/api/users/team", async (req, res) => {
     try {
-      const users = await storageHybrid.getUsers();
+      const users = await storageNeon.getUsers();
       const teamMembers = users
         .filter(u => u.role === "colaborador" && u.active)
         .map(u => ({
@@ -335,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         cpf: validation.data.cpf || null
       };
 
-      const user = await storageHybrid.createUser(userData);
+      const user = await storageNeon.createUser(userData);
       
       res.status(201).json({
         id: user.id,
@@ -354,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const { id } = req.params;
       const updates = req.body;
       
-      const user = await storageHybrid.updateUser(id, updates);
+      const user = await storageNeon.updateUser(id, updates);
       res.json({
         id: user.id,
         username: user.username,
@@ -371,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.delete("/api/users/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      await storageHybrid.deleteUser(id);
+      await storageNeon.deleteUser(id);
       res.json({ success: true });
     } catch (error) {
       res.status(400).json({ error: "Erro ao excluir usuário" });
@@ -390,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (evaluated) filters.evaluated = String(evaluated);
       if (status) filters.status = String(status);
       
-      const evaluations = await storageHybrid.getEvaluations(filters);
+      const evaluations = await storageNeon.getEvaluations(filters);
       res.json(evaluations);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar avaliações" });
@@ -407,7 +405,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       };
       console.log("POST /api/evaluations - Parsed data:", JSON.stringify(evaluationData, null, 2));
       
-      const evaluation = await storageHybrid.createEvaluation(evaluationData);
+      const evaluation = await storageNeon.createEvaluation(evaluationData);
       
       res.status(201).json(evaluation);
     } catch (error) {
@@ -421,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.get("/api/evaluations/stats", async (req, res) => {
     try {
-      const evaluations = await storageHybrid.getEvaluations();
+      const evaluations = await storageNeon.getEvaluations();
       
       // Calculate basic stats
       const totalEvaluations = evaluations.length;
@@ -443,8 +441,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Reports routes
   app.get("/api/reports/dashboard", async (req, res) => {
     try {
-      const evaluations = await storageHybrid.getEvaluations();
-      const users = await storageHybrid.getUsers();
+      const evaluations = await storageNeon.getEvaluations();
+      const users = await storageNeon.getUsers();
       
       // This would contain dashboard data aggregation logic
       res.json({
@@ -460,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/reports/export", async (req, res) => {
     try {
       const { format } = req.query;
-      const evaluations = await storageHybrid.getEvaluations();
+      const evaluations = await storageNeon.getEvaluations();
       
       if (format === "csv") {
         // Generate CSV content
@@ -483,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.get("/api/reports/alerts", async (req, res) => {
     try {
-      const evaluations = await storageHybrid.getEvaluations();
+      const evaluations = await storageNeon.getEvaluations();
       
       // Calculate alerts based on threshold
       const threshold = 0.3;

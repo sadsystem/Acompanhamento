@@ -1,33 +1,45 @@
+// Neon-optimized storage for Vercel serverless
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import * as schema from "../shared/schema";
-import { eq, sql, desc, and, isNull, or } from "drizzle-orm";
+import { eq, sql, desc, and, or, asc } from "drizzle-orm";
 import type { User, Question, Evaluation, Team, Route } from "../shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 
-// Configure Neon for serverless environments
+// Configure Neon for optimal serverless performance
+neonConfig.fetchConnectionCache = true;
+neonConfig.useSecureWebSocket = false;
+
+// Disable automatic pooling debug logs in production
 if (process.env.NODE_ENV === 'production') {
-  neonConfig.fetchConnectionCache = true;
-  neonConfig.useSecureWebSocket = false;
+  neonConfig.poolQueryViaFetch = true;
 }
 
 export class StorageNeon {
   private db: ReturnType<typeof drizzle>;
   private static instance: StorageNeon;
+  private pool: Pool;
   
   constructor() {
     if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL is required for database connection");
+      throw new Error("DATABASE_URL is required for Neon database connection");
     }
     
-    // Use Neon serverless for Vercel compatibility
-    const pool = new Pool({ 
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    const databaseUrl = process.env.DATABASE_URL;
+    console.log(`🔗 Connecting to Neon: ${databaseUrl.split('@')[0]}@***`);
+    
+    // Create pool with optimal settings for serverless
+    this.pool = new Pool({ 
+      connectionString: databaseUrl,
+      ssl: process.env.NODE_ENV === 'production',
+      max: 1, // Serverless works best with single connections
+      idleTimeoutMillis: 0, // No idle timeout for serverless
+      connectionTimeoutMillis: 10000, // 10s connection timeout
     });
     
-    this.db = drizzle(pool, { schema });
+    this.db = drizzle(this.pool, { schema });
+    console.log('✅ Neon database connection initialized');
   }
 
   // Singleton pattern for connection reuse

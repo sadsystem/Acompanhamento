@@ -10,7 +10,7 @@ import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 
 // Check if we're using Neon or regular Postgres
-const isNeonUrl = (url: string) => url.includes('neon.tech') || url.includes('pooler.supabase.com');
+const isNeonUrl = (url: string) => url.includes('neon.tech') || url.includes('neon.database.azure.com');
 const isSupabaseUrl = (url: string) => url.includes('supabase.com');
 
 export class StorageHybrid {
@@ -27,13 +27,13 @@ export class StorageHybrid {
     
     if (isNeonUrl(databaseUrl)) {
       // Use Neon serverless for production or Neon URLs
-      console.log('Using Neon serverless adapter');
+      console.log('Using Neon serverless adapter (optimized for Vercel)');
       neonConfig.fetchConnectionCache = true;
       neonConfig.useSecureWebSocket = false;
       
       const pool = new Pool({ 
         connectionString: databaseUrl,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        ssl: process.env.NODE_ENV === 'production'
       });
       
       this.db = drizzleNeon(pool, { schema });
@@ -43,6 +43,8 @@ export class StorageHybrid {
       const queryClient = postgres(databaseUrl, {
         ssl: process.env.NODE_ENV === 'production' ? 'require' : 'prefer',
         max: 1, // Limit connections for serverless
+        idle_timeout: 20,
+        connect_timeout: 10,
       });
       
       this.db = drizzlePostgres(queryClient, { schema });
@@ -101,15 +103,14 @@ export class StorageHybrid {
   }
 
   async getQuestions(): Promise<Question[]> {
-    const result = await this.db.select().from(schema.questions).orderBy(desc(schema.questions.createdAt));
+    const result = await this.db.select().from(schema.questions).orderBy(schema.questions.order);
     return result;
   }
 
-  async createQuestion(questionData: Omit<Question, "id" | "createdAt">): Promise<Question> {
+  async createQuestion(questionData: Omit<Question, "id">): Promise<Question> {
     const newQuestion = {
       id: randomUUID(),
       ...questionData,
-      createdAt: new Date(),
     };
 
     const result = await this.db.insert(schema.questions).values(newQuestion).returning();
@@ -137,11 +138,11 @@ export class StorageHybrid {
       }
       
       if (filters.evaluator) {
-        conditions.push(eq(schema.evaluations.evaluatorId, filters.evaluator));
+        conditions.push(eq(schema.evaluations.evaluator, filters.evaluator));
       }
       
       if (filters.evaluated) {
-        conditions.push(eq(schema.evaluations.evaluatedId, filters.evaluated));
+        conditions.push(eq(schema.evaluations.evaluated, filters.evaluated));
       }
       
       if (filters.status) {
@@ -186,10 +187,14 @@ export class StorageHybrid {
         const hashedPassword = await bcrypt.hash("admin123", 10);
         await this.createUser({
           username: "admin",
+          phone: "admin",
           password: hashedPassword,
           role: "admin",
-          name: "Administrator",
-          email: "admin@example.com"
+          displayName: "Administrator",
+          permission: "ADM",
+          active: true,
+          cargo: "ADM",
+          cpf: null
         });
         console.log("Admin user created successfully");
       }
@@ -200,17 +205,22 @@ export class StorageHybrid {
         console.log("Creating sample questions...");
         const sampleQuestions = [
           {
-            text: "Como você avalia a comunicação da pessoa avaliada?",
-            type: "scale" as const,
-            scale: { min: 1, max: 5, labels: { 1: "Péssima", 5: "Excelente" } }
+            text: "O colaborador demonstrou pontualidade durante o período avaliado?",
+            order: 1,
+            goodWhenYes: true,
+            requireReasonWhen: "no"
           },
           {
-            text: "Quais são os pontos fortes da pessoa avaliada?",
-            type: "text" as const
+            text: "O colaborador colaborou efetivamente com a equipe?",
+            order: 2,
+            goodWhenYes: true,
+            requireReasonWhen: "no"
           },
           {
-            text: "Que áreas precisam de melhoria?",
-            type: "text" as const
+            text: "Houve algum problema de comportamento ou disciplina?",
+            order: 3,
+            goodWhenYes: false,
+            requireReasonWhen: "yes"
           }
         ];
 
