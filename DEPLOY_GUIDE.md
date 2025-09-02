@@ -19,7 +19,7 @@
 
 ### Exemplo da URL:
 ```
-postgresql://postgres.xxx:PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+postgresql://postgres.xxx:PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
 ---
@@ -61,14 +61,14 @@ Crie o arquivo `.env` na raiz do projeto:
 
 ```env
 # Banco de dados Supabase
-DATABASE_URL="postgresql://postgres.xxx:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+DATABASE_URL="postgresql://postgres.xxx:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
 
 # Configurações do servidor
 NODE_ENV=production
 PORT=3000
 
 # URL base da API para o frontend
-VITE_API_URL="https://<seu-domínio>.vercel.app/api"
+VITE_API_URL="/api"
 
 # Configurações de sessão (gere uma chave aleatória)
 SESSION_SECRET="sua-chave-secreta-muito-longa-e-segura-aqui"
