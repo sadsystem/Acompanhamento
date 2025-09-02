@@ -20,6 +20,10 @@ Foram feitas diversas alterações no código para garantir o funcionamento corr
    - Configuramos cabeçalhos CORS diretamente no servidor Express
    - Removemos cabeçalhos estáticos do `vercel.json` para evitar conflito com `credentials`
 
+4. **Prefixo `/api` ausente em rotas**:
+   - O servidor agora adiciona automaticamente o prefixo `/api` quando necessário no ambiente do Vercel
+   - Evita erros 404 em rotas como `/auth/login` durante o deploy
+
 ### Como fazer deploy:
 
 1. **Uso do script de deploy**:
@@ -31,8 +35,8 @@ Foram feitas diversas alterações no código para garantir o funcionamento corr
    - `NODE_ENV`: production
    - `DATABASE_URL`: sua_url_do_banco
 
-3. **Domínio personalizado**:
-   - Configurado para `ponto2.ecoexpedicao.site`
+3. **Domínio**:
+   - Configurado para `sadsystem.vercel.app` ou outro domínio desejado
 
 ### Troubleshooting:
 
@@ -44,7 +48,7 @@ Se ainda encontrar problemas após o deploy:
    ```
 
 2. **Teste a API diretamente**:
-   Acesse `https://ponto2.ecoexpedicao.site/api/health` para verificar se a API está respondendo
+   Acesse `https://sadsystem.vercel.app/api/health` para verificar se a API está respondendo
 
 3. **Reconstrua e force o deploy**:
    ```bash

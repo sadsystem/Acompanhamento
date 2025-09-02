@@ -1,4 +1,4 @@
-# 🚀 Deploy Vercel - ponto2.ecoexpedicao.site
+# 🚀 Deploy Vercel - sadsystem.vercel.app
 
 ## 📋 CHECKLIST RÁPIDO (15 minutos)
 
@@ -37,17 +37,17 @@ vercel
 vercel --prod
 ```
 
-### 4️⃣ CONFIGURAR DOMÍNIO CUSTOM
+### 4️⃣ (Opcional) CONFIGURAR DOMÍNIO CUSTOM
 
 **a) No Vercel Dashboard:**
 - Projeto → Settings → Domains
-- Add Domain: `ponto2.ecoexpedicao.site`
+- Add Domain: `seu-dominio.com` (o domínio padrão `sadsystem.vercel.app` já é fornecido automaticamente)
 - Vai aparecer um registro DNS para configurar
 
-**b) No Namecheap (painel DNS):**
+**b) No seu provedor DNS (exemplo Namecheap):**
 ```
 Type: CNAME
-Host: ponto2
+Host: subdominio
 Value: cname.vercel-dns.com
 TTL: Automatic
 ```
@@ -113,7 +113,7 @@ vercel --force
 
 **Seu sistema ficará disponível em:**
 - Desenvolvimento: `https://seu-projeto-xxx.vercel.app`
-- Produção: `https://ponto2.ecoexpedicao.site`
+- Produção: `https://sadsystem.vercel.app`
 
 **Login admin:**
 - Telefone: (87) 9 9946-1725
