@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "npm run create-pwa-icons && vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && cp -r client/public/* dist/public/",
+  "build": "npm run create-pwa-icons && vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && cp -r client/public/* dist/public/ || true && rm -rf public && mkdir public && if [ -d dist/public ]; then cp -r dist/public/* public/; else cp -r dist/* public/; fi",
     "create-pwa-icons": "mkdir -p client/public && echo 'Creating PWA icons...' && cp -f client/favicon.ico client/public/favicon.ico || true",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
