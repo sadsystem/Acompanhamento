@@ -1,13 +1,13 @@
 import { StorageAdapter } from './adapter';
 import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle, InsertEvaluation } from '../config/types';
 import { apiRequest } from '@/lib/queryClient';
+import { API_BASE_URL } from '../config/config';
 
 export class ApiStorageAdapter implements StorageAdapter {
   // Users
   async getUsers(): Promise<User[]> {
     const timestamp = Date.now();
-    const baseUrl = window.location.origin;
-    const response = await fetch(`${baseUrl}/api/users/admin?_t=${timestamp}`, {
+    const response = await fetch(`${API_BASE_URL}/users/admin?_t=${timestamp}`, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
@@ -25,12 +25,12 @@ export class ApiStorageAdapter implements StorageAdapter {
   }
 
   async createUser(user: User): Promise<User> {
-    const response = await apiRequest('POST', '/api/users', user);
+    const response = await apiRequest('POST', '/users', user);
     return response.json();
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
-    const response = await apiRequest('PUT', `/api/users/${id}`, updates);
+    const response = await apiRequest('PUT', `/users/${id}`, updates);
     return response.json();
   }
 
@@ -83,7 +83,7 @@ export class ApiStorageAdapter implements StorageAdapter {
     if (filters?.evaluated) params.append('evaluated', filters.evaluated);
     if (filters?.status) params.append('status', filters.status);
     
-    const response = await fetch(`/api/evaluations?${params}`);
+    const response = await fetch(`${API_BASE_URL}/evaluations?${params}`);
     if (!response.ok) throw new Error('Failed to fetch evaluations');
     return response.json();
   }
@@ -95,7 +95,7 @@ export class ApiStorageAdapter implements StorageAdapter {
 
   async createEvaluation(evaluationData: InsertEvaluation): Promise<Evaluation> {
     console.log("ApiAdapter - Sending evaluation data:", JSON.stringify(evaluationData, null, 2));
-    const response = await apiRequest('POST', '/api/evaluations', evaluationData);
+    const response = await apiRequest('POST', '/evaluations', evaluationData);
     return response.json();
   }
 

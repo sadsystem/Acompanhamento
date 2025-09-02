@@ -9,7 +9,7 @@ Foram feitas diversas alterações no código para garantir o funcionamento corr
 1. **Erro 404 nas chamadas de API**:
    - Modificamos o arquivo `vercel.json` para rotear corretamente as chamadas de API
    - Adicionamos suporte a CORS para permitir chamadas entre domínios diferentes
-   - Garantimos que todas as chamadas de API usem URLs absolutas com `window.location.origin`
+   - Garantimos que todas as chamadas de API usem o mesmo `API_BASE_URL`
 
 2. **Tela branca após login**:
    - Melhoramos o tratamento de erros na autenticação
