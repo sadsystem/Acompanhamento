@@ -50,7 +50,7 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-100 via-gray-50 to-green-100 overflow-hidden relative">
+  <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-100 via-gray-50 to-green-100 overflow-hidden relative">
       {/* Padrão geométrico de fundo */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 left-10 w-32 h-32 bg-green-600 rounded-full blur-3xl"></div>
@@ -119,6 +119,10 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
               </div>
             )}
             
+            <div className="flex items-center justify-between text-[11px] text-gray-500">
+              <DiagnosticLink />
+              <span></span>
+            </div>
             <div className="mt-2 flex justify-center">
               <Button 
                 type="submit" 
@@ -145,6 +149,116 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
           </div>
         </div>
       )}
+  <ApiMiniStatus />
     </div>
+  );
+}
+
+// Componente inline para testes de diagnóstico
+function DiagnosticLink() {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async () => {
+    setLoading(true); setError(null); setData(null);
+    try {
+      const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+      // Executa vários endpoints em paralelo
+      const endpoints = [
+        'health',
+        'debug/diagnostics',
+        'questions',
+        'auth/login' // esperado 400/401 sem body - só para ver reach
+      ];
+      const results = await Promise.all(endpoints.map(async ep => {
+        const url = `${base}/${ep}`;
+        const started = performance.now();
+        try {
+          const res = await fetch(url, { method: ep === 'auth/login' ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' }, body: ep === 'auth/login' ? JSON.stringify({}) : undefined });
+          const ms = Math.round(performance.now() - started);
+          let body: any = null;
+            try { body = await res.json(); } catch { body = null; }
+          return { endpoint: ep, url, status: res.status, ok: res.ok, ms, body };
+        } catch (e: any) {
+          return { endpoint: ep, url, error: e.message };
+        }
+      }));
+      setData({ results, ts: new Date().toISOString() });
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button type="button" className="underline hover:text-green-600" onClick={() => { if (!open) { setOpen(true); run(); } else { setOpen(false); } }}>
+        {open ? 'Fechar diagnósticos' : 'Diagnóstico'}
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-2 z-50 w-[340px] max-h-[70vh] overflow-auto bg-white/95 backdrop-blur border rounded-xl shadow-lg p-3 text-[11px] space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">Checks</span>
+            <button className="text-xs text-blue-600" onClick={run} disabled={loading}>{loading ? '...' : 'Recarregar'}</button>
+          </div>
+          {error && <div className="text-red-600">Erro: {error}</div>}
+          {!error && !data && loading && <div>Executando testes...</div>}
+          {data && (
+            <div className="space-y-2">
+              {data.results.map((r: any) => (
+                <div key={r.endpoint} className={`border rounded p-2 ${r.ok || (r.status && r.status < 500) ? 'border-gray-200' : 'border-red-400'} bg-white`}> 
+                  <div className="font-medium">/{r.endpoint}</div>
+                  <div>Status: {r.status ?? 'ERR'} • {r.ms ? r.ms + 'ms' : ''} {r.error && <span className="text-red-600">{r.error}</span>}</div>
+                  {r.body && <pre className="mt-1 whitespace-pre-wrap break-words max-h-32 overflow-auto bg-gray-50 p-1 rounded">{JSON.stringify(r.body, null, 2)}</pre>}
+                </div>
+              ))}
+              <div className="text-[10px] text-gray-500">Gerado em {new Date(data.ts).toLocaleString()} • Atualize para validar correções.</div>
+            </div>
+          )}
+          <div className="pt-1 border-t text-[10px] text-gray-400">
+            Dicas: 404 em /api/health indica rota não atingida (build/server). Erro de conexão em diagnostics-&gt;dbConnection aponta DATABASE_URL.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Mini status (usa somente GET /health) – aparece canto inferior esquerdo para coerência
+function ApiMiniStatus() {
+  const [status, setStatus] = useState<'ok' | 'fail' | 'loading'>('loading');
+  const [ts, setTs] = useState('');
+  const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+
+  const ping = async () => {
+    try {
+      setStatus('loading');
+      const r = await fetch(`${base}/health?_t=${Date.now()}`);
+      if (!r.ok) throw new Error('status ' + r.status);
+      const j = await r.json().catch(() => ({}));
+      setTs(j.timestamp || new Date().toISOString());
+      setStatus('ok');
+    } catch {
+      setStatus('fail');
+      setTs(new Date().toISOString());
+    }
+  };
+
+  // única vez + botão manual no tooltip do badge (não usar useEffect extra aqui simplificado)
+  if (!ts && status === 'loading') {
+    // fire and forget
+    ping();
+  }
+
+  const color = status === 'ok' ? 'bg-green-600' : status === 'fail' ? 'bg-red-600' : 'bg-amber-500';
+  const label = status === 'ok' ? 'API OK' : status === 'fail' ? 'API OFF' : 'API...';
+
+  return (
+    <button type="button" onClick={ping} className={`fixed left-2 bottom-2 text-[10px] ${color} text-white px-2 py-1 rounded-full shadow font-medium hover:opacity-90 transition`} title={`Status: ${label}\nÚltimo teste: ${ts || '-'}\nClique para retestar.`}>
+      {label}
+    </button>
   );
 }

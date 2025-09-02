@@ -31,6 +31,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Questions public endpoint (read-only) - facilita comparar frontend vs backend
+  app.get("/api/questions", async (_req, res) => {
+    try {
+      const qs = await storage.getQuestions();
+      res.json(qs);
+    } catch (e) {
+      res.status(500).json({ error: "Erro ao buscar perguntas" });
+    }
+  });
+
+  // Diagnostics endpoint (NÃO deixar em produção aberta permanentemente; proteger depois)
+  app.get("/api/debug/diagnostics", async (req, res) => {
+    const started = Date.now();
+    const checks: Record<string, any> = {};
+
+    // Helper
+    const run = async (name: string, fn: () => Promise<any>) => {
+      const t0 = Date.now();
+      try {
+        const data = await fn();
+        checks[name] = { ok: true, ms: Date.now() - t0, ...data };
+      } catch (err: any) {
+        checks[name] = { ok: false, ms: Date.now() - t0, error: err.message };
+      }
+    };
+
+    await run("envVars", async () => {
+      const required = ["DATABASE_URL"];
+      const present: Record<string, boolean> = {};
+      required.forEach(k => present[k] = !!process.env[k]);
+      const missing = Object.entries(present).filter(([, v]) => !v).map(([k]) => k);
+      return { present, missing };
+    });
+
+    await run("dbConnection", async () => {
+      // usa getUsers simples para testar conexão
+      const users = await storage.getUsers();
+      return { usersSample: users.slice(0, 1).map(u => ({ id: u.id, username: u.username })), totalUsers: users.length };
+    });
+
+    await run("questions", async () => {
+      const qs = await storage.getQuestions();
+      return { count: qs.length, ids: qs.map(q => q.id) };
+    });
+
+    await run("evaluationsCount", async () => {
+      try {
+        const evals = await storage.getEvaluations();
+        return { count: evals.length };
+      } catch (e: any) {
+        throw new Error("Falha ao consultar avaliações: " + e.message);
+      }
+    });
+
+    await run("seedAdminUser", async () => {
+      const admin = await storage.getUserByUsername("87999461725");
+      return { exists: !!admin };
+    });
+
+    // Resultado consolidado
+    const summaryOk = Object.values(checks).every((c: any) => c.ok);
+    res.status(summaryOk ? 200 : 207).json({
+      status: summaryOk ? "ok" : "issues",
+      timestamp: new Date().toISOString(),
+      totalMs: Date.now() - started,
+      nodeEnv: process.env.NODE_ENV,
+      checks,
+    });
+  });
+
   // Debug / diagnostic endpoint (NÃO EXPOR PUBLICAMENTE EM PRODUÇÃO SEM RESTRIÇÃO)
   // Retorna informações de ambiente, status de banco e rotas registradas.
   app.get("/api/debug/status", async (req, res) => {
