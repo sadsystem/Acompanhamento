@@ -56,6 +56,7 @@
   ],
   "env": {
     "DATABASE_URL": "postgresql://postgres.bppbdcbtudnzzojmnjrw:PgJj6d1YdSzTYMBW@aws-1-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require",
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "VITE_APP_VERSION": "e6880e9-serverless"
   }
 }
