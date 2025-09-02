@@ -8,7 +8,7 @@ const app = express();
 
 // Enable CORS for all routes - configuração mais permissiva para desenvolvimento
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     // Permitir qualquer origem em desenvolvimento
     callback(null, true);
   },
@@ -20,12 +20,31 @@ app.use(cors({
 }));
 
 // Adicionar um handler específico para OPTIONS para CORS preflight
-app.options('*', (req, res) => {
+app.options('*', (_req, res) => {
   res.status(204).end();
 });
 
+// In Vercel, requests may arrive without the "/api" prefix due to routing
+// configuration. This middleware transparently adds the prefix for known API
+// routes so the existing route handlers continue to work both locally and in
+// the serverless environment.
+if (process.env.VERCEL) {
+  const apiPrefixes = ["/auth", "/users", "/evaluations", "/reports"];
+  app.use((req, _res, next) => {
+    if (!req.path.startsWith("/api")) {
+      for (const prefix of apiPrefixes) {
+        if (req.path.startsWith(prefix)) {
+          req.url = `/api${req.url}`;
+          break;
+        }
+      }
+    }
+    next();
+  });
+}
+
 // Disable caching for all API routes - force fresh data
-app.use('/api', (req, res, next) => {
+app.use('/api', (_req, res, next) => {
   res.set({
     'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
     'Pragma': 'no-cache',
@@ -69,17 +88,18 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
+const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
-  });
+  res.status(status).json({ message });
+  throw err;
+});
 
+// When running locally, start the server and optionally setup Vite.
+if (!process.env.VERCEL) {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
@@ -101,4 +121,6 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
-})();
+}
+
+export default app;
