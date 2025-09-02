@@ -30,6 +30,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       env: process.env.NODE_ENV
     });
   });
+  // Rotas alternativas (sem prefixo) para depuração de roteamento em produção
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok", alt: true, path: "/health" });
+  });
 
   // Questions public endpoint (read-only) - facilita comparar frontend vs backend
   app.get("/api/questions", async (_req, res) => {
@@ -39,6 +43,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (e) {
       res.status(500).json({ error: "Erro ao buscar perguntas" });
     }
+  });
+  app.get("/questions", async (_req, res) => {
+    try { const qs = await storage.getQuestions(); res.json(qs); } catch { res.status(500).json({ error: "Erro" }); }
   });
 
   // Diagnostics endpoint (NÃO deixar em produção aberta permanentemente; proteger depois)
@@ -99,6 +106,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       nodeEnv: process.env.NODE_ENV,
       checks,
     });
+  });
+  app.get("/debug/diagnostics", async (req, res) => {
+    res.status(400).json({ error: "Use /api/debug/diagnostics" });
   });
 
   // Debug / diagnostic endpoint (NÃO EXPOR PUBLICAMENTE EM PRODUÇÃO SEM RESTRIÇÃO)

@@ -270,7 +270,7 @@ function DiagnosticLink() {
         {open ? 'Fechar diagnóstico' : 'Diagnóstico'}
       </button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border p-4 flex flex-col max-h-[80vh] text-[12px]">
             <div className="flex items-center justify-between gap-4 mb-2">
