@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -247,11 +247,8 @@ function ApiMiniStatus() {
     }
   };
 
-  // única vez + botão manual no tooltip do badge (não usar useEffect extra aqui simplificado)
-  if (!ts && status === 'loading') {
-    // fire and forget
-    ping();
-  }
+  // Executa uma vez no mount
+  useEffect(() => { ping(); /* eslint-disable-line */ }, []);
 
   const color = status === 'ok' ? 'bg-green-600' : status === 'fail' ? 'bg-red-600' : 'bg-amber-500';
   const label = status === 'ok' ? 'API OK' : status === 'fail' ? 'API OFF' : 'API...';
