@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { API_BASE_URL } from '../config/config';
+import { API_URL } from '../config/config';
 
 export function ApiStatus() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
@@ -14,7 +14,7 @@ export function ApiStatus() {
       try {
         const startTime = Date.now();
         // Add cache busting timestamp parameter
-        const response = await fetch(`${API_BASE_URL}/health?_t=${Date.now()}`, {
+        const response = await fetch(`${API_URL}/health?_t=${Date.now()}`, {
           method: 'GET',
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',

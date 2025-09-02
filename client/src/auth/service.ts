@@ -1,7 +1,7 @@
 import { StorageAdapter } from '../storage/adapter';
 import { User, LoginResult, Session } from '../config/types';
 import { queryClient } from '@/lib/queryClient';
-import { API_BASE_URL } from '../config/config';
+import { API_URL } from '../config/config';
 
 export class AuthService {
   constructor(private storage: StorageAdapter) {}
@@ -12,7 +12,7 @@ export class AuthService {
       const phoneDigits = username.replace(/\D/g, '');
       
       // Build API URL using configured base
-      const apiUrl = `${API_BASE_URL}/auth/login`;
+      const apiUrl = `${API_URL}/auth/login`;
       
       // Add timestamp to prevent caching
       const apiUrlWithCache = `${apiUrl}?_t=${Date.now()}`;
