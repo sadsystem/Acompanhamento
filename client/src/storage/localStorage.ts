@@ -85,7 +85,8 @@ export class LocalStorageAdapter implements StorageAdapter {
     // Generate ID for localStorage
     const evaluation: Evaluation = {
       id: `eval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ...evaluationData
+      ...evaluationData,
+      status: evaluationData.status ?? "queued"
     };
     evaluations.unshift(evaluation);
     await this.setEvaluations(evaluations);
