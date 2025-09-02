@@ -21,6 +21,91 @@ const createUserSchema = insertUserSchema.extend({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Supabase storage and seed data
   await storage.seedInitialData();
+
+  // Diagnostics token (optional). If set, requests must include ?token=VALUE
+  const diagnosticsToken = process.env.DIAGNOSTICS_TOKEN;
+  const requireToken = (req: any, res: any, next: any) => {
+    if (!diagnosticsToken) return next();
+    if (req.query.token === diagnosticsToken) return next();
+    return res.status(401).json({ error: "Unauthorized diagnostics" });
+  };
+  
+  // Quick diagnostics endpoint aggregating health info and simple DB probes
+  app.get('/api/diagnostics', requireToken, async (req, res) => {
+    const started = Date.now();
+    const result: any = {
+      timestamp: new Date().toISOString(),
+      uptimeSec: process.uptime(),
+      nodeEnv: process.env.NODE_ENV,
+      version: process.env.APP_VERSION || 'unknown',
+      checks: [] as any[],
+    };
+
+    // Helper to run timed check
+    const timed = async (name: string, fn: () => Promise<any>) => {
+      const t0 = Date.now();
+      try {
+        const data = await fn();
+        result.checks.push({ name, ok: true, ms: Date.now() - t0, data });
+      } catch (err: any) {
+        result.checks.push({ name, ok: false, ms: Date.now() - t0, error: err?.message || String(err) });
+      }
+    };
+
+    await timed('users.count', async () => ({ count: (await storage.getUsers()).length }));
+    await timed('questions.count', async () => ({ count: (await storage.getQuestions()).length }));
+    await timed('evaluations.count', async () => ({ count: (await storage.getEvaluations()).length }));
+
+    // Quick login simulation (admin user) WITHOUT password exposure
+    await timed('admin.user.exists', async () => {
+      const adminCandidates = (await storage.getUsers()).filter(u => u.role === 'admin');
+      return { admins: adminCandidates.map(a => ({ id: a.id, username: a.username })) };
+    });
+
+    result.totalMs = Date.now() - started;
+    res.json(result);
+  });
+
+  // Lightweight DB ping (returns only OK + latency). Useful for synthetic monitoring.
+  app.get('/api/diagnostics/ping-db', requireToken, async (_req, res) => {
+    const t0 = Date.now();
+    try {
+      // Small operation: fetch 1 user if exists
+      await storage.getUsers();
+      return res.json({ ok: true, ms: Date.now() - t0 });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, ms: Date.now() - t0, error: e?.message || String(e) });
+    }
+  });
+
+  // Simple HTML diagnostic page (no framework) to visualize probes quickly
+  app.get('/diag', async (req, res) => {
+    const tokenParam = diagnosticsToken ? `?token=${diagnosticsToken}` : '';
+    const html = `<!DOCTYPE html><html lang="pt-br"><head><meta charset="utf-8"/><title>Diagnóstico</title><style>body{font-family:system-ui,Arial,sans-serif;padding:20px;background:#f5f7fa}pre{background:#222;color:#0f0;padding:12px;overflow:auto;max-height:60vh}button{margin-right:8px;margin-bottom:8px;padding:8px 14px;cursor:pointer}#status.ok{color:green}#status.fail{color:#b00}</style></head><body>
+    <h1>Diagnóstico do Sistema</h1>
+    <p>Env: <strong>${process.env.NODE_ENV}</strong></p>
+    <div>
+      <button onclick="run('health','/api/health')">/api/health</button>
+      <button onclick="run('diag','/api/diagnostics${tokenParam}')">/api/diagnostics</button>
+      <button onclick="run('ping','/api/diagnostics/ping-db${tokenParam}')">Ping DB</button>
+    </div>
+    <h3>Resultado (<span id="status">aguardando</span>)</h3>
+    <pre id="output">Clique em um botão para iniciar...</pre>
+    <script>
+      async function run(label, url){
+        const out = document.getElementById('output');
+        const status = document.getElementById('status');
+        out.textContent = 'Carregando '+label+'...';
+        status.className=''; status.textContent='executando';
+        const t0=performance.now();
+        try { const res= await fetch(url+'?_t='+Date.now(), {cache:'no-store'}); const txt = await res.text(); const ms=(performance.now()-t0).toFixed(1); status.textContent=res.ok?'ok':'falhou'; status.className=res.ok?'ok':'fail'; out.textContent = 'HTTP '+res.status+' em '+ms+'ms\n\n'+txt; }
+        catch(e){ status.textContent='erro'; status.className='fail'; out.textContent=String(e); }
+      }
+    </script>
+    </body></html>`;
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.send(html);
+  });
   
   // Health check endpoint
   app.get("/api/health", (req, res) => {
@@ -28,6 +113,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       status: "ok", 
       timestamp: new Date().toISOString(),
       env: process.env.NODE_ENV
+    });
+  });
+  // Alias sem o prefixo /api para casos de rewrites inconsistentes em ambientes serverless
+  app.get('/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV,
+      note: 'alias route'
     });
   });
   
