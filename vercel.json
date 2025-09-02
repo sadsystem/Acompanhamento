@@ -3,9 +3,14 @@
   "buildCommand": "npm run build",
   "framework": null,
   "installCommand": "npm install",
+  "functions": {
+    "server/index.ts": {
+      "maxDuration": 25
+    }
+  },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.ts" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": "/server/index.ts" },
+    { "source": "/((?!api).*)", "destination": "/client/dist/index.html" }
   ],
   "headers": [
     {
@@ -27,7 +32,6 @@
     }
   ],
   "env": {
-    "DATABASE_URL": "postgresql://postgres.bppbdcbtudnzzojmnjrw:PgJj6d1YdSzTYMBW@aws-1-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require",
     "NODE_ENV": "production",
     "VITE_APP_VERSION": "e3d2719-20250902-1"
   }

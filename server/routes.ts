@@ -1,10 +1,24 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { SupabaseStorage } from "./supabaseStorage";
-
-const storage = new SupabaseStorage();
+import { storageNeon } from "./storageNeon";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { insertUserSchema, insertEvaluationSchema } from "@shared/schema";
+
+let seedInitialized = false;
+
+// Ensure seed data exists (only once per cold start)
+const ensureSeedData = async () => {
+  if (!seedInitialized) {
+    try {
+      await storageNeon.seedInitialData();
+      seedInitialized = true;
+    } catch (error) {
+      console.error('Seed initialization error:', error);
+      // Don't throw - let the app continue
+    }
+  }
+};
 
 // Authentication endpoints
 const loginSchema = z.object({
@@ -19,33 +33,59 @@ const createUserSchema = insertUserSchema.extend({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize Supabase storage and seed data
-  await storage.seedInitialData();
+  // Middleware to ensure seed data (optimized for serverless)
+  app.use('/api', async (req, res, next) => {
+    try {
+      await ensureSeedData();
+      next();
+    } catch (error) {
+      console.error('Seed middleware error:', error);
+      next(); // Continue anyway
+    }
+  });
   
   // Health check endpoint
-  app.get("/api/health", (req, res) => {
-    res.json({ 
-      status: "ok", 
-      timestamp: new Date().toISOString(),
-      env: process.env.NODE_ENV
-    });
+  app.get("/api/health", async (req, res) => {
+    try {
+      // Quick health check - just verify connection
+      const start = Date.now();
+      await storageNeon.getUsers();
+      const responseTime = Date.now() - start;
+      
+      res.json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        database: "connected",
+        responseTime: `${responseTime}ms`,
+        environment: process.env.NODE_ENV || "development"
+      });
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(503).json({
+        status: "unhealthy",
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString()
+      });
+    }
   });
+  
   // Rotas alternativas (sem prefixo) para depuração de roteamento em produção
   app.get("/health", (req, res) => {
     res.json({ status: "ok", alt: true, path: "/health" });
   });
 
-  // Questions public endpoint (read-only) - facilita comparar frontend vs backend
+    // Questions public endpoint (read-only) - facilita comparar frontend vs backend
   app.get("/api/questions", async (_req, res) => {
     try {
-      const qs = await storage.getQuestions();
+      const qs = await storageNeon.getQuestions();
       res.json(qs);
-    } catch (e) {
-      res.status(500).json({ error: "Erro ao buscar perguntas" });
+    } catch (error) {
+      res.status(500).json({ error: "Erro interno" });
     }
   });
+
   app.get("/questions", async (_req, res) => {
-    try { const qs = await storage.getQuestions(); res.json(qs); } catch { res.status(500).json({ error: "Erro" }); }
+    try { const qs = await storageNeon.getQuestions(); res.json(qs); } catch { res.status(500).json({ error: "Erro" }); }
   });
 
   // Diagnostics endpoint (NÃO deixar em produção aberta permanentemente; proteger depois)
@@ -74,18 +114,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     await run("dbConnection", async () => {
       // usa getUsers simples para testar conexão
-      const users = await storage.getUsers();
+      const users = await storageNeon.getUsers();
       return { usersSample: users.slice(0, 1).map(u => ({ id: u.id, username: u.username })), totalUsers: users.length };
     });
 
     await run("questions", async () => {
-      const qs = await storage.getQuestions();
+      const qs = await storageNeon.getQuestions();
       return { count: qs.length, ids: qs.map(q => q.id) };
     });
 
     await run("evaluationsCount", async () => {
       try {
-        const evals = await storage.getEvaluations();
+        const evals = await storageNeon.getEvaluations();
         return { count: evals.length };
       } catch (e: any) {
         throw new Error("Falha ao consultar avaliações: " + e.message);
@@ -93,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     await run("seedAdminUser", async () => {
-      const admin = await storage.getUserByUsername("87999461725");
+      const admin = await storageNeon.getUserByUsername("87999461725");
       return { exists: !!admin };
     });
 
@@ -125,10 +165,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Teste básico de banco
     try {
-      const users = await storage.getUsers();
+      const users = await storageNeon.getUsers();
       let evalCount = 0;
       try {
-        const evaluations = await storage.getEvaluations();
+        const evaluations = await storageNeon.getEvaluations();
         evalCount = evaluations.length;
       } catch (e) {
         // ignorar erro de evaluations separado
@@ -178,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let user;
       try {
-        user = await storage.getUserByUsername(username);
+        user = await storageNeon.getUserByUsername(username);
         console.log("DEBUG: User search result:", user ? "User found" : "User not found");
         
         if (!user || user.password !== password) {
@@ -235,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Mock token validation - extract user ID
     const userId = token.replace("token-", "");
-    const user = await storage.getUser(userId);
+    const user = await storageNeon.getUserById(userId);
     
     if (!user) {
       return res.status(401).json({ error: "Token inválido" });
@@ -253,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Users routes
   app.get("/api/users/admin", async (req, res) => {
     try {
-      const users = await storage.getUsers();
+      const users = await storageNeon.getUsers();
       res.json(users);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar usuários" });
@@ -262,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/team", async (req, res) => {
     try {
-      const users = await storage.getUsers();
+      const users = await storageNeon.getUsers();
       const teamMembers = users
         .filter(u => u.role === "colaborador" && u.active)
         .map(u => ({
@@ -280,8 +320,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users", async (req, res) => {
     try {
-      const userData = createUserSchema.parse(req.body);
-      const user = await storage.createUser(userData);
+      const validation = createUserSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: "Dados inválidos", 
+          details: validation.error.errors 
+        });
+      }
+
+      const userData = {
+        ...validation.data,
+        permission: validation.data.permission || "Colaborador",
+        active: validation.data.active ?? true,
+        cargo: validation.data.cargo || null,
+        cpf: validation.data.cpf || null
+      };
+
+      const user = await storageNeon.createUser(userData);
       
       res.status(201).json({
         id: user.id,
@@ -300,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = req.body;
       
-      const user = await storage.updateUser(id, updates);
+      const user = await storageNeon.updateUser(id, updates);
       res.json({
         id: user.id,
         username: user.username,
@@ -317,7 +372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/users/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteUser(id);
+      await storageNeon.deleteUser(id);
       res.json({ success: true });
     } catch (error) {
       res.status(400).json({ error: "Erro ao excluir usuário" });
@@ -336,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (evaluated) filters.evaluated = String(evaluated);
       if (status) filters.status = String(status);
       
-      const evaluations = await storage.getEvaluations(filters);
+      const evaluations = await storageNeon.getEvaluations(filters);
       res.json(evaluations);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar avaliações" });
@@ -347,10 +402,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("POST /api/evaluations - Received data:", JSON.stringify(req.body, null, 2));
       
-      const evaluationData = insertEvaluationSchema.parse(req.body);
+      const evaluationData = {
+        ...insertEvaluationSchema.parse(req.body),
+        status: req.body.status || "queued"
+      };
       console.log("POST /api/evaluations - Parsed data:", JSON.stringify(evaluationData, null, 2));
       
-      const evaluation = await storage.createEvaluation(evaluationData);
+      const evaluation = await storageNeon.createEvaluation(evaluationData);
       
       res.status(201).json(evaluation);
     } catch (error) {
@@ -364,7 +422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/evaluations/stats", async (req, res) => {
     try {
-      const evaluations = await storage.getEvaluations();
+      const evaluations = await storageNeon.getEvaluations();
       
       // Calculate basic stats
       const totalEvaluations = evaluations.length;
@@ -386,8 +444,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reports routes
   app.get("/api/reports/dashboard", async (req, res) => {
     try {
-      const evaluations = await storage.getEvaluations();
-      const users = await storage.getUsers();
+      const evaluations = await storageNeon.getEvaluations();
+      const users = await storageNeon.getUsers();
       
       // This would contain dashboard data aggregation logic
       res.json({
@@ -403,7 +461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/export", async (req, res) => {
     try {
       const { format } = req.query;
-      const evaluations = await storage.getEvaluations();
+      const evaluations = await storageNeon.getEvaluations();
       
       if (format === "csv") {
         // Generate CSV content
@@ -426,7 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/reports/alerts", async (req, res) => {
     try {
-      const evaluations = await storage.getEvaluations();
+      const evaluations = await storageNeon.getEvaluations();
       
       // Calculate alerts based on threshold
       const threshold = 0.3;

@@ -1,11 +1,12 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, timestamp, real, json } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { pgTable, text, varchar, boolean, timestamp, real, json, integer } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 // Users table
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id").primaryKey().$defaultFn(() => randomUUID()),
   username: text("username").notNull().unique(), // Now phone number for login
   phone: text("phone").notNull(), // Phone in format: (87) 9 XXXX-XXXX
   password: text("password").notNull(),
@@ -29,7 +30,7 @@ export const questions = pgTable("questions", {
 
 // Evaluations table
 export const evaluations = pgTable("evaluations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id").primaryKey().$defaultFn(() => randomUUID()),
   createdAt: timestamp("created_at").notNull(),
   dateRef: text("date_ref").notNull(), // YYYY-MM-DD
   evaluator: text("evaluator").notNull(),
@@ -41,7 +42,7 @@ export const evaluations = pgTable("evaluations", {
 
 // Teams table
 export const teams = pgTable("teams", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id").primaryKey().$defaultFn(() => randomUUID()),
   driverUsername: text("driver_username").notNull(),
   assistants: json("assistants").notNull(), // string[] - usernames of assistants (max 2)
   createdAt: timestamp("created_at").defaultNow(),
@@ -50,7 +51,7 @@ export const teams = pgTable("teams", {
 
 // Routes table
 export const routes = pgTable("routes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id").primaryKey().$defaultFn(() => randomUUID()),
   city: text("city").notNull(),
   cities: json("cities").notNull(), // string[] - lista completa das cidades
   teamId: varchar("team_id").references(() => teams.id),
