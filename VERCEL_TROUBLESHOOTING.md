@@ -19,9 +19,6 @@ Foram feitas diversas alterações no código para garantir o funcionamento corr
 3. **Problemas de CORS**:
    - Configuramos cabeçalhos CORS diretamente no servidor Express
    - Removemos cabeçalhos estáticos do `vercel.json` para evitar conflito com `credentials`
-4. **Prefixo `/api` ausente em rotas**:
-   - O servidor agora adiciona automaticamente o prefixo `/api` quando necessário no ambiente do Vercel
-   - Evita erros 404 em rotas como `/auth/login` durante o deploy
 
 ### Como fazer deploy:
 
