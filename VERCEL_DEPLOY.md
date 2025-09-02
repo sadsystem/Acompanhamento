@@ -25,9 +25,9 @@ DATABASE_URL = sua-url-supabase-completa-com-sslmode=require
 NODE_ENV = production
 ```
 
-**Formato correto da DATABASE_URL:**
+**✅ DATABASE_URL já configurada:**
 ```
-postgresql://postgres.xxx:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require
+postgresql://postgres.bppbdcbtudnzzojmnjrw:PgJj6d1YdSzTYMBW@aws-1-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
 ### 3️⃣ FAZER DEPLOY
