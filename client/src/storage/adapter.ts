@@ -107,9 +107,14 @@ export class MockStorageAdapter implements StorageAdapter {
     this.evaluations = [...evaluations];
   }
 
-  async createEvaluation(evaluation: Evaluation): Promise<Evaluation> {
-    this.evaluations.unshift(evaluation);
-    return evaluation;
+  async createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation> {
+    const newEvaluation: Evaluation = {
+      id: `eval_${Date.now()}`,
+      ...evaluation,
+      status: evaluation.status ?? "queued",
+    };
+    this.evaluations.unshift(newEvaluation);
+    return newEvaluation;
   }
 
   async getSession(): Promise<Session | null> {

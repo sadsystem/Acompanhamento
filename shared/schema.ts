@@ -15,7 +15,7 @@ export const users = pgTable("users", {
   active: boolean("active").notNull().default(true),
   cargo: text("cargo"), // "Motorista" | "Ajudante" | "ADM"
   cpf: text("cpf"),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow(),
 });
 
 // Questions table
@@ -30,13 +30,13 @@ export const questions = pgTable("questions", {
 // Evaluations table
 export const evaluations = pgTable("evaluations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  createdAt: timestamp("created_at").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).notNull(),
   dateRef: text("date_ref").notNull(), // YYYY-MM-DD
   evaluator: text("evaluator").notNull(),
   evaluated: text("evaluated").notNull(),
-  answers: json("answers").notNull(), // Answer[]
+  answers: json("answers").notNull().$type<Answer[]>(), // Answer[]
   score: real("score").notNull(),
-  status: text("status").notNull().default("queued"), // "queued" | "synced"
+  status: text("status").notNull().default("queued").$type<"queued" | "synced">(), // "queued" | "synced"
 });
 
 // Teams table
@@ -44,8 +44,8 @@ export const teams = pgTable("teams", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   driverUsername: text("driver_username").notNull(),
   assistants: json("assistants").notNull(), // string[] - usernames of assistants (max 2)
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 // Routes table
@@ -57,8 +57,8 @@ export const routes = pgTable("routes", {
   startDate: text("start_date").notNull(), // YYYY-MM-DD
   endDate: text("end_date"), // YYYY-MM-DD when route is finished
   status: text("status").notNull().default("formation"), // "formation" | "active" | "completed"
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow(),
 });
 
 // Insert schemas
@@ -69,7 +69,17 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const insertQuestionSchema = createInsertSchema(questions);
 
-export const insertEvaluationSchema = createInsertSchema(evaluations).omit({
+export const insertEvaluationSchema = createInsertSchema(evaluations, {
+  createdAt: z.string().datetime(),
+  answers: z.array(
+    z.object({
+      questionId: z.string(),
+      value: z.boolean(),
+      reason: z.string().optional(),
+    })
+  ),
+  status: z.enum(["queued", "synced"]).optional(),
+}).omit({
   id: true,
 });
 
@@ -93,7 +103,7 @@ export type Question = typeof questions.$inferSelect;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 
 export type Evaluation = typeof evaluations.$inferSelect;
-export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
+export type InsertEvaluation = typeof evaluations.$inferInsert;
 
 export type Team = typeof teams.$inferSelect;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
@@ -120,5 +130,5 @@ export type EvaluationFilters = {
   dateTo?: string;
   evaluator?: string;
   evaluated?: string;
-  status?: string;
+  status?: "queued" | "synced";
 };

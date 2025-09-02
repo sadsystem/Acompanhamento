@@ -48,7 +48,7 @@ export type EvaluationFilters = {
   dateTo?: string;
   evaluator?: string;
   evaluated?: string;
-  status?: string;
+  status?: "queued" | "synced";
 };
 
 export type LoginResult = {
@@ -107,6 +107,4 @@ export type TravelRouteWithTeam = TravelRoute & {
 };
 
 // Import evaluation insert type from shared schema
-import { z } from "zod";
-import { insertEvaluationSchema } from "@shared/schema";
-export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
+export type { InsertEvaluation } from "@shared/schema";

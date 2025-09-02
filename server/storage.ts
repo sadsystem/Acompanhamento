@@ -19,7 +19,7 @@ export interface IStorage {
     dateTo?: string;
     evaluator?: string;
     evaluated?: string;
-    status?: string;
+    status?: "queued" | "synced";
   }): Promise<Evaluation[]>;
   createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation>;
   setEvaluations(evaluations: Evaluation[]): Promise<void>;
@@ -49,57 +49,67 @@ export class MemStorage implements IStorage {
       {
         id: "u1",
         username: "admin",
+        phone: "(00) 0 0000-0000",
         password: "admin123",
         displayName: "Administrador",
         role: "admin",
+        permission: "ADM",
         active: true,
         cargo: "Gestor",
         cpf: null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       },
       {
         id: "u2",
         username: "teste",
+        phone: "(00) 0 0000-0001",
         password: "teste123",
         displayName: "Usuário Teste",
         role: "colaborador",
+        permission: "Colaborador",
         active: true,
         cargo: "Motorista",
         cpf: null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       },
       {
         id: "u3",
         username: "maria",
+        phone: "(00) 0 0000-0002",
         password: "123456",
         displayName: "Maria Silva",
         role: "colaborador",
+        permission: "Colaborador",
         active: true,
         cargo: "Ajudante",
         cpf: null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       },
       {
         id: "u4",
         username: "joao",
+        phone: "(00) 0 0000-0003",
         password: "123456",
         displayName: "João Santos",
         role: "colaborador",
+        permission: "Colaborador",
         active: true,
         cargo: "Motorista",
         cpf: null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       },
       {
         id: "u5",
         username: "carlos",
+        phone: "(00) 0 0000-0004",
         password: "123456",
         displayName: "Carlos Almeida",
         role: "colaborador",
+        permission: "Colaborador",
         active: true,
         cargo: "Ajudante",
         cpf: null,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       },
     ];
 
@@ -161,13 +171,14 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { 
-      ...insertUser, 
+    const user: User = {
+      ...insertUser,
       id,
       active: insertUser.active ?? true,
       cargo: insertUser.cargo ?? null,
       cpf: insertUser.cpf ?? null,
-      createdAt: new Date(),
+      permission: insertUser.permission ?? "Colaborador",
+      createdAt: new Date().toISOString(),
     };
     this.users.set(id, user);
     return user;
@@ -189,13 +200,17 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
+  async deleteUser(id: string): Promise<void> {
+    this.users.delete(id);
+  }
+
   // Evaluation methods
   async getEvaluations(filters?: {
     dateFrom?: string;
     dateTo?: string;
     evaluator?: string;
     evaluated?: string;
-    status?: string;
+    status?: "queued" | "synced";
   }): Promise<Evaluation[]> {
     let evaluations = Array.from(this.evaluations.values());
 
@@ -292,7 +307,7 @@ export class DatabaseStorage implements IStorage {
     dateTo?: string;
     evaluator?: string;
     evaluated?: string;
-    status?: string;
+    status?: "queued" | "synced";
   }): Promise<Evaluation[]> {
     return await db.select().from(evaluations);
   }
