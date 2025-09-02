@@ -17,8 +17,8 @@ Foram feitas diversas alterações no código para garantir o funcionamento corr
    - Ajustamos a estrutura de arquivos para que o Vercel sirva os arquivos estáticos corretamente
 
 3. **Problemas de CORS**:
-   - Configuramos cabeçalhos CORS corretos no servidor Express
-   - Adicionamos uma rota OPTIONS específica para lidar com preflight requests
+   - Configuramos cabeçalhos CORS diretamente no servidor Express
+   - Removemos cabeçalhos estáticos do `vercel.json` para evitar conflito com `credentials`
 
 ### Como fazer deploy:
 
