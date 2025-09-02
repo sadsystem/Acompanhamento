@@ -66,9 +66,22 @@ export default async function handler(req: any, res: any) {
   try {
     if (!appPromise) appPromise = buildApp();
     const app = await appPromise;
-    return app(req, res);
+    
+    // Handle the request through the Express app
+    return new Promise((resolve, reject) => {
+      app(req, res, (err: any) => {
+        if (err) reject(err);
+        else resolve(res);
+      });
+    });
   } catch (e: any) {
-    console.error('Lambda fatal error:', e);
-    res.status(500).json({ error: 'lambda_init_failed', message: e.message });
+    console.error('Serverless handler error:', e);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'serverless_handler_error', 
+        message: e.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 }

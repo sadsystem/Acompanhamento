@@ -1,17 +1,11 @@
 {
   "version": 2,
+  "functions": {
+    "api/*.ts": {
+      "runtime": "@vercel/node@3.2.17"
+    }
+  },
   "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["server/**/*", "shared/**/*"]
-      }
-    },
-    {
-      "src": "api/ping.ts",
-      "use": "@vercel/node"
-    },
     {
       "src": "package.json",
       "use": "@vercel/static-build",
@@ -22,28 +16,42 @@
   ],
   "routes": [
     {
+      "src": "/api/health",
+      "dest": "/api/health.ts"
+    },
+    {
+      "src": "/api/auth/login",
+      "dest": "/api/auth/login.ts"
+    },
+    {
       "src": "/api/(.*)",
-      "dest": "api/index.ts",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
-        "Access-Control-Allow-Credentials": "true"
-      }
+      "dest": "/api/index.ts"
     },
     {
       "handle": "filesystem"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
     },
     {
       "src": "/(.*)",
       "dest": "/index.html"
     }
   ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, Accept"
+        }
+      ]
+    }
+  ]
 }

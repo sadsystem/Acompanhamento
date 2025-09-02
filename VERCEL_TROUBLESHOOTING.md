@@ -26,19 +26,26 @@ Foram feitas otimizações específicas para garantir funcionamento no ambiente 
    - CORS restrito a domínios específicos
    - Variáveis sensíveis via env vars apenas
 
-### Como fazer deploy:
+### ✅ Como fazer deploy (ATUALIZADO):
 
-1. **Uso do script de deploy**:
-   ```bash
-   ./deploy.sh
+1. **Configure as variáveis de ambiente ANTES do primeiro deploy**:
+   No dashboard do Vercel → Settings → Environment Variables:
+   ```
+   DATABASE_URL = sua_url_do_supabase_com_sslmode_require
+   NODE_ENV = production
    ```
 
-2. **Verificação das variáveis de ambiente no Vercel**:
-   - `NODE_ENV`: production
-   - `DATABASE_URL`: sua_url_do_banco
+2. **Deploy usando Vercel CLI**:
+   ```bash
+   vercel login
+   vercel --prod
+   ```
 
-3. **Domínio personalizado**:
-   - Configurado para `ponto2.ecoexpedicao.site`
+3. **Estrutura de arquivos otimizada**:
+   - ✅ `api/index.ts` - Handler principal serverless
+   - ✅ `api/health.ts` - Endpoint de saúde individual  
+   - ✅ `api/auth/login.ts` - Login individual para teste
+   - ✅ `vercel.json` - Configuração otimizada para serverless
 
 ### Troubleshooting:
 
