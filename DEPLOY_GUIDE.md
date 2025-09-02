@@ -19,7 +19,7 @@
 
 ### Exemplo da URL:
 ```
-postgresql://postgres.xxx:PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+postgresql://postgres.xxx:PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
 ---
@@ -61,7 +61,7 @@ Crie o arquivo `.env` na raiz do projeto:
 
 ```env
 # Banco de dados Supabase
-DATABASE_URL="postgresql://postgres.xxx:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+DATABASE_URL="postgresql://postgres.xxx:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
 
 # Configurações do servidor
 NODE_ENV=production

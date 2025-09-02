@@ -56,7 +56,7 @@ TTL: Automatic
 
 **URL do banco (exemplo):**
 ```
-postgresql://postgres.xxx:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+postgresql://postgres.xxx:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
 **Como obter:**

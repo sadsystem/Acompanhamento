@@ -42,7 +42,7 @@ echo "✅ Build completo!"
 echo "📝 Configurando variáveis de ambiente..."
 cat > .env.production << EOF
 NODE_ENV=production
-DATABASE_URL=postgresql://postgres.bppbdcbtudnzzojmnjrw:9qoCu5vnxzDAMhCF@aws-1-sa-east-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.bppbdcbtudnzzojmnjrw:9qoCu5vnxzDAMhCF@aws-1-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require
 EOF
 
 # Deploy para Vercel
