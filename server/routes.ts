@@ -435,6 +435,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 404 handler específico para API (deve ficar após TODAS as rotas acima)
+  app.use('/api', (req, res, next) => {
+    if (res.headersSent) return next();
+    try {
+      // @ts-ignore
+      const stack = (app as any)._router?.stack || [];
+      const routes = stack
+        .filter((l: any) => l.route && l.route.path && l.route.methods)
+        .map((l: any) => ({ path: l.route.path, methods: Object.keys(l.route.methods) }))
+        .filter((r: any) => r.path.startsWith('/api'));
+      res.status(404).json({
+        error: 'api_not_found',
+        message: 'Nenhuma rota /api correspondente',
+        requested: req.path,
+        registeredCount: routes.length,
+        sample: routes.slice(0, 10),
+      });
+    } catch (e: any) {
+      res.status(404).json({ error: 'api_not_found', requested: req.path });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
