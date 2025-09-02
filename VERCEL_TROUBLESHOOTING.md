@@ -9,7 +9,7 @@ Foram feitas diversas alterações no código para garantir o funcionamento corr
 1. **Erro 404 nas chamadas de API**:
    - Modificamos o arquivo `vercel.json` para rotear corretamente as chamadas de API
    - Adicionamos suporte a CORS para permitir chamadas entre domínios diferentes
-   - Garantimos que todas as chamadas de API usem a URL definida em `VITE_API_URL`
+   - Garantimos que todas as chamadas de API usem o caminho definido em `VITE_API_URL` (tipicamente `/api`)
 
 2. **Tela branca após login**:
    - Melhoramos o tratamento de erros na autenticação
@@ -17,8 +17,11 @@ Foram feitas diversas alterações no código para garantir o funcionamento corr
    - Ajustamos a estrutura de arquivos para que o Vercel sirva os arquivos estáticos corretamente
 
 3. **Problemas de CORS**:
-   - Configuramos cabeçalhos CORS corretos no servidor Express
-   - Adicionamos uma rota OPTIONS específica para lidar com preflight requests
+   - Configuramos cabeçalhos CORS diretamente no servidor Express
+   - Removemos cabeçalhos estáticos do `vercel.json` para evitar conflito com `credentials`
+4. **Prefixo `/api` ausente em rotas**:
+   - O servidor agora adiciona automaticamente o prefixo `/api` quando necessário no ambiente do Vercel
+   - Evita erros 404 em rotas como `/auth/login` durante o deploy
 
 ### Como fazer deploy:
 
