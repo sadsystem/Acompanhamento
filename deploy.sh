@@ -56,8 +56,8 @@ export VERCEL_ORG_ID="team_YourOrgID"
 vercel --prod --force
 
 echo "✅ Deploy concluído!"
-echo "🔗 Acesse o sistema em: https://ponto2.ecoexpedicao.site"
+echo "🔗 Acesse o sistema em: https://sadsystem.vercel.app"
 echo ""
 echo "⚠️  IMPORTANTE: Se o erro persistir, verifique:"
-echo "1. Se a API está acessível em https://ponto2.ecoexpedicao.site/api/health"
+echo "1. Se a API está acessível em https://sadsystem.vercel.app/api/health"
 echo "2. Se o CORS está configurado corretamente nas Variáveis de Ambiente do Vercel"

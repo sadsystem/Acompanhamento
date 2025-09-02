@@ -68,7 +68,7 @@ NODE_ENV=production
 PORT=3000
 
 # URL base da API para o frontend
-VITE_API_URL="https://<seu-domínio>.vercel.app/api"
+VITE_API_URL="/api"
 
 # Configurações de sessão (gere uma chave aleatória)
 SESSION_SECRET="sua-chave-secreta-muito-longa-e-segura-aqui"
