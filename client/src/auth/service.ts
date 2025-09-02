@@ -11,9 +11,8 @@ export class AuthService {
       // Convert phone to username format for API call
       const phoneDigits = username.replace(/\D/g, '');
       
-      // Use window.location.origin to ensure we're using the correct base URL in qualquer ambiente
-      const baseUrl = window.location.origin;
-      const apiUrl = `${baseUrl}/api/auth/login`;
+      // Build API URL using configured base
+      const apiUrl = `${API_BASE_URL}/auth/login`;
       
       // Add timestamp to prevent caching
       const apiUrlWithCache = `${apiUrl}?_t=${Date.now()}`;

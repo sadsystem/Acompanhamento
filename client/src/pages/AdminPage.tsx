@@ -123,33 +123,33 @@ export function AdminPage() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      const response = await apiRequest('POST', '/api/users', userData);
+      const response = await apiRequest('POST', '/users', userData);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users/admin'] });
+      queryClient.invalidateQueries({ queryKey: ['/users/admin'] });
     }
   });
 
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      const response = await apiRequest('PUT', `/api/users/${id}`, updates);
+      const response = await apiRequest('PUT', `/users/${id}`, updates);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users/admin'] });
+      queryClient.invalidateQueries({ queryKey: ['/users/admin'] });
     }
   });
 
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const response = await apiRequest('DELETE', `/api/users/${userId}`);
+      const response = await apiRequest('DELETE', `/users/${userId}`);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users/admin'] });
+      queryClient.invalidateQueries({ queryKey: ['/users/admin'] });
     }
   });
 
