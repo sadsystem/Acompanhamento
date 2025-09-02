@@ -1,24 +1,30 @@
 # Acompanhamento Diário
 
-## Correções para o Deploy no Vercel
+## ✅ Otimizações para Deploy no Vercel - REPLIT MIGRAÇÃO
 
-Foram feitas diversas alterações no código para garantir o funcionamento correto da aplicação no ambiente do Vercel:
+Foram feitas otimizações específicas para garantir funcionamento no ambiente serverless Vercel:
 
-### Problemas corrigidos:
+### ✅ Problemas corrigidos:
 
-1. **Erro 404 nas chamadas de API**:
-   - Modificamos o arquivo `vercel.json` para rotear corretamente as chamadas de API
-   - Adicionamos suporte a CORS para permitir chamadas entre domínios diferentes
-   - Garantimos que todas as chamadas de API usem o mesmo `API_BASE_URL`
+1. **WebSocket removido para serverless**:
+   - Configurado Neon database para HTTP em produção
+   - WebSocket apenas em desenvolvimento
+   - Evita erros de conexão no Vercel
 
-2. **Tela branca após login**:
-   - Melhoramos o tratamento de erros na autenticação
-   - Adicionamos logs adicionais para depuração
-   - Ajustamos a estrutura de arquivos para que o Vercel sirva os arquivos estáticos corretamente
+2. **Erro 404 nas chamadas de API**:
+   - Corrigido `vercel.json` com rotas simplificadas
+   - Removidas rotas duplicadas
+   - CORS otimizado para produção
 
-3. **Problemas de CORS**:
-   - Configuramos cabeçalhos CORS corretos no servidor Express
-   - Adicionamos uma rota OPTIONS específica para lidar com preflight requests
+3. **Handler serverless otimizado**:
+   - api/index.ts adaptado para cold starts
+   - Logging reduzido em produção
+   - Cache de conexão melhorado
+
+4. **Segurança melhorada**:
+   - DATABASE_URL removida do vercel.json
+   - CORS restrito a domínios específicos
+   - Variáveis sensíveis via env vars apenas
 
 ### Como fazer deploy:
 

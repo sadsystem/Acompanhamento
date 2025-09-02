@@ -23,22 +23,13 @@
   "routes": [
     {
       "src": "/api/(.*)",
+      "dest": "api/index.ts",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization"
-      },
-      "dest": "api/index.ts"
-    },
-    {
-      "src": "/api/(.*)",
-      "methods": ["OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization"
-      },
-      "status": 200
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
+        "Access-Control-Allow-Credentials": "true"
+      }
     },
     {
       "handle": "filesystem"
@@ -53,7 +44,6 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production",
-    "DATABASE_URL": "postgresql://postgres.bppbdcbtudnzzojmnjrw:9qoCu5vnxzDAMhCF@aws-1-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
+    "NODE_ENV": "production"
   }
 }

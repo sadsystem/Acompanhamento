@@ -15,12 +15,19 @@ npm install -g vercel
 
 ### 2️⃣ CONFIGURAR VARIÁVEIS DE AMBIENTE
 
-**No painel do Vercel (após primeiro deploy):**
+**IMPORTANTE: Configure as variáveis ANTES do primeiro deploy no painel Vercel**
+
+**No painel do Vercel:**
 ```
 Settings → Environment Variables → Add:
 
-DATABASE_URL = sua-url-supabase-completa
+DATABASE_URL = sua-url-supabase-completa-com-sslmode=require
 NODE_ENV = production
+```
+
+**Formato correto da DATABASE_URL:**
+```
+postgresql://postgres.xxx:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
 ### 3️⃣ FAZER DEPLOY
