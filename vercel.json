@@ -1,16 +1,16 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "framework": null,
+  "outputDirectory": "client/dist",
   "installCommand": "npm install",
   "functions": {
-    "server/index.ts": {
+    "api/index.js": {
       "maxDuration": 25
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/server/index.ts" },
-    { "source": "/((?!api).*)", "destination": "/client/dist/index.html" }
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
@@ -32,7 +32,6 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production",
-    "VITE_APP_VERSION": "e3d2719-20250902-1"
+    "NODE_ENV": "production"
   }
 }
