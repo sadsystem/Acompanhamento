@@ -5,7 +5,7 @@
 Este é um aplicativo web fullstack para avaliação e acompanhamento diário de colaboradores, com as seguintes características:
 
 - **Frontend**: React/Vite com TypeScript, utilizando TailwindCSS e Radix UI.
-- **Backend**: Node.js/Express com TypeScript
+- **Backend**: Node.js/Express com TypeScript.
 - **Banco de dados**: PostgreSQL via Supabase com Drizzle ORM
 - **Deploy**: Vercel
 
