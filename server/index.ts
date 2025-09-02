@@ -2,8 +2,21 @@ import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit", 
+    second: "2-digit",
+    hour12: true,
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
 
 // Connection pool cache for serverless
 let app: express.Express | null = null;
@@ -141,17 +154,27 @@ export default async function handler(req: any, res: any) {
 
 // For local development
 if (process.env.NODE_ENV !== 'production') {
-  createApp().then(app => {
+  createApp().then(async (app) => {
     const PORT = process.env.PORT || 3001;
+    
+    // Setup Vite in development
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'custom',
+      root: path.join(__dirname, '../client'),
+      resolve: {
+        alias: {
+          "@": path.resolve(__dirname, '../client/src'),
+          "@shared": path.resolve(__dirname, '../shared'),
+        },
+      },
+    });
+
+    app.use(vite.middlewares);
+
     const server = app.listen(PORT, () => {
       log(`Server running on port ${PORT}`);
     });
-    
-    // Setup Vite for development only
-    if (process.env.NODE_ENV === 'development') {
-      setupVite(app, server);
-    } else {
-      serveStatic(app);
-    }
   }).catch(console.error);
 }
