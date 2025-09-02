@@ -73,11 +73,11 @@ export class SupabaseStorage implements IStorage {
     dateTo?: string;
     evaluator?: string;
     evaluated?: string;
-    status?: string;
+    status?: "queued" | "synced";
   }): Promise<Evaluation[]> {
     let query = this.db.select().from(evaluations);
     
-    const conditions = [];
+    const conditions: any[] = [];
     
     if (filters?.dateFrom) {
       conditions.push(gte(evaluations.dateRef, filters.dateFrom));
@@ -99,11 +99,8 @@ export class SupabaseStorage implements IStorage {
       conditions.push(eq(evaluations.status, filters.status));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    return await query;
+    const finalQuery = conditions.length > 0 ? query.where(and(...conditions)) : query;
+    return await finalQuery;
   }
 
   async createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation> {
