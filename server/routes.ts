@@ -206,6 +206,31 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.status(info.status === "ok" ? 200 : 503).json(info);
   });
   
+  // TEMPORARY DEBUG - Remove after fixing login
+  app.get("/api/debug/admin", async (req, res) => {
+    try {
+      const users = await storageNeon.getUsers();
+      const admin = await storageNeon.getUserByUsername("87999461725");
+      
+      res.json({
+        totalUsers: users.length,
+        adminExists: !!admin,
+        adminData: admin ? {
+          id: admin.id,
+          username: admin.username,
+          displayName: admin.displayName,
+          role: admin.role,
+          active: admin.active,
+          hasPassword: !!admin.password,
+          passwordLength: admin.password?.length || 0
+        } : null,
+        allUsernames: users.map(u => u.username)
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+  
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     console.log("DEBUG: Login endpoint hit with", req.body); // Test log visibility
