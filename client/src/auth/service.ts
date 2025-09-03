@@ -37,24 +37,25 @@ export class AuthService {
         })
       });
       
-      // Handle network error or non-JSON response
-      if (!response.ok) {
-        console.error('API Error:', response.status, response.statusText);
-        
+      // Parse response first to get proper error message
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
         if (response.status === 404) {
           return { ok: false, error: "API não encontrada (404). Servidor pode estar offline." };
         }
-        
         return { ok: false, error: `Erro do servidor: ${response.status}` };
       }
       
-      // Parse response
-      const result = await response.json();
       console.log('Login result:', result);
       
+      // Check if login was successful
       if (!response.ok || !result.success) {
         console.error('Login failed:', result.error || "Credenciais inválidas");
-        return { ok: false, error: result.error || "Credenciais inválidas" };
+        // Use server's error message if available, otherwise fallback to generic message
+        return { ok: false, error: result.error || "Login ou senha incorretos" };
       }
       
       // Save session

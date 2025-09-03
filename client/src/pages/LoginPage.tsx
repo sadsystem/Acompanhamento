@@ -350,7 +350,7 @@ function ApiMiniStatus() {
   useEffect(() => { ping(); /* eslint-disable-line */ }, []);
 
   const color = status === 'ok' ? 'bg-green-600' : status === 'fail' ? 'bg-red-600' : 'bg-amber-500';
-  const label = status === 'ok' ? 'API OK' : status === 'fail' ? 'API OFF' : 'API...';
+  const label = status === 'ok' ? 'Online' : status === 'fail' ? 'Offline' : 'Verificando...';
 
   return (
     <button type="button" onClick={ping} className={`fixed left-2 bottom-2 text-[10px] ${color} text-white px-2 py-1 rounded-full shadow font-medium hover:opacity-90 transition`} title={`Status: ${label}\nÚltimo teste: ${ts || '-'}\nClique para retestar.`}>

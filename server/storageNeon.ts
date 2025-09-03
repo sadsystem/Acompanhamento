@@ -49,6 +49,11 @@ export class StorageNeon {
     return result[0];
   }
 
+  async getUserByCpf(cpf: string): Promise<User | undefined> {
+    const result = await this.db.select().from(schema.users).where(eq(schema.users.cpf, cpf));
+    return result[0];
+  }
+
   async createUser(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
     // Hash password before storing
     const hashedPassword = await bcrypt.hash(user.password, 10);
@@ -64,17 +69,61 @@ export class StorageNeon {
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
-    // Hash password if being updated
-    if (updates.password) {
-      updates.password = await bcrypt.hash(updates.password, 10);
-    }
+    console.log('=== STORAGE UPDATE USER DEBUG ===');
+    console.log('User ID:', id);
+    console.log('Updates received:', JSON.stringify(updates, null, 2));
     
-    const result = await this.db
-      .update(schema.users)
-      .set(updates)
-      .where(eq(schema.users.id, id))
-      .returning();
-    return result[0];
+    try {
+      // Validate required fields
+      if (!id || id.trim() === '') {
+        throw new Error('User ID is required');
+      }
+
+      // Fields that should not be updated
+      const excludedFields = ['id', 'createdAt'];
+
+      // Clean the updates object to remove undefined/null values and excluded fields
+      const cleanUpdates: any = {};
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && !excludedFields.includes(key)) {
+          // Convert string dates to Date objects for timestamp fields
+          if (key === 'createdAt' && typeof value === 'string') {
+            cleanUpdates[key] = new Date(value);
+          } else {
+            cleanUpdates[key] = value;
+          }
+        }
+      });
+
+      console.log('Clean updates:', JSON.stringify(cleanUpdates, null, 2));
+
+      // Hash password if being updated
+      if (cleanUpdates.password) {
+        console.log('Hashing password...');
+        cleanUpdates.password = await bcrypt.hash(cleanUpdates.password, 10);
+      }
+      
+      console.log('Executing update query...');
+      const result = await this.db
+        .update(schema.users)
+        .set(cleanUpdates)
+        .where(eq(schema.users.id, id))
+        .returning();
+      
+      console.log('Query result length:', result.length);
+      
+      if (result.length === 0) {
+        throw new Error(`User with id ${id} not found`);
+      }
+      
+      console.log('User updated successfully:', result[0].id);
+      return result[0];
+    } catch (error) {
+      console.error('=== STORAGE UPDATE USER ERROR ===');
+      console.error('Error details:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      throw error;
+    }
   }
 
   async deleteUser(id: string): Promise<void> {

@@ -10,8 +10,8 @@ import express from "express";
 import cors from "cors";
 
 // server/storageNeon.ts
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 
 // shared/schema.ts
 var schema_exports = {};
@@ -115,32 +115,17 @@ var insertRouteSchema = createInsertSchema(routes).omit({
 import { eq, sql, desc, and } from "drizzle-orm";
 import { randomUUID as randomUUID2 } from "crypto";
 import bcrypt from "bcryptjs";
-neonConfig.fetchConnectionCache = true;
-neonConfig.useSecureWebSocket = false;
-if (process.env.NODE_ENV === "production") {
-  neonConfig.poolQueryViaFetch = true;
-}
 var StorageNeon = class _StorageNeon {
   db;
   static instance;
-  pool;
   constructor() {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL is required for Neon database connection");
     }
     const databaseUrl = process.env.DATABASE_URL;
     console.log(`\u{1F517} Connecting to Neon: ${databaseUrl.split("@")[0]}@***`);
-    this.pool = new Pool({
-      connectionString: databaseUrl,
-      ssl: process.env.NODE_ENV === "production",
-      max: 1,
-      // Serverless works best with single connections
-      idleTimeoutMillis: 0,
-      // No idle timeout for serverless
-      connectionTimeoutMillis: 1e4
-      // 10s connection timeout
-    });
-    this.db = drizzle(this.pool, { schema: schema_exports });
+    const neonClient = neon(databaseUrl);
+    this.db = drizzle(neonClient, { schema: schema_exports });
     console.log("\u2705 Neon database connection initialized");
   }
   // Singleton pattern for connection reuse
@@ -175,11 +160,38 @@ var StorageNeon = class _StorageNeon {
     return result[0];
   }
   async updateUser(id, updates) {
-    if (updates.password) {
-      updates.password = await bcrypt.hash(updates.password, 10);
+    console.log("=== STORAGE UPDATE USER DEBUG ===");
+    console.log("User ID:", id);
+    console.log("Updates received:", JSON.stringify(updates, null, 2));
+    try {
+      if (!id || id.trim() === "") {
+        throw new Error("User ID is required");
+      }
+      const cleanUpdates = {};
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== void 0 && value !== null) {
+          cleanUpdates[key] = value;
+        }
+      });
+      console.log("Clean updates:", JSON.stringify(cleanUpdates, null, 2));
+      if (cleanUpdates.password) {
+        console.log("Hashing password...");
+        cleanUpdates.password = await bcrypt.hash(cleanUpdates.password, 10);
+      }
+      console.log("Executing update query...");
+      const result = await this.db.update(users).set(cleanUpdates).where(eq(users.id, id)).returning();
+      console.log("Query result length:", result.length);
+      if (result.length === 0) {
+        throw new Error(`User with id ${id} not found`);
+      }
+      console.log("User updated successfully:", result[0].id);
+      return result[0];
+    } catch (error) {
+      console.error("=== STORAGE UPDATE USER ERROR ===");
+      console.error("Error details:", error);
+      console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
+      throw error;
     }
-    const result = await this.db.update(users).set(updates).where(eq(users.id, id)).returning();
-    return result[0];
   }
   async deleteUser(id) {
     await this.db.delete(users).where(eq(users.id, id));
@@ -367,6 +379,7 @@ var StorageNeon = class _StorageNeon {
 var storageNeon = StorageNeon.getInstance();
 
 // server/routes.ts
+import bcrypt2 from "bcryptjs";
 import { z } from "zod";
 var seedInitialized = false;
 var ensureSeedData = async () => {
@@ -568,7 +581,6 @@ async function registerRoutes(app2) {
             error: "Credenciais inv\xE1lidas"
           });
         }
-        const bcrypt2 = await import("bcryptjs");
         const passwordMatch = await bcrypt2.compare(password, user.password);
         console.log("DEBUG: Password match:", passwordMatch);
         if (!passwordMatch) {
@@ -681,17 +693,40 @@ async function registerRoutes(app2) {
     try {
       const { id } = req.params;
       const updates = req.body;
-      const user = await storageNeon.updateUser(id, updates);
+      console.log("=== UPDATE USER DEBUG ===");
+      console.log("User ID:", id);
+      console.log("Updates received:", JSON.stringify(updates, null, 2));
+      if (!id || id.trim() === "") {
+        return res.status(400).json({ error: "ID do usu\xE1rio \xE9 obrigat\xF3rio" });
+      }
+      const cleanUpdates = {};
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== void 0 && value !== null && value !== "") {
+          cleanUpdates[key] = value;
+        }
+      });
+      console.log("Clean updates to be sent:", JSON.stringify(cleanUpdates, null, 2));
+      const user = await storageNeon.updateUser(id, cleanUpdates);
+      console.log("User updated successfully:", user.id);
       res.json({
         id: user.id,
         username: user.username,
         displayName: user.displayName,
         role: user.role,
         active: user.active,
-        cargo: user.cargo
+        cargo: user.cargo,
+        permission: user.permission,
+        cpf: user.cpf,
+        phone: user.phone
       });
     } catch (error) {
-      res.status(400).json({ error: "Erro ao atualizar usu\xE1rio" });
+      console.error("=== UPDATE USER ERROR ===");
+      console.error("Error details:", error);
+      console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
+      res.status(400).json({
+        error: "Erro ao atualizar usu\xE1rio",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
   app2.delete("/api/users/:id", async (req, res) => {
@@ -841,7 +876,9 @@ async function createApp() {
     origin: function(origin, callback) {
       if (!origin) return callback(null, true);
       const allowedOrigins = [
-        "https://ponto2.ecoexpedicao.site",
+        "http://localhost:3002",
+        "https://localhost:3002",
+        "http://localhost:3001",
         "http://localhost:5173",
         "http://localhost:4173"
       ];

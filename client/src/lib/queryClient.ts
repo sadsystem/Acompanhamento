@@ -12,23 +12,40 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  customHeaders?: Record<string, string | undefined>
 ): Promise<Response> {
   // Ensure we're using absolute URLs
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   
   console.log(`[API Request] ${method} ${fullUrl}`);
   
+  // Determine if data is FormData
+  const isFormData = data instanceof FormData;
+  
+  // Default headers
+  let headers: Record<string, string> = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache"
+  };
+  
+  // Add Content-Type for JSON data (but not for FormData - browser sets boundary)
+  if (data && !isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  // Merge custom headers, filter undefined values
+  if (customHeaders) {
+    Object.entries(customHeaders).forEach(([key, value]) => {
+      if (value !== undefined) {
+        headers[key] = value;
+      }
+    });
+  }
+  
   const res = await fetch(fullUrl, {
     method,
-    headers: data ? { 
-      "Content-Type": "application/json",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache"
-    } : {
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache"
-    },
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
     credentials: "include",
   });
 

@@ -3,6 +3,8 @@ import { storageNeon } from "./storageNeon";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { insertUserSchema, insertEvaluationSchema } from "@shared/schema";
+import multer from "multer";
+import * as XLSX from "xlsx";
 
 let seedInitialized = false;
 
@@ -29,6 +31,19 @@ const loginSchema = z.object({
 const createUserSchema = insertUserSchema.extend({
   cargo: z.string().optional(),
   cpf: z.string().optional(),
+});
+
+// Configure multer for file uploads
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req: any, file: any, cb: any) => {
+    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only XLSX files are allowed!'), false);
+    }
+  }
 });
 
 export async function registerRoutes(app: Express): Promise<void> {
@@ -247,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           console.log("DEBUG: User not found");
           return res.status(401).json({ 
             success: false, 
-            error: "Credenciais inválidas" 
+            error: "Login ou senha incorretos" 
           });
         }
 
@@ -259,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           console.log("DEBUG: Password authentication failed");
           return res.status(401).json({ 
             success: false, 
-            error: "Credenciais inválidas" 
+            error: "Login ou senha incorretos" 
           });
         }
       } catch (dbError) {
@@ -384,12 +399,212 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Import users from XLSX
+  app.post("/api/users/import", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Nenhum arquivo enviado" });
+      }
+
+      // Parse XLSX file
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (data.length <= 1) {
+        return res.status(400).json({ error: "Arquivo vazio ou sem dados válidos" });
+      }
+
+      // Verify header format
+      const headers = data[0] as string[];
+      const expectedHeaders = ['NOME', 'CPF', 'TELEFONE', 'SENHA', 'CARGO'];
+      const headerMismatch = expectedHeaders.some((expected, index) => 
+        !headers[index] || headers[index].toString().toUpperCase() !== expected
+      );
+
+      if (headerMismatch) {
+        return res.status(400).json({ 
+          error: `Formato de cabeçalho incorreto. Esperado: ${expectedHeaders.join(', ')}. Encontrado: ${headers.join(', ')}` 
+        });
+      }
+
+      // Skip header row, process data rows
+      const rows = data.slice(1) as any[][];
+      const results = { 
+        success: 0, 
+        errors: [] as string[],
+        imported: [] as string[],
+        duplicates: [] as string[]
+      };
+
+      console.log(`[IMPORT] Starting bulk user import. Total rows to process: ${rows.filter(row => row && row.some(cell => cell && cell.toString().trim())).length}`);
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowNumber = i + 2; // +2 because we skipped header and arrays are 0-indexed
+
+        // Skip empty rows
+        if (!row || row.every(cell => !cell || cell.toString().trim() === '')) {
+          continue;
+        }
+
+        if (row.length < 5) {
+          results.errors.push(`Linha ${rowNumber}: Dados insuficientes (necessário 5 colunas: NOME, CPF, TELEFONE, SENHA, CARGO)`);
+          continue;
+        }
+
+        const [displayName, cpf, phone, password, cargo] = row;
+
+        // Validate required fields
+        if (!displayName || !cpf || !phone || !password || !cargo) {
+          results.errors.push(`Linha ${rowNumber}: Campos obrigatórios em branco - Nome: ${displayName || 'vazio'}, CPF: ${cpf || 'vazio'}, Telefone: ${phone || 'vazio'}, Senha: ${password || 'vazio'}, Cargo: ${cargo || 'vazio'}`);
+          continue;
+        }
+
+        try {
+          // Clean and format data
+          const cleanName = String(displayName).trim();
+          const cleanCpf = String(cpf).replace(/\D/g, ''); // Remove formatting from CPF
+          const cleanPhone = String(phone).replace(/\D/g, ''); // Remove formatting from phone
+          const cleanPassword = String(password).trim();
+          const cleanCargo = String(cargo).trim();
+
+          // Validate phone format (Brazilian format)
+          if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+            results.errors.push(`Linha ${rowNumber}: Telefone inválido (${phone}). Deve ter 10 ou 11 dígitos.`);
+            continue;
+          }
+
+          // Ensure mobile format (11 digits)
+          let formattedPhone = cleanPhone;
+          if (cleanPhone.length === 10) {
+            // Add digit 9 for mobile if missing (legacy format)
+            formattedPhone = cleanPhone.slice(0, 2) + '9' + cleanPhone.slice(2);
+          }
+
+          // Validate CPF format
+          if (cleanCpf.length !== 11) {
+            results.errors.push(`Linha ${rowNumber}: CPF inválido (${cpf}). Deve ter 11 dígitos.`);
+            continue;
+          }
+
+          // Validate cargo
+          const validCargos = ['Motorista', 'Ajudante', 'ADM'];
+          if (!validCargos.includes(cleanCargo)) {
+            results.errors.push(`Linha ${rowNumber}: Cargo inválido (${cleanCargo}). Valores aceitos: ${validCargos.join(', ')}`);
+            continue;
+          }
+
+          const userData = {
+            displayName: cleanName,
+            cpf: cleanCpf,
+            phone: formattedPhone,
+            password: cleanPassword,
+            cargo: cleanCargo,
+            permission: cleanCargo === 'ADM' ? 'ADM' : 'Colaborador',
+            role: (cleanCargo === 'ADM' ? 'admin' : 'colaborador') as Role,
+            active: true,
+            username: formattedPhone // Add username field that was missing
+          };
+
+          // Validate user data with schema
+          const validation = createUserSchema.safeParse(userData);
+          if (!validation.success) {
+            results.errors.push(`Linha ${rowNumber}: Dados inválidos - ${validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`);
+            continue;
+          }
+
+          // Check if user already exists (by phone or CPF) - CRITICAL: Prevent duplicates
+          const existingUserByPhone = await storageNeon.getUserByUsername(formattedPhone);
+          const existingUserByCpf = await storageNeon.getUserByCpf(cleanCpf);
+          
+          if (existingUserByPhone) {
+            results.duplicates.push(`Linha ${rowNumber}: ❌ DUPLICATA - Usuário com telefone ${phone} já existe (Nome atual: ${existingUserByPhone.displayName})`);
+            console.log(`[IMPORT] Duplicate phone detected: ${formattedPhone} for user ${cleanName}`);
+            continue;
+          }
+          
+          if (existingUserByCpf) {
+            results.duplicates.push(`Linha ${rowNumber}: ❌ DUPLICATA - Usuário com CPF ${cpf} já existe (Nome atual: ${existingUserByCpf.displayName})`);
+            console.log(`[IMPORT] Duplicate CPF detected: ${cleanCpf} for user ${cleanName}`);
+            continue;
+          }
+
+          // SAFE TO CREATE - No duplicates found
+          await storageNeon.createUser(validation.data);
+          results.success++;
+          results.imported.push(`✅ ${cleanName} (${phone})`);
+          console.log(`[IMPORT] Successfully created user: ${cleanName} with phone ${formattedPhone}`);
+
+        } catch (error) {
+          console.error(`Error importing user from row ${rowNumber}:`, error);
+          results.errors.push(`Linha ${rowNumber}: Erro interno - ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        }
+      }
+
+      // Generate comprehensive response
+      const totalProcessed = rows.filter(row => row && row.some(cell => cell && cell.toString().trim())).length;
+      const response: any = {
+        imported: results.success,
+        total_processed: totalProcessed,
+        success_list: results.imported,
+        errors: results.errors,
+        duplicates: results.duplicates,
+        duplicates_count: results.duplicates.length
+      };
+
+      console.log(`[IMPORT] Import completed. Success: ${results.success}, Duplicates: ${results.duplicates.length}, Errors: ${results.errors.length}`);
+
+      if (results.errors.length > 0 || results.duplicates.length > 0) {
+        response.message = `Importação processada: ${results.success} usuário(s) criado(s) com sucesso. ${results.duplicates.length} duplicata(s) ignorada(s) (não foram adicionadas). ${results.errors.length} erro(s) encontrado(s).`;
+      } else {
+        response.message = `✅ Importação bem-sucedida! ${results.success} usuário(s) criado(s) sem duplicatas ou erros.`;
+      }
+
+      // Additional safety message about duplicates
+      if (results.duplicates.length > 0) {
+        response.duplicate_warning = `⚠️ IMPORTANTE: ${results.duplicates.length} usuário(s) não foram adicionados pois já existem no sistema (mesmo CPF ou telefone). Cada usuário é único no sistema.`;
+      }
+
+      res.json(response);
+
+    } catch (error) {
+      console.error('Import error:', error);
+      res.status(500).json({ 
+        error: "Erro ao processar arquivo de importação",
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+    }
+  });
+
   app.put("/api/users/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
       
-      const user = await storageNeon.updateUser(id, updates);
+      console.log('=== UPDATE USER DEBUG ===');
+      console.log('User ID:', id);
+      console.log('Updates received:', JSON.stringify(updates, null, 2));
+      
+      // Validate required fields
+      if (!id || id.trim() === '') {
+        return res.status(400).json({ error: "ID do usuário é obrigatório" });
+      }
+
+      // Remove undefined/null values and validate
+      const cleanUpdates: any = {};
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanUpdates[key] = value;
+        }
+      });
+
+      console.log('Clean updates to be sent:', JSON.stringify(cleanUpdates, null, 2));
+
+      const user = await storageNeon.updateUser(id, cleanUpdates);
+      console.log('User updated successfully:', user.id);
+      
       res.json({
         id: user.id,
         username: user.username,
@@ -397,9 +612,18 @@ export async function registerRoutes(app: Express): Promise<void> {
         role: user.role,
         active: user.active,
         cargo: user.cargo,
+        permission: user.permission,
+        cpf: user.cpf,
+        phone: user.phone,
       });
     } catch (error) {
-      res.status(400).json({ error: "Erro ao atualizar usuário" });
+      console.error('=== UPDATE USER ERROR ===');
+      console.error('Error details:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(400).json({ 
+        error: "Erro ao atualizar usuário", 
+        details: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 

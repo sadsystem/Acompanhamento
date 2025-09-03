@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { User, Role } from "../config/types";
 import { uuid } from "../utils/calc";
-import { UserPlus, Edit, UserX, Users, CheckCircle, LogIn, Trash2 } from "lucide-react";
+import { UserPlus, Edit, UserX, Users, CheckCircle, LogIn, Trash2, Database, Upload } from "lucide-react";
 import { AuthService } from "../auth/service";
 import { useStorage } from "../hooks/useStorage";
 
@@ -73,6 +73,7 @@ export function AdminPage() {
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deletedUserName, setDeletedUserName] = useState("");
+  const [showImportModal, setShowImportModal] = useState(false);
   const storage = useStorage();
   const authService = new AuthService(storage);
 
@@ -408,6 +409,76 @@ export function AdminPage() {
     }
   };
 
+  const handleImportFile = async (file: File) => {
+    if (!file) return;
+
+    // Show loading state
+    const originalText = 'Importar Dados';
+    const button = document.querySelector('[data-import-btn]') as HTMLButtonElement;
+    if (button) {
+      button.textContent = 'Processando...';
+      button.disabled = true;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await apiRequest('POST', '/users/import', formData);
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Create detailed success message
+        let message = result.message || `Importação concluída!`;
+        
+        if (result.success_list && result.success_list.length > 0) {
+          message += `\n\n✅ NOVOS USUÁRIOS CRIADOS (${result.success_list.length}):\n${result.success_list.join('\n')}`;
+        }
+        
+        if (result.duplicates && result.duplicates.length > 0) {
+          message += `\n\n⚠️ DUPLICATAS IGNORADAS (${result.duplicates.length}):\n${result.duplicates.join('\n')}`;
+          message += `\n\n🔒 PROTEÇÃO ATIVADA: Usuários com mesmo CPF ou telefone não foram duplicados no sistema.`;
+        }
+        
+        if (result.errors && result.errors.length > 0) {
+          message += `\n\n❌ ERROS DE FORMATO (${result.errors.length}):\n${result.errors.join('\n')}`;
+        }
+
+        // Show duplicate warning if exists
+        if (result.duplicate_warning) {
+          message += `\n\n${result.duplicate_warning}`;
+        }
+        
+        alert(message);
+        
+        if (result.imported > 0) {
+          queryClient.invalidateQueries({ queryKey: ['/users/admin'] });
+        }
+        setShowImportModal(false);
+        
+      } else {
+        const error = await response.json();
+        alert(`Erro na importação:\n${error.error}\n${error.details ? `Detalhes: ${error.details}` : ''}`);
+      }
+    } catch (error) {
+      console.error('Erro ao importar arquivo:', error);
+      alert('Erro ao processar arquivo. Verifique se:\n• O arquivo está no formato XLSX\n• As colunas estão na ordem correta: NOME, CPF, TELEFONE, SENHA, CARGO\n• Todos os campos obrigatórios estão preenchidos');
+    } finally {
+      // Reset button state
+      if (button) {
+        button.textContent = originalText;
+        button.disabled = false;
+      }
+      
+      // Clear file input
+      const fileInput = document.getElementById('xlsx-file') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4">
       <div className="mb-8 flex justify-between items-center">
@@ -642,6 +713,33 @@ export function AdminPage() {
                   )}
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Import System Block - Now at the bottom with proper spacing */}
+      <div className="grid grid-cols-1 gap-6 mt-8">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2">
+              <Database className="w-5 h-5" />
+              Alimentar Sistema
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-4">
+                Importe dados em lote para alimentar o sistema rapidamente
+              </p>
+              <Button 
+                onClick={() => setShowImportModal(true)}
+                variant="outline" 
+                className="flex items-center gap-2 mx-auto"
+              >
+                <Upload className="w-4 h-4" />
+                Importar Dados
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -889,6 +987,110 @@ export function AdminPage() {
               className="px-6"
             >
               Sim, Excluir Permanentemente
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Modal */}
+      <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Importar Usuários via XLSX
+            </DialogTitle>
+            <DialogDescription>
+              Faça upload de um arquivo XLSX para importar usuários em lote no banco de dados
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2">📋 Formato obrigatório do arquivo XLSX:</h4>
+              <div className="text-sm text-blue-700 space-y-2">
+                <p><strong>Cabeçalhos exatos (primeira linha):</strong></p>
+                <div className="bg-white p-2 rounded border font-mono text-xs">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-1">A</th>
+                        <th className="text-left py-1">B</th>
+                        <th className="text-left py-1">C</th>
+                        <th className="text-left py-1">D</th>
+                        <th className="text-left py-1">E</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="py-1">NOME</td>
+                        <td className="py-1">CPF</td>
+                        <td className="py-1">TELEFONE</td>
+                        <td className="py-1">SENHA</td>
+                        <td className="py-1">CARGO</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-2">
+                  <p><strong>Detalhes dos campos:</strong></p>
+                  <ul className="ml-4 space-y-1 text-xs">
+                    <li>• <strong>NOME:</strong> Nome completo do usuário</li>
+                    <li>• <strong>CPF:</strong> Com ou sem formatação (000.000.000-00)</li>
+                    <li>• <strong>TELEFONE:</strong> Com ou sem formatação (87 9 9999-9999)</li>
+                    <li>• <strong>SENHA:</strong> Senha que o usuário usará para login</li>
+                    <li>• <strong>CARGO:</strong> Exatamente: Motorista, Ajudante, etc.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="space-y-2 text-sm text-gray-700">
+                <div>
+                  <span><strong>Proteção automática:</strong> Previne duplicatas por CPF/telefone</span>
+                </div>
+                <div>
+                  <span><strong>Processamento seguro:</strong> Validação completa sem armazenar arquivo</span>
+                </div>
+                <div>
+                  <span><strong>Usuários importados:</strong> Criados automaticamente como <strong>Colaboradores</strong></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Hidden file input */}
+            <Input
+              id="xlsx-file"
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleImportFile(file);
+                }
+              }}
+              className="hidden"
+            />
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowImportModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              data-import-btn
+              onClick={() => {
+                const fileInput = document.getElementById('xlsx-file') as HTMLInputElement;
+                fileInput?.click();
+              }}
+              className="flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Selecionar .XLSX
             </Button>
           </div>
         </DialogContent>
