@@ -586,6 +586,13 @@ const score = answers.reduce((acc, answer) => {
 
 ## 🚨 IMPORTANTES PARA LEMBRAR
 
+### **Problema Resolvido - Sincronização de Dados**
+🔥 **CORREÇÃO APLICADA**: Teams, Routes e Vehicles agora usam API em vez de localStorage
+- **Antes**: Dados salvos apenas localmente (não sincronizavam entre dispositivos)
+- **Depois**: Dados persistidos no banco Neon PostgreSQL via API
+- **Arquivos alterados**: `client/src/storage/apiAdapter.ts`
+- **Migrações aplicadas**: `npm run db:push` para criar tabelas faltantes
+
 ### **Credenciais de Desenvolvimento**
 - **Admin padrão**: Criado automaticamente no primeiro start
 - **Banco**: Neon PostgreSQL serverless
