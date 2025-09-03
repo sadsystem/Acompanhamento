@@ -1,15 +1,25 @@
 // Neon-optimized storage for Vercel serverless
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
 import * as schema from "../shared/schema";
 import { eq, sql, desc, and, or, asc } from "drizzle-orm";
 import type { User, Question, Evaluation, Team, Route } from "../shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 
+// Configure Neon for optimal serverless performance
+neonConfig.fetchConnectionCache = true;
+neonConfig.useSecureWebSocket = false;
+
+// Disable automatic pooling debug logs in production
+if (process.env.NODE_ENV === 'production') {
+  neonConfig.poolQueryViaFetch = true;
+}
+
 export class StorageNeon {
   private db: ReturnType<typeof drizzle>;
   private static instance: StorageNeon;
+  private pool: Pool;
   
   constructor() {
     if (!process.env.DATABASE_URL) {
@@ -19,10 +29,16 @@ export class StorageNeon {
     const databaseUrl = process.env.DATABASE_URL;
     console.log(`🔗 Connecting to Neon: ${databaseUrl.split('@')[0]}@***`);
     
-    // Use Neon HTTP client for serverless
-    const client = neon(databaseUrl);
-    this.db = drizzle(client, { schema });
+    // Create pool with optimal settings for serverless
+    this.pool = new Pool({ 
+      connectionString: databaseUrl,
+      ssl: process.env.NODE_ENV === 'production',
+      max: 1, // Serverless works best with single connections
+      idleTimeoutMillis: 0, // No idle timeout for serverless
+      connectionTimeoutMillis: 10000, // 10s connection timeout
+    });
     
+    this.db = drizzle(this.pool, { schema });
     console.log('✅ Neon database connection initialized');
   }
 
@@ -285,23 +301,6 @@ export class StorageNeon {
     } catch (error) {
       console.error("Error seeding data:", error);
       // Don't throw - let the app continue
-    }
-  }
-
-  // Health check for serverless
-  async healthCheck(): Promise<{ status: string; timestamp: string; connection: string }> {
-    try {
-      // Test basic database connection with a simple query
-      const result = await this.db.execute(sql`SELECT 1 as test`);
-      
-      return {
-        status: "healthy",
-        timestamp: new Date().toISOString(),
-        connection: "neon-serverless"
-      };
-    } catch (error) {
-      console.error("Health check failed:", error);
-      throw error;
     }
   }
 }

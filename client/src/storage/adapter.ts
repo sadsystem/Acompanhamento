@@ -1,4 +1,4 @@
-import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle, InsertEvaluation } from '../config/types';
+import { User, Evaluation, Session, EvaluationFilters, Team, TravelRoute, Vehicle, InsertEvaluation, Answer } from '../config/types';
 
 export interface StorageAdapter {
   // Users
@@ -107,7 +107,14 @@ export class MockStorageAdapter implements StorageAdapter {
     this.evaluations = [...evaluations];
   }
 
-  async createEvaluation(evaluation: Evaluation): Promise<Evaluation> {
+  async createEvaluation(evaluationData: InsertEvaluation): Promise<Evaluation> {
+    const evaluation: Evaluation = {
+      ...evaluationData,
+      id: `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: evaluationData.createdAt instanceof Date ? evaluationData.createdAt : new Date(evaluationData.createdAt),
+      answers: evaluationData.answers as Answer[], // Cast Json to Answer[]
+      status: (evaluationData.status || "queued") as "queued" | "synced"
+    };
     this.evaluations.unshift(evaluation);
     return evaluation;
   }

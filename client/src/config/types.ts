@@ -29,7 +29,7 @@ export type Answer = {
 
 export type Evaluation = {
   id: string;
-  createdAt: string;
+  createdAt: Date;
   dateRef: string;
   evaluator: string;
   evaluated: string;

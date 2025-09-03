@@ -10,8 +10,8 @@ import express from "express";
 import cors from "cors";
 
 // server/storageNeon.ts
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
 
 // shared/schema.ts
 var schema_exports = {};
@@ -115,17 +115,32 @@ var insertRouteSchema = createInsertSchema(routes).omit({
 import { eq, sql, desc, and } from "drizzle-orm";
 import { randomUUID as randomUUID2 } from "crypto";
 import bcrypt from "bcryptjs";
+neonConfig.fetchConnectionCache = true;
+neonConfig.useSecureWebSocket = false;
+if (process.env.NODE_ENV === "production") {
+  neonConfig.poolQueryViaFetch = true;
+}
 var StorageNeon = class _StorageNeon {
   db;
   static instance;
+  pool;
   constructor() {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL is required for Neon database connection");
     }
     const databaseUrl = process.env.DATABASE_URL;
     console.log(`\u{1F517} Connecting to Neon: ${databaseUrl.split("@")[0]}@***`);
-    const client = neon(databaseUrl);
-    this.db = drizzle(client, { schema: schema_exports });
+    this.pool = new Pool({
+      connectionString: databaseUrl,
+      ssl: process.env.NODE_ENV === "production",
+      max: 1,
+      // Serverless works best with single connections
+      idleTimeoutMillis: 0,
+      // No idle timeout for serverless
+      connectionTimeoutMillis: 1e4
+      // 10s connection timeout
+    });
+    this.db = drizzle(this.pool, { schema: schema_exports });
     console.log("\u2705 Neon database connection initialized");
   }
   // Singleton pattern for connection reuse
@@ -325,20 +340,6 @@ var StorageNeon = class _StorageNeon {
       }
     } catch (error) {
       console.error("Error seeding data:", error);
-    }
-  }
-  // Health check for serverless
-  async healthCheck() {
-    try {
-      const result = await this.db.execute(sql`SELECT 1 as test`);
-      return {
-        status: "healthy",
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-        connection: "neon-serverless"
-      };
-    } catch (error) {
-      console.error("Health check failed:", error);
-      throw error;
     }
   }
 };
