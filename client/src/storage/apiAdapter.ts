@@ -99,123 +99,87 @@ export class ApiStorageAdapter implements StorageAdapter {
     return response.json();
   }
 
-  // Teams - Temporary localStorage implementation
+  // Teams - API implementation
   async getTeams(): Promise<Team[]> {
-    try {
-      const raw = localStorage.getItem('sad_teams');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    const response = await fetch(`${API_BASE_URL}/teams`);
+    if (!response.ok) throw new Error('Failed to fetch teams');
+    return response.json();
   }
 
   async setTeams(teams: Team[]): Promise<void> {
-    localStorage.setItem('sad_teams', JSON.stringify(teams));
+    // Not needed with API - teams are managed individually
+    throw new Error('setTeams not implemented in API adapter');
   }
 
   async createTeam(team: Team): Promise<Team> {
-    const teams = await this.getTeams();
-    teams.push(team);
-    await this.setTeams(teams);
-    return team;
+    const response = await apiRequest('POST', '/teams', team);
+    return response.json();
   }
 
   async updateTeam(teamId: string, updates: Partial<Team>): Promise<Team> {
-    const teams = await this.getTeams();
-    const index = teams.findIndex(t => t.id === teamId);
-    if (index === -1) throw new Error('Team not found');
-    
-    const updatedTeam = { ...teams[index], ...updates };
-    teams[index] = updatedTeam;
-    await this.setTeams(teams);
-    return updatedTeam;
+    const response = await apiRequest('PUT', `/teams/${teamId}`, updates);
+    return response.json();
   }
 
   async deleteTeam(teamId: string): Promise<void> {
-    const teams = await this.getTeams();
-    const filteredTeams = teams.filter(t => t.id !== teamId);
-    await this.setTeams(filteredTeams);
+    await apiRequest('DELETE', `/teams/${teamId}`);
   }
 
-  // Travel Routes - Temporary localStorage implementation
+  // Travel Routes - API implementation
   async getTravelRoutes(): Promise<TravelRoute[]> {
-    try {
-      const raw = localStorage.getItem('sad_travel_routes');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    const response = await fetch(`${API_BASE_URL}/routes`);
+    if (!response.ok) throw new Error('Failed to fetch travel routes');
+    return response.json();
   }
 
   async setTravelRoutes(routes: TravelRoute[]): Promise<void> {
-    localStorage.setItem('sad_travel_routes', JSON.stringify(routes));
+    // Not needed with API - routes are managed individually
+    throw new Error('setTravelRoutes not implemented in API adapter');
   }
 
   async createTravelRoute(route: TravelRoute): Promise<TravelRoute> {
-    const routes = await this.getTravelRoutes();
-    routes.push(route);
-    await this.setTravelRoutes(routes);
-    return route;
+    const response = await apiRequest('POST', '/routes', route);
+    return response.json();
   }
 
   async updateTravelRoute(routeId: string, updates: Partial<TravelRoute>): Promise<TravelRoute> {
-    const routes = await this.getTravelRoutes();
-    const index = routes.findIndex(r => r.id === routeId);
-    if (index === -1) throw new Error('Route not found');
-    
-    const updatedRoute = { ...routes[index], ...updates };
-    routes[index] = updatedRoute;
-    await this.setTravelRoutes(routes);
-    return updatedRoute;
+    const response = await apiRequest('PUT', `/routes/${routeId}`, updates);
+    return response.json();
   }
 
   async deleteTravelRoute(routeId: string): Promise<void> {
-    const routes = await this.getTravelRoutes();
-    const filteredRoutes = routes.filter(r => r.id !== routeId);
-    await this.setTravelRoutes(filteredRoutes);
+    await apiRequest('DELETE', `/routes/${routeId}`);
   }
 
-  // Vehicles - Temporary localStorage implementation
+  // Vehicles - API implementation
   async getVehicles(): Promise<Vehicle[]> {
-    try {
-      const raw = localStorage.getItem('sad_vehicles');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+    const response = await fetch(`${API_BASE_URL}/vehicles`);
+    if (!response.ok) throw new Error('Failed to fetch vehicles');
+    return response.json();
   }
 
   async setVehicles(vehicles: Vehicle[]): Promise<void> {
-    localStorage.setItem('sad_vehicles', JSON.stringify(vehicles));
+    // Not needed with API - vehicles are managed individually
+    throw new Error('setVehicles not implemented in API adapter');
   }
 
   async createVehicle(vehicle: Vehicle): Promise<Vehicle> {
-    const vehicles = await this.getVehicles();
-    vehicles.push(vehicle);
-    await this.setVehicles(vehicles);
-    return vehicle;
+    const response = await apiRequest('POST', '/vehicles', vehicle);
+    return response.json();
   }
 
   async updateVehicle(vehicleId: string, updates: Partial<Vehicle>): Promise<Vehicle> {
-    const vehicles = await this.getVehicles();
-    const index = vehicles.findIndex(v => v.id === vehicleId);
-    if (index === -1) throw new Error('Vehicle not found');
-    
-    const updatedVehicle = { ...vehicles[index], ...updates };
-    vehicles[index] = updatedVehicle;
-    await this.setVehicles(vehicles);
-    return updatedVehicle;
+    const response = await apiRequest('PUT', `/vehicles/${vehicleId}`, updates);
+    return response.json();
   }
 
   async deleteVehicle(vehicleId: string): Promise<void> {
-    const vehicles = await this.getVehicles();
-    const filteredVehicles = vehicles.filter(v => v.id !== vehicleId);
-    await this.setVehicles(filteredVehicles);
+    await apiRequest('DELETE', `/vehicles/${vehicleId}`);
   }
 
   async clearAllData(): Promise<void> {
-    // Clear localStorage data only (API data persists)
-    const keys = ['sad_session', 'sad_remember', 'sad_teams', 'sad_travel_routes', 'sad_vehicles'];
+    // Clear only session localStorage data (API data persists on server)
+    const keys = ['sad_session', 'sad_remember'];
     keys.forEach(key => localStorage.removeItem(key));
     
     // Clear all browser caches to force fresh data
