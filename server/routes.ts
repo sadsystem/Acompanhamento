@@ -815,11 +815,33 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.post("/api/routes", async (req, res) => {
     try {
+      console.log("=== CREATING ROUTE DEBUG ===");
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      
+      // Validate required fields
+      if (!req.body.city || !req.body.cities || !req.body.startDate || !req.body.status) {
+        return res.status(400).json({ 
+          error: "Campos obrigatórios ausentes", 
+          required: ["city", "cities", "startDate", "status"] 
+        });
+      }
+
+      // Ensure cities is an array
+      if (!Array.isArray(req.body.cities)) {
+        return res.status(400).json({ 
+          error: "Campo 'cities' deve ser um array", 
+          received: typeof req.body.cities 
+        });
+      }
+      
       const route = await storageNeon.createRoute(req.body);
+      console.log("Route created successfully:", JSON.stringify(route, null, 2));
       res.status(201).json(route);
     } catch (error) {
-      console.error("Error creating route:", error);
-      res.status(400).json({ error: "Erro ao criar rota" });
+      console.error("Error creating route - DETAILED:", error);
+      console.error("Error message:", error instanceof Error ? error.message : "Unknown error");
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+      res.status(400).json({ error: "Erro ao criar rota", details: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 

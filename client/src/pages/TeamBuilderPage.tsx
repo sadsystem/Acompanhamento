@@ -463,6 +463,9 @@ export function TeamBuilderPage() {
         createdAt: new Date().toISOString()
       };
 
+      console.log("=== FRONTEND CREATE ROUTE DEBUG ===");
+      console.log("Creating team:", JSON.stringify(newTeam, null, 2));
+
       // Save team
       await storage.createTeam({
         id: newTeam.id,
@@ -470,6 +473,8 @@ export function TeamBuilderPage() {
         assistants: newTeam.assistants,
         createdAt: newTeam.createdAt
       });
+
+      console.log("Team created successfully, now creating route...");
 
       // Create route
       const routeData: TravelRoute = {
@@ -481,7 +486,11 @@ export function TeamBuilderPage() {
         status: "formation"
       };
 
+      console.log("Route data to be created:", JSON.stringify(routeData, null, 2));
+
       await storage.createTravelRoute(routeData);
+
+      console.log("Route created successfully!");
 
       // Add to state
       const newRouteWithTeam: TravelRouteWithTeam = {

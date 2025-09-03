@@ -212,24 +212,46 @@ export class StorageNeon {
     return result;
   }
 
-  async createTeam(team: Omit<Team, 'id' | 'createdAt' | 'updatedAt'>): Promise<Team> {
+  async createTeam(team: Omit<Team, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<Team> {
+    console.log("=== STORAGE CREATE TEAM DEBUG ===");
+    console.log("Input team data:", JSON.stringify(team, null, 2));
+    console.log("Team ID provided:", team.id);
+    
     const teamData = {
       ...team,
-      id: randomUUID(),
+      id: team.id || randomUUID(), // Use provided ID or generate new one
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
+    console.log("Final team data to insert:", JSON.stringify(teamData, null, 2));
+    
     const result = await this.db.insert(schema.teams).values(teamData).returning();
+    console.log("Team created with final ID:", result[0].id);
     return result[0];
   }
 
   async updateTeam(id: string, updates: Partial<Team>): Promise<Team> {
+    console.log("=== UPDATING TEAM DEBUG ===");
+    console.log("Team ID:", id);
+    console.log("Raw updates:", JSON.stringify(updates, null, 2));
+    
+    // Clean the updates to ensure proper data types
+    const cleanUpdates = { ...updates };
+    
+    // Remove timestamps that might be strings - we'll handle updatedAt ourselves
+    delete cleanUpdates.createdAt;
+    delete cleanUpdates.updatedAt;
+    
+    console.log("Clean updates:", JSON.stringify(cleanUpdates, null, 2));
+    
     const result = await this.db
       .update(schema.teams)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...cleanUpdates, updatedAt: new Date() })
       .where(eq(schema.teams.id, id))
       .returning();
+    
+    console.log("Team updated successfully:", JSON.stringify(result[0], null, 2));
     return result[0];
   }
 
@@ -243,24 +265,52 @@ export class StorageNeon {
     return result;
   }
 
-  async createRoute(route: Omit<Route, 'id' | 'createdAt' | 'updatedAt'>): Promise<Route> {
+  async createRoute(route: Omit<Route, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<Route> {
+    console.log("=== STORAGE CREATE ROUTE DEBUG ===");
+    console.log("Input route data:", JSON.stringify(route, null, 2));
+    
+    // Ensure cities is properly formatted as JSON
     const routeData = {
       ...route,
-      id: randomUUID(),
+      cities: Array.isArray(route.cities) ? route.cities : JSON.parse(route.cities as string),
+      id: route.id || randomUUID(), // Use provided ID or generate new one
       createdAt: new Date(),
       updatedAt: new Date()
     };
     
-    const result = await this.db.insert(schema.routes).values(routeData).returning();
-    return result[0];
+    console.log("Final route data to insert:", JSON.stringify(routeData, null, 2));
+    
+    try {
+      const result = await this.db.insert(schema.routes).values(routeData).returning();
+      console.log("Route inserted successfully:", JSON.stringify(result[0], null, 2));
+      return result[0];
+    } catch (dbError) {
+      console.error("Database error in createRoute:", dbError);
+      throw dbError;
+    }
   }
 
   async updateRoute(id: string, updates: Partial<Route>): Promise<Route> {
+    console.log("=== UPDATING ROUTE DEBUG ===");
+    console.log("Route ID:", id);
+    console.log("Raw updates:", JSON.stringify(updates, null, 2));
+    
+    // Clean the updates to ensure proper data types
+    const cleanUpdates = { ...updates };
+    
+    // Remove timestamps that might be strings - we'll handle updatedAt ourselves
+    delete cleanUpdates.createdAt;
+    delete cleanUpdates.updatedAt;
+    
+    console.log("Clean updates:", JSON.stringify(cleanUpdates, null, 2));
+    
     const result = await this.db
       .update(schema.routes)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...cleanUpdates, updatedAt: new Date() })
       .where(eq(schema.routes.id, id))
       .returning();
+    
+    console.log("Route updated successfully:", JSON.stringify(result[0], null, 2));
     return result[0];
   }
 
