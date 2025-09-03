@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import * as schema from "../shared/schema";
 import { eq, sql, desc, and, or, asc } from "drizzle-orm";
-import type { User, Question, Evaluation, Team, Route } from "../shared/schema";
+import type { User, Question, Evaluation, Team, Route, Vehicle } from "../shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 
@@ -266,6 +266,37 @@ export class StorageNeon {
 
   async deleteRoute(id: string): Promise<void> {
     await this.db.delete(schema.routes).where(eq(schema.routes.id, id));
+  }
+
+  // Vehicles management
+  async getVehicles(): Promise<Vehicle[]> {
+    const result = await this.db.select().from(schema.vehicles).orderBy(desc(schema.vehicles.createdAt));
+    return result;
+  }
+
+  async createVehicle(vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vehicle> {
+    const vehicleData = {
+      ...vehicle,
+      id: randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    const result = await this.db.insert(schema.vehicles).values(vehicleData).returning();
+    return result[0];
+  }
+
+  async updateVehicle(id: string, updates: Partial<Vehicle>): Promise<Vehicle> {
+    const result = await this.db
+      .update(schema.vehicles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(schema.vehicles.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteVehicle(id: string): Promise<void> {
+    await this.db.delete(schema.vehicles).where(eq(schema.vehicles.id, id));
   }
 
   // Health check with database connectivity test

@@ -49,12 +49,24 @@ export const teams = pgTable("teams", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Vehicles table
+export const vehicles = pgTable("vehicles", {
+  id: varchar("id").primaryKey().$defaultFn(() => randomUUID()),
+  plate: text("plate").notNull(),
+  model: text("model"),
+  year: integer("year"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Routes table
 export const routes = pgTable("routes", {
   id: varchar("id").primaryKey().$defaultFn(() => randomUUID()),
   city: text("city").notNull(),
   cities: json("cities").notNull(), // string[] - lista completa das cidades
   teamId: varchar("team_id").references(() => teams.id),
+  vehicleId: varchar("vehicle_id").references(() => vehicles.id),
   startDate: text("start_date").notNull(), // YYYY-MM-DD
   endDate: text("end_date"), // YYYY-MM-DD when route is finished
   status: text("status").notNull().default("formation"), // "formation" | "active" | "completed"
@@ -80,6 +92,12 @@ export const insertTeamSchema = createInsertSchema(teams).omit({
   updatedAt: true,
 });
 
+export const insertVehicleSchema = createInsertSchema(vehicles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertRouteSchema = createInsertSchema(routes).omit({
   id: true,
   createdAt: true,
@@ -98,6 +116,9 @@ export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
 
 export type Team = typeof teams.$inferSelect;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
+
+export type Vehicle = typeof vehicles.$inferSelect;
+export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 
 export type Route = typeof routes.$inferSelect;
 export type InsertRoute = z.infer<typeof insertRouteSchema>;

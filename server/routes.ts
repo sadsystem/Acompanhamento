@@ -761,6 +761,129 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Teams routes
+  app.get("/api/teams", async (req, res) => {
+    try {
+      const teams = await storageNeon.getTeams();
+      res.json(teams);
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ error: "Erro ao buscar equipes" });
+    }
+  });
+
+  app.post("/api/teams", async (req, res) => {
+    try {
+      const team = await storageNeon.createTeam(req.body);
+      res.status(201).json(team);
+    } catch (error) {
+      console.error("Error creating team:", error);
+      res.status(400).json({ error: "Erro ao criar equipe" });
+    }
+  });
+
+  app.put("/api/teams/:id", async (req, res) => {
+    try {
+      const team = await storageNeon.updateTeam(req.params.id, req.body);
+      res.json(team);
+    } catch (error) {
+      console.error("Error updating team:", error);
+      res.status(400).json({ error: "Erro ao atualizar equipe" });
+    }
+  });
+
+  app.delete("/api/teams/:id", async (req, res) => {
+    try {
+      await storageNeon.deleteTeam(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting team:", error);
+      res.status(400).json({ error: "Erro ao excluir equipe" });
+    }
+  });
+
+  // Routes routes
+  app.get("/api/routes", async (req, res) => {
+    try {
+      const routes = await storageNeon.getRoutes();
+      res.json(routes);
+    } catch (error) {
+      console.error("Error fetching routes:", error);
+      res.status(500).json({ error: "Erro ao buscar rotas" });
+    }
+  });
+
+  app.post("/api/routes", async (req, res) => {
+    try {
+      const route = await storageNeon.createRoute(req.body);
+      res.status(201).json(route);
+    } catch (error) {
+      console.error("Error creating route:", error);
+      res.status(400).json({ error: "Erro ao criar rota" });
+    }
+  });
+
+  app.put("/api/routes/:id", async (req, res) => {
+    try {
+      const route = await storageNeon.updateRoute(req.params.id, req.body);
+      res.json(route);
+    } catch (error) {
+      console.error("Error updating route:", error);
+      res.status(400).json({ error: "Erro ao atualizar rota" });
+    }
+  });
+
+  app.delete("/api/routes/:id", async (req, res) => {
+    try {
+      await storageNeon.deleteRoute(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting route:", error);
+      res.status(400).json({ error: "Erro ao excluir rota" });
+    }
+  });
+
+  // Vehicles routes
+  app.get("/api/vehicles", async (req, res) => {
+    try {
+      const vehicles = await storageNeon.getVehicles();
+      res.json(vehicles);
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      res.status(500).json({ error: "Erro ao buscar veículos" });
+    }
+  });
+
+  app.post("/api/vehicles", async (req, res) => {
+    try {
+      const vehicle = await storageNeon.createVehicle(req.body);
+      res.status(201).json(vehicle);
+    } catch (error) {
+      console.error("Error creating vehicle:", error);
+      res.status(400).json({ error: "Erro ao criar veículo" });
+    }
+  });
+
+  app.put("/api/vehicles/:id", async (req, res) => {
+    try {
+      const vehicle = await storageNeon.updateVehicle(req.params.id, req.body);
+      res.json(vehicle);
+    } catch (error) {
+      console.error("Error updating vehicle:", error);
+      res.status(400).json({ error: "Erro ao atualizar veículo" });
+    }
+  });
+
+  app.delete("/api/vehicles/:id", async (req, res) => {
+    try {
+      await storageNeon.deleteVehicle(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting vehicle:", error);
+      res.status(400).json({ error: "Erro ao excluir veículo" });
+    }
+  });
+
   // 404 handler específico para API (deve ficar após TODAS as rotas acima)
   app.use('/api', (req, res, next) => {
     if (res.headersSent) return next();
