@@ -236,6 +236,36 @@ export class StorageNeon {
     await this.db.delete(schema.routes).where(eq(schema.routes.id, id));
   }
 
+  // Health check with database connectivity test
+  async healthCheck(): Promise<{
+    status: string;
+    database: string;
+    responseTime: number;
+  }> {
+    const startTime = Date.now();
+    
+    try {
+      // Simple database connectivity test
+      const result = await this.db.execute(sql`SELECT 1 as test`);
+      const responseTime = Date.now() - startTime;
+      
+      return {
+        status: "healthy",
+        database: "connected",
+        responseTime
+      };
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      console.error("Health check database error:", error);
+      
+      return {
+        status: "unhealthy", 
+        database: "disconnected",
+        responseTime
+      };
+    }
+  }
+
   // Seed initial data
   async seedInitialData(): Promise<void> {
     try {
