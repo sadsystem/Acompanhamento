@@ -66,14 +66,6 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
         <h1 className="text-2xl font-bold text-gray-700 drop-shadow-sm">
           Acompanhamento Diário
         </h1>
-        {/* Informações da Versão */}
-        <div className="mt-3 text-xs text-gray-500 bg-white/50 backdrop-blur-sm rounded-lg px-3 py-2 inline-block border border-gray-200/50">
-          <div className="font-mono text-green-700 font-semibold">v{import.meta.env.VITE_APP_VERSION || 'e3d2719-20250902-1'}</div>
-          <div className="text-[10px] mt-1">Serverless Deploy: 02/09/2025  (novo)</div>
-          <div className="text-[10px] text-green-600 mt-0.5 max-w-[200px] truncate" title="Update application to address recent user feedback and ensure functionality">
-            ✓ Otimizado para Vercel
-          </div>
-        </div>
       </div>
       
       {/* Área do formulário centralizada */}
@@ -157,7 +149,6 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
           </div>
         </div>
       )}
-  <ApiMiniStatus />
     </div>
   );
 }

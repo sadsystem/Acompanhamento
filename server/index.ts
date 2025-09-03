@@ -35,12 +35,12 @@ async function createApp(): Promise<express.Express> {
       if (!origin) return callback(null, true);
 
       const allowedOrigins = [
-        'https://ponto2.ecoexpedicao.site',
+        'http://localhost:3002',
+        'https://localhost:3002',
+        'http://localhost:3001',
         'http://localhost:5173',
         'http://localhost:4173',
-      ];
-
-      const allowedPatterns = [
+      ];      const allowedPatterns = [
         /^https:\/\/.*\.vercel\.app$/,
         /^https:\/\/acompanhamento-.*\.vercel\.app$/,
       ];

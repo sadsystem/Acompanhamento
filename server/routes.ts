@@ -252,7 +252,6 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
 
         // Check password using bcrypt
-        const bcrypt = await import('bcryptjs');
         const passwordMatch = await bcrypt.compare(password, user.password);
         console.log("DEBUG: Password match:", passwordMatch);
         
