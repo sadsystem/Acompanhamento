@@ -338,12 +338,17 @@ PORT=3001
 
 ### **Scripts de Desenvolvimento**
 ```bash
-# Iniciar desenvolvimento (com limpeza de processos)
-./start-dev.sh
+# ⭐ COMANDO PRINCIPAL PARA TESTES LOCAIS
+./start-dev.sh         # Inicia servidor + cliente completo (USAR ESTE!)
 
-# Deploy para Vercel
-./deploy.sh
+# Outros comandos disponíveis:
+npm run dev:full       # Desenvolvimento completo (servidor + cliente)
+npm run dev:server     # Apenas servidor backend
+npm run dev:client     # Apenas cliente frontend
+npm run dev            # Apenas servidor backend
 ```
+
+### **Scripts de Deployment**
 
 ---
 
@@ -365,7 +370,7 @@ cp .env.example .env
 # Aplicar migrações do banco
 npm run db:push
 
-# Iniciar desenvolvimento
+# ⭐ INICIAR SISTEMA PARA TESTES (COMANDO PRINCIPAL)
 ./start-dev.sh
 ```
 
@@ -607,10 +612,12 @@ const score = answers.reduce((acc, answer) => {
 
 ### **Comandos Essenciais**
 ```bash
-npm run dev:full        # Desenvolvimento completo
+# ⭐ PARA TESTES E DESENVOLVIMENTO LOCAL
+./start-dev.sh         # SEMPRE usar este comando para rodar localmente!
+
+# Outros comandos importantes:
 npm run build          # Build para produção
 npm run db:push        # Aplicar migrations
-./start-dev.sh         # Início limpo
 ./deploy.sh            # Deploy automático
 ```
 
@@ -623,11 +630,12 @@ npm run db:push        # Aplicar migrations
 
 ## 💡 DICAS PARA DESENVOLVIMENTO
 
-1. **Sempre testar** endpoints no browser/Postman antes do frontend
-2. **Usar React Query DevTools** para debug de cache
-3. **Verificar logs** no Vercel Functions para debug de produção
-4. **Validar tipos** com `npm run check` antes de commit
-5. **Testar build local** com `npm run build && npm start`
+1. **⭐ SEMPRE usar `./start-dev.sh`** para rodar o sistema localmente (limpa processos e inicia completo)
+2. **Sempre testar** endpoints no browser/Postman antes do frontend
+3. **Usar React Query DevTools** para debug de cache
+4. **Verificar logs** no Vercel Functions para debug de produção
+5. **Validar tipos** com `npm run check` antes de commit
+6. **Testar build local** com `npm run build && npm start`
 
 ---
 
