@@ -530,6 +530,28 @@ async function registerRoutes(app2) {
     info.latencyMs = Date.now() - startedAt;
     res.status(info.status === "ok" ? 200 : 503).json(info);
   });
+  app2.get("/api/debug/admin", async (req, res) => {
+    try {
+      const users2 = await storageNeon.getUsers();
+      const admin = await storageNeon.getUserByUsername("87999461725");
+      res.json({
+        totalUsers: users2.length,
+        adminExists: !!admin,
+        adminData: admin ? {
+          id: admin.id,
+          username: admin.username,
+          displayName: admin.displayName,
+          role: admin.role,
+          active: admin.active,
+          hasPassword: !!admin.password,
+          passwordLength: admin.password?.length || 0
+        } : null,
+        allUsernames: users2.map((u) => u.username)
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
   app2.post("/api/auth/login", async (req, res) => {
     console.log("DEBUG: Login endpoint hit with", req.body);
     try {
@@ -539,8 +561,18 @@ async function registerRoutes(app2) {
       try {
         user = await storageNeon.getUserByUsername(username);
         console.log("DEBUG: User search result:", user ? "User found" : "User not found");
-        if (!user || user.password !== password) {
-          console.log("DEBUG: Authentication failed");
+        if (!user) {
+          console.log("DEBUG: User not found");
+          return res.status(401).json({
+            success: false,
+            error: "Credenciais inv\xE1lidas"
+          });
+        }
+        const bcrypt2 = await import("bcryptjs");
+        const passwordMatch = await bcrypt2.compare(password, user.password);
+        console.log("DEBUG: Password match:", passwordMatch);
+        if (!passwordMatch) {
+          console.log("DEBUG: Password authentication failed");
           return res.status(401).json({
             success: false,
             error: "Credenciais inv\xE1lidas"
