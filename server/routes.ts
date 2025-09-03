@@ -218,8 +218,21 @@ export async function registerRoutes(app: Express): Promise<void> {
         user = await storageNeon.getUserByUsername(username);
         console.log("DEBUG: User search result:", user ? "User found" : "User not found");
         
-        if (!user || user.password !== password) {
-          console.log("DEBUG: Authentication failed");
+        if (!user) {
+          console.log("DEBUG: User not found");
+          return res.status(401).json({ 
+            success: false, 
+            error: "Credenciais inválidas" 
+          });
+        }
+
+        // Check password using bcrypt
+        const bcrypt = await import('bcryptjs');
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        console.log("DEBUG: Password match:", passwordMatch);
+        
+        if (!passwordMatch) {
+          console.log("DEBUG: Password authentication failed");
           return res.status(401).json({ 
             success: false, 
             error: "Credenciais inválidas" 
