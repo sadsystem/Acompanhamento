@@ -11,7 +11,6 @@ import { User, AppRoute } from "./config/types";
 import { CONFIG } from "./config/constants";
 import { Menu, X, Eye } from "lucide-react";
 import { VersionDisplay } from "./components/VersionDisplay";
-import { ApiStatus } from "./components/ApiStatus";
 
 // Pages
 import { LoginPage } from "./pages/LoginPage";
@@ -348,7 +347,6 @@ function App() {
       <TooltipProvider>
         <StorageProvider adapter={storageAdapter}>
           <VersionDisplay />
-          <ApiStatus />
           <Router />
         </StorageProvider>
       </TooltipProvider>

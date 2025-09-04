@@ -2,7 +2,7 @@
   "version": "0.82e",
   "buildDate": "2025-01-29",
   "environment": "development",
-  "name": "Acompanhamento Diário - Ouro Verde",
+  "name": "SDA - Sistema de Acompanhamento",
   "improvements": [
     "ApiStatus otimizado: 30s → 5min (90% menos requests)",
     "HEAD requests para health check (mais eficiente)",

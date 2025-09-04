@@ -1,4 +1,4 @@
-# Guia de Desenvolvimento - Acompanhamento Diário v0.81b
+# Guia de Desenvolvimento - Sistema de Acompanhamento Diário v0.82e
 
 ## Arquitetura Geral
 
@@ -294,7 +294,9 @@ PUT    /api/vehicles/:id # Atualizar veículo
 # Relatórios
 GET /api/reports/alerts   # Alertas de performance
 GET /api/reports/export   # Exportação CSV
-GET /api/health          # Health check + diagnósticos
+GET /api/health          # Health check + diagnósticos (suporte HEAD request)
+HEAD /api/health         # Health check otimizado para monitoramento
+GET /api/debug/diagnostics # Diagnósticos detalhados do sistema
 ```
 
 #### **Storage Abstraction**
@@ -336,7 +338,7 @@ npm test            # Executa testes unitários (Vitest)
    - Schemas de validação definidos junto com os schemas do banco em `shared/schema.ts`
    - Uso de `createInsertSchema` para criar schemas Zod a partir das definições Drizzle
 5. **Versionamento**: Exibido no canto superior direito via `client/src/config/version.json`
-6. **Monitoramento**: Componente de status da API no canto inferior esquerdo
+6. **Sistema de Diagnósticos**: Componente `SystemDiagnostics` integrado ao botão de versão para monitoramento e debugging
 7. **Sistema de Avaliações**:
    - Perguntas definidas em `client/src/config/questions.ts`
    - Fluxo de avaliação implementado em `ChecklistPage.tsx`
@@ -381,6 +383,33 @@ npm test            # Executa testes unitários (Vitest)
 - Logs detalhados no servidor para debugging de operações de banco
 
 ## Melhorias Implementadas e Correções de Bugs
+
+### **Otimizações Críticas de Performance (Setembro 2025)**
+
+#### **1. Sistema de Monitoramento Otimizado**
+- **Problema Original**: ApiStatus fazendo polling constante de 30s para Neon Database
+- **Solução Implementada**: Redução de 90% no uso de recursos
+  - **Polling Inteligente**: Aumentado de 30s para 5 minutos
+  - **HEAD Requests**: Uso de requests mais eficientes (sem body)
+  - **Page Visibility API**: Pausa automática quando aba inativa
+  - **Timeout com AbortSignal**: Evita requests pendentes
+  - **Backoff Exponencial**: Recuperação inteligente em caso de erros
+  - **Cache Headers**: Otimização no servidor para eficiência
+
+#### **2. Sistema de Diagnósticos Consolidado**
+- **Componente SystemDiagnostics.tsx**: Interface completa e profissional
+  - **Aba Status**: Monitoramento em tempo real com ApiStatus otimizado
+  - **Aba Testes**: Bateria completa de testes de API/DB com análise heurística
+  - **Aba Análise**: Identificação inteligente de problemas comuns
+  - **Design Responsivo**: Radix UI com Dialog + Tabs para melhor UX
+- **Integração no VersionDisplay**: Acesso via botão de versão (canto superior direito)
+- **Trigger Customizável**: Props interface para flexibilidade de uso
+
+#### **3. Melhorias de Interface e UX**
+- **Login Page Simplificada**: Removido diagnóstico inline para interface mais limpa
+- **Branding Atualizado**: "SDA - Sistema de Acompanhamento" ao invés de "Acompanhamento Diário - Ouro Verde"
+- **Navegação Intuitiva**: Diagnósticos acessíveis mas não intrusivos
+- **Eliminação de Polling Constante**: Zero requisições desnecessárias ao banco
 
 ### **Correções de Interface e UX (Setembro 2025)**
 
@@ -442,11 +471,41 @@ npm test            # Executa testes unitários (Vitest)
 
 ## Arquivos Críticos Recentemente Modificados
 
+### **Componentes de Sistema e Interface**
+- `client/src/components/SystemDiagnostics.tsx`: Novo componente consolidado de diagnósticos
+- `client/src/components/VersionDisplay.tsx`: Integração com SystemDiagnostics
+- `client/src/components/ApiStatus.tsx`: Otimizado para uso eficiente de recursos
+- `client/src/pages/LoginPage.tsx`: Interface simplificada e limpa
+- `client/src/App.tsx`: Remoção de componentes desnecessários
+
+### **Configuração e Dados**
+- `client/src/config/version.json`: Branding atualizado para "SDA - Sistema de Acompanhamento"
+- `server/routes.ts`: Suporte a HEAD requests com cache headers
 - `client/src/pages/DashboardPage.tsx`: Correção de formatação de scores
 - `client/src/pages/TeamBuilderPage.tsx`: Ordenação e preservação de dados
 - `client/src/config/types.ts`: Ajustes de tipos `routeId`
 - `client/src/storage/*.ts`: Compatibilidade de tipos em adaptadores
 - `server/storage.ts`: Padronização de tipos `routeId`
+
+### **Benefícios das Otimizações Implementadas**
+
+#### **Performance e Recursos**
+- **90% redução** em requisições ao Neon Database
+- **Preservação dos 50 compute hours/mês** do plano gratuito
+- **Eliminação de logs excessivos** no terminal de desenvolvimento
+- **Resposta mais rápida** da interface com HEAD requests
+
+#### **Experiência do Usuário**
+- **Interface mais limpa** com diagnósticos organizados
+- **Acesso intuitivo** via botão de versão
+- **Feedback visual claro** com análise automática de problemas
+- **Branding profissional** consistente em toda aplicação
+
+#### **Manutenibilidade do Código**
+- **Componente reutilizável** para diagnósticos
+- **Props interface flexível** para diferentes contextos de uso
+- **Eliminação de código duplicado** (DiagnosticLink removido)
+- **Arquitetura mais limpa** com responsabilidades bem definidas
 
 ## Padrões de Desenvolvimento Estabelecidos
 
