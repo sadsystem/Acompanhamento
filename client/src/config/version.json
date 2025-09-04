@@ -1,13 +1,14 @@
 {
-  "version": "0.82d",
+  "version": "0.82e",
   "buildDate": "2025-01-29",
   "environment": "development",
   "name": "Acompanhamento Diário - Ouro Verde",
   "improvements": [
-    "Layout ultra compacto - tudo em uma única linha",
-    "Header redundante removido com elegância",
-    "Título 'Filtros de Análise' integrado aos controles",
-    "Ícone de calendário posicionado perfeitamente",
-    "Design final otimizado e profissional"
+    "ApiStatus otimizado: 30s → 5min (90% menos requests)",
+    "HEAD requests para health check (mais eficiente)",
+    "Page Visibility API (pausa quando inativo)",
+    "Backoff exponencial em caso de erros",
+    "Cache headers para reduzir sobrecarga no Neon",
+    "Timeout de 10s para evitar requests longos"
   ]
 }

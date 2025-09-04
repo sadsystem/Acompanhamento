@@ -60,11 +60,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
-  // Health check endpoint
+  // Health check endpoint - otimizado para polling
   app.get("/api/health", async (req, res) => {
     try {
       // Use optimized health check
       const healthResult = await storageNeon.healthCheck();
+      
+      // Cache headers para reduzir requests desnecessários
+      res.set({
+        'Cache-Control': 'public, max-age=60', // Cache por 1 minuto
+        'Last-Modified': new Date().toUTCString()
+      });
       
       res.json({
         status: healthResult.status,
@@ -80,6 +86,26 @@ export async function registerRoutes(app: Express): Promise<void> {
         error: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString()
       });
+    }
+  });
+
+  // HEAD request para health check (mais eficiente para polling)
+  app.head("/api/health", async (req, res) => {
+    try {
+      // Verificação mais rápida - apenas conectividade
+      const healthResult = await storageNeon.healthCheck();
+      
+      res.set({
+        'Cache-Control': 'public, max-age=60',
+        'Last-Modified': new Date().toUTCString(),
+        'X-Health-Status': healthResult.status,
+        'X-Response-Time': `${healthResult.responseTime}ms`
+      });
+      
+      res.status(healthResult.status === 'healthy' ? 200 : 503).end();
+    } catch (error) {
+      console.error('Health check HEAD failed:', error);
+      res.status(503).end();
     }
   });
   
