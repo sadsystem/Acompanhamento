@@ -22,12 +22,14 @@ __export(schema_exports, {
   insertRouteSchema: () => insertRouteSchema,
   insertTeamSchema: () => insertTeamSchema,
   insertUserSchema: () => insertUserSchema,
+  insertVehicleSchema: () => insertVehicleSchema,
   questions: () => questions,
   routes: () => routes,
   teams: () => teams,
-  users: () => users
+  users: () => users,
+  vehicles: () => vehicles
 });
-import { pgTable, text, varchar, boolean, timestamp, real, json } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, timestamp, real, json, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { randomUUID } from "crypto";
 var users = pgTable("users", {
@@ -63,6 +65,8 @@ var evaluations = pgTable("evaluations", {
   // YYYY-MM-DD
   evaluator: text("evaluator").notNull(),
   evaluated: text("evaluated").notNull(),
+  routeId: varchar("route_id").references(() => routes.id),
+  // Link direto com a rota
   answers: json("answers").notNull(),
   // Answer[]
   score: real("score").notNull(),
@@ -77,12 +81,22 @@ var teams = pgTable("teams", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
+var vehicles = pgTable("vehicles", {
+  id: varchar("id").primaryKey().$defaultFn(() => randomUUID()),
+  plate: text("plate").notNull(),
+  model: text("model"),
+  year: integer("year"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
 var routes = pgTable("routes", {
   id: varchar("id").primaryKey().$defaultFn(() => randomUUID()),
   city: text("city").notNull(),
   cities: json("cities").notNull(),
   // string[] - lista completa das cidades
   teamId: varchar("team_id").references(() => teams.id),
+  vehicleId: varchar("vehicle_id").references(() => vehicles.id),
   startDate: text("start_date").notNull(),
   // YYYY-MM-DD
   endDate: text("end_date"),
@@ -98,9 +112,16 @@ var insertUserSchema = createInsertSchema(users).omit({
 });
 var insertQuestionSchema = createInsertSchema(questions);
 var insertEvaluationSchema = createInsertSchema(evaluations).omit({
-  id: true
+  id: true,
+  createdAt: true
+  // Server will generate this automatically
 });
 var insertTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+var insertVehicleSchema = createInsertSchema(vehicles).omit({
   id: true,
   createdAt: true,
   updatedAt: true
@@ -148,6 +169,10 @@ var StorageNeon = class _StorageNeon {
     const result = await this.db.select().from(users).where(eq(users.username, username));
     return result[0];
   }
+  async getUserByCpf(cpf) {
+    const result = await this.db.select().from(users).where(eq(users.cpf, cpf));
+    return result[0];
+  }
   async createUser(user) {
     const hashedPassword = await bcrypt.hash(user.password, 10);
     const userData = {
@@ -167,10 +192,15 @@ var StorageNeon = class _StorageNeon {
       if (!id || id.trim() === "") {
         throw new Error("User ID is required");
       }
+      const excludedFields = ["id", "createdAt"];
       const cleanUpdates = {};
       Object.entries(updates).forEach(([key, value]) => {
-        if (value !== void 0 && value !== null) {
-          cleanUpdates[key] = value;
+        if (value !== void 0 && value !== null && !excludedFields.includes(key)) {
+          if (key === "createdAt" && typeof value === "string") {
+            cleanUpdates[key] = new Date(value);
+          } else {
+            cleanUpdates[key] = value;
+          }
         }
       });
       console.log("Clean updates:", JSON.stringify(cleanUpdates, null, 2));
@@ -229,20 +259,28 @@ var StorageNeon = class _StorageNeon {
       if (filters.status) {
         conditions.push(eq(evaluations.status, filters.status));
       }
+      if (filters.routeId) {
+        conditions.push(eq(evaluations.routeId, filters.routeId));
+      }
       if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+        const result2 = await this.db.select().from(evaluations).where(and(...conditions)).orderBy(desc(evaluations.createdAt));
+        return result2;
       }
     }
     const result = await query.orderBy(desc(evaluations.createdAt));
     return result;
   }
   async createEvaluation(evaluation) {
+    console.log("=== CREATING EVALUATION DEBUG ===");
+    console.log("Input evaluation data:", JSON.stringify(evaluation, null, 2));
     const evaluationData = {
       ...evaluation,
       id: randomUUID2(),
       createdAt: /* @__PURE__ */ new Date()
     };
+    console.log("Final evaluation data to insert:", JSON.stringify(evaluationData, null, 2));
     const result = await this.db.insert(evaluations).values(evaluationData).returning();
+    console.log("Evaluation created successfully:", JSON.stringify(result[0], null, 2));
     return result[0];
   }
   async setEvaluations(evaluations2) {
@@ -256,17 +294,31 @@ var StorageNeon = class _StorageNeon {
     return result;
   }
   async createTeam(team) {
+    console.log("=== STORAGE CREATE TEAM DEBUG ===");
+    console.log("Input team data:", JSON.stringify(team, null, 2));
+    console.log("Team ID provided:", team.id);
     const teamData = {
       ...team,
-      id: randomUUID2(),
+      id: team.id || randomUUID2(),
+      // Use provided ID or generate new one
       createdAt: /* @__PURE__ */ new Date(),
       updatedAt: /* @__PURE__ */ new Date()
     };
+    console.log("Final team data to insert:", JSON.stringify(teamData, null, 2));
     const result = await this.db.insert(teams).values(teamData).returning();
+    console.log("Team created with final ID:", result[0].id);
     return result[0];
   }
   async updateTeam(id, updates) {
-    const result = await this.db.update(teams).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(teams.id, id)).returning();
+    console.log("=== UPDATING TEAM DEBUG ===");
+    console.log("Team ID:", id);
+    console.log("Raw updates:", JSON.stringify(updates, null, 2));
+    const cleanUpdates = { ...updates };
+    delete cleanUpdates.createdAt;
+    delete cleanUpdates.updatedAt;
+    console.log("Clean updates:", JSON.stringify(cleanUpdates, null, 2));
+    const result = await this.db.update(teams).set({ ...cleanUpdates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(teams.id, id)).returning();
+    console.log("Team updated successfully:", JSON.stringify(result[0], null, 2));
     return result[0];
   }
   async deleteTeam(id) {
@@ -278,21 +330,62 @@ var StorageNeon = class _StorageNeon {
     return result;
   }
   async createRoute(route) {
+    console.log("=== STORAGE CREATE ROUTE DEBUG ===");
+    console.log("Input route data:", JSON.stringify(route, null, 2));
     const routeData = {
       ...route,
-      id: randomUUID2(),
+      cities: Array.isArray(route.cities) ? route.cities : JSON.parse(route.cities),
+      id: route.id || randomUUID2(),
+      // Use provided ID or generate new one
       createdAt: /* @__PURE__ */ new Date(),
       updatedAt: /* @__PURE__ */ new Date()
     };
-    const result = await this.db.insert(routes).values(routeData).returning();
-    return result[0];
+    console.log("Final route data to insert:", JSON.stringify(routeData, null, 2));
+    try {
+      const result = await this.db.insert(routes).values(routeData).returning();
+      console.log("Route inserted successfully:", JSON.stringify(result[0], null, 2));
+      return result[0];
+    } catch (dbError) {
+      console.error("Database error in createRoute:", dbError);
+      throw dbError;
+    }
   }
   async updateRoute(id, updates) {
-    const result = await this.db.update(routes).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(routes.id, id)).returning();
+    console.log("=== UPDATING ROUTE DEBUG ===");
+    console.log("Route ID:", id);
+    console.log("Raw updates:", JSON.stringify(updates, null, 2));
+    const cleanUpdates = { ...updates };
+    delete cleanUpdates.createdAt;
+    delete cleanUpdates.updatedAt;
+    console.log("Clean updates:", JSON.stringify(cleanUpdates, null, 2));
+    const result = await this.db.update(routes).set({ ...cleanUpdates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(routes.id, id)).returning();
+    console.log("Route updated successfully:", JSON.stringify(result[0], null, 2));
     return result[0];
   }
   async deleteRoute(id) {
     await this.db.delete(routes).where(eq(routes.id, id));
+  }
+  // Vehicles management
+  async getVehicles() {
+    const result = await this.db.select().from(vehicles).orderBy(desc(vehicles.createdAt));
+    return result;
+  }
+  async createVehicle(vehicle) {
+    const vehicleData = {
+      ...vehicle,
+      id: randomUUID2(),
+      createdAt: /* @__PURE__ */ new Date(),
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    const result = await this.db.insert(vehicles).values(vehicleData).returning();
+    return result[0];
+  }
+  async updateVehicle(id, updates) {
+    const result = await this.db.update(vehicles).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(vehicles.id, id)).returning();
+    return result[0];
+  }
+  async deleteVehicle(id) {
+    await this.db.delete(vehicles).where(eq(vehicles.id, id));
   }
   // Health check with database connectivity test
   async healthCheck() {
@@ -381,6 +474,8 @@ var storageNeon = StorageNeon.getInstance();
 // server/routes.ts
 import bcrypt2 from "bcryptjs";
 import { z } from "zod";
+import multer from "multer";
+import * as XLSX from "xlsx";
 var seedInitialized = false;
 var ensureSeedData = async () => {
   if (!seedInitialized) {
@@ -398,8 +493,24 @@ var loginSchema = z.object({
   remember: z.boolean().optional()
 });
 var createUserSchema = insertUserSchema.extend({
-  cargo: z.string().optional(),
-  cpf: z.string().optional()
+  cargo: z.string().nullable().optional(),
+  cpf: z.string().nullable().optional(),
+  permission: z.string().default("Colaborador"),
+  // Ensure permission is always set
+  active: z.boolean().default(true)
+  // Ensure active is always boolean
+});
+var upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only XLSX files are allowed!"), false);
+    }
+  }
 });
 async function registerRoutes(app2) {
   app2.use("/api", async (req, res, next) => {
@@ -578,7 +689,7 @@ async function registerRoutes(app2) {
           console.log("DEBUG: User not found");
           return res.status(401).json({
             success: false,
-            error: "Credenciais inv\xE1lidas"
+            error: "Login ou senha incorretos"
           });
         }
         const passwordMatch = await bcrypt2.compare(password, user.password);
@@ -587,7 +698,7 @@ async function registerRoutes(app2) {
           console.log("DEBUG: Password authentication failed");
           return res.status(401).json({
             success: false,
-            error: "Credenciais inv\xE1lidas"
+            error: "Login ou senha incorretos"
           });
         }
       } catch (dbError) {
@@ -627,7 +738,7 @@ async function registerRoutes(app2) {
       return res.status(401).json({ error: "Token n\xE3o fornecido" });
     }
     const userId = token.replace("token-", "");
-    const user = await storageNeon.getUser(userId);
+    const user = await storageNeon.getUserById(userId);
     if (!user) {
       return res.status(401).json({ error: "Token inv\xE1lido" });
     }
@@ -689,6 +800,147 @@ async function registerRoutes(app2) {
       res.status(400).json({ error: "Dados de usu\xE1rio inv\xE1lidos" });
     }
   });
+  app2.post("/api/users/import", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Nenhum arquivo enviado" });
+      }
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      if (data.length <= 1) {
+        return res.status(400).json({ error: "Arquivo vazio ou sem dados v\xE1lidos" });
+      }
+      const headers = data[0];
+      const expectedHeaders = ["NOME", "CPF", "TELEFONE", "SENHA", "CARGO"];
+      const headerMismatch = expectedHeaders.some(
+        (expected, index) => !headers[index] || headers[index].toString().toUpperCase() !== expected
+      );
+      if (headerMismatch) {
+        return res.status(400).json({
+          error: `Formato de cabe\xE7alho incorreto. Esperado: ${expectedHeaders.join(", ")}. Encontrado: ${headers.join(", ")}`
+        });
+      }
+      const rows = data.slice(1);
+      const results = {
+        success: 0,
+        errors: [],
+        imported: [],
+        duplicates: []
+      };
+      console.log(`[IMPORT] Starting bulk user import. Total rows to process: ${rows.filter((row) => row && row.some((cell) => cell && cell.toString().trim())).length}`);
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowNumber = i + 2;
+        if (!row || row.every((cell) => !cell || cell.toString().trim() === "")) {
+          continue;
+        }
+        if (row.length < 5) {
+          results.errors.push(`Linha ${rowNumber}: Dados insuficientes (necess\xE1rio 5 colunas: NOME, CPF, TELEFONE, SENHA, CARGO)`);
+          continue;
+        }
+        const [displayName, cpf, phone, password, cargo] = row;
+        if (!displayName || !cpf || !phone || !password || !cargo) {
+          results.errors.push(`Linha ${rowNumber}: Campos obrigat\xF3rios em branco - Nome: ${displayName || "vazio"}, CPF: ${cpf || "vazio"}, Telefone: ${phone || "vazio"}, Senha: ${password || "vazio"}, Cargo: ${cargo || "vazio"}`);
+          continue;
+        }
+        try {
+          const cleanName = String(displayName).trim();
+          const cleanCpf = String(cpf).replace(/\D/g, "");
+          const cleanPhone = String(phone).replace(/\D/g, "");
+          const cleanPassword = String(password).trim();
+          const cleanCargo = String(cargo).trim();
+          if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+            results.errors.push(`Linha ${rowNumber}: Telefone inv\xE1lido (${phone}). Deve ter 10 ou 11 d\xEDgitos.`);
+            continue;
+          }
+          let formattedPhone = cleanPhone;
+          if (cleanPhone.length === 10) {
+            formattedPhone = cleanPhone.slice(0, 2) + "9" + cleanPhone.slice(2);
+          }
+          if (cleanCpf.length !== 11) {
+            results.errors.push(`Linha ${rowNumber}: CPF inv\xE1lido (${cpf}). Deve ter 11 d\xEDgitos.`);
+            continue;
+          }
+          const validCargos = ["Motorista", "Ajudante", "ADM"];
+          if (!validCargos.includes(cleanCargo)) {
+            results.errors.push(`Linha ${rowNumber}: Cargo inv\xE1lido (${cleanCargo}). Valores aceitos: ${validCargos.join(", ")}`);
+            continue;
+          }
+          const userData = {
+            displayName: cleanName,
+            cpf: cleanCpf || null,
+            // Handle as null instead of undefined
+            phone: formattedPhone,
+            password: cleanPassword,
+            cargo: cleanCargo || null,
+            // Handle as null instead of undefined  
+            permission: cleanCargo === "ADM" ? "ADM" : "Colaborador",
+            // Always set permission
+            role: cleanCargo === "ADM" ? "admin" : "colaborador",
+            active: true,
+            username: formattedPhone
+            // Add username field that was missing
+          };
+          const validation = createUserSchema.safeParse(userData);
+          if (!validation.success) {
+            results.errors.push(`Linha ${rowNumber}: Dados inv\xE1lidos - ${validation.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")}`);
+            continue;
+          }
+          const existingUserByPhone = await storageNeon.getUserByUsername(formattedPhone);
+          const existingUserByCpf = await storageNeon.getUserByCpf(cleanCpf);
+          if (existingUserByPhone) {
+            results.duplicates.push(`Linha ${rowNumber}: \u274C DUPLICATA - Usu\xE1rio com telefone ${phone} j\xE1 existe (Nome atual: ${existingUserByPhone.displayName})`);
+            console.log(`[IMPORT] Duplicate phone detected: ${formattedPhone} for user ${cleanName}`);
+            continue;
+          }
+          if (existingUserByCpf) {
+            results.duplicates.push(`Linha ${rowNumber}: \u274C DUPLICATA - Usu\xE1rio com CPF ${cpf} j\xE1 existe (Nome atual: ${existingUserByCpf.displayName})`);
+            console.log(`[IMPORT] Duplicate CPF detected: ${cleanCpf} for user ${cleanName}`);
+            continue;
+          }
+          const cleanValidationData = {
+            ...validation.data,
+            cargo: validation.data.cargo || null,
+            cpf: validation.data.cpf || null
+          };
+          await storageNeon.createUser(cleanValidationData);
+          results.success++;
+          results.imported.push(`\u2705 ${cleanName} (${phone})`);
+          console.log(`[IMPORT] Successfully created user: ${cleanName} with phone ${formattedPhone}`);
+        } catch (error) {
+          console.error(`Error importing user from row ${rowNumber}:`, error);
+          results.errors.push(`Linha ${rowNumber}: Erro interno - ${error instanceof Error ? error.message : "Erro desconhecido"}`);
+        }
+      }
+      const totalProcessed = rows.filter((row) => row && row.some((cell) => cell && cell.toString().trim())).length;
+      const response = {
+        imported: results.success,
+        total_processed: totalProcessed,
+        success_list: results.imported,
+        errors: results.errors,
+        duplicates: results.duplicates,
+        duplicates_count: results.duplicates.length
+      };
+      console.log(`[IMPORT] Import completed. Success: ${results.success}, Duplicates: ${results.duplicates.length}, Errors: ${results.errors.length}`);
+      if (results.errors.length > 0 || results.duplicates.length > 0) {
+        response.message = `Importa\xE7\xE3o processada: ${results.success} usu\xE1rio(s) criado(s) com sucesso. ${results.duplicates.length} duplicata(s) ignorada(s) (n\xE3o foram adicionadas). ${results.errors.length} erro(s) encontrado(s).`;
+      } else {
+        response.message = `\u2705 Importa\xE7\xE3o bem-sucedida! ${results.success} usu\xE1rio(s) criado(s) sem duplicatas ou erros.`;
+      }
+      if (results.duplicates.length > 0) {
+        response.duplicate_warning = `\u26A0\uFE0F IMPORTANTE: ${results.duplicates.length} usu\xE1rio(s) n\xE3o foram adicionados pois j\xE1 existem no sistema (mesmo CPF ou telefone). Cada usu\xE1rio \xE9 \xFAnico no sistema.`;
+      }
+      res.json(response);
+    } catch (error) {
+      console.error("Import error:", error);
+      res.status(500).json({
+        error: "Erro ao processar arquivo de importa\xE7\xE3o",
+        details: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
   app2.put("/api/users/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -740,13 +992,14 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/evaluations", async (req, res) => {
     try {
-      const { dateFrom, dateTo, evaluator, evaluated, status } = req.query;
+      const { dateFrom, dateTo, evaluator, evaluated, status, routeId } = req.query;
       const filters = {};
       if (dateFrom) filters.dateFrom = String(dateFrom);
       if (dateTo) filters.dateTo = String(dateTo);
       if (evaluator) filters.evaluator = String(evaluator);
       if (evaluated) filters.evaluated = String(evaluated);
       if (status) filters.status = String(status);
+      if (routeId) filters.routeId = String(routeId);
       const evaluations2 = await storageNeon.getEvaluations(filters);
       res.json(evaluations2);
     } catch (error) {
@@ -756,19 +1009,32 @@ async function registerRoutes(app2) {
   app2.post("/api/evaluations", async (req, res) => {
     try {
       console.log("POST /api/evaluations - Received data:", JSON.stringify(req.body, null, 2));
+      const { createdAt, id, ...cleanData } = req.body;
+      console.log("POST /api/evaluations - Clean data:", JSON.stringify(cleanData, null, 2));
+      const requiredFields = ["dateRef", "evaluator", "evaluated", "answers", "score"];
+      for (const field of requiredFields) {
+        if (!(field in cleanData)) {
+          return res.status(400).json({ error: `Campo obrigat\xF3rio ausente: ${field}` });
+        }
+      }
       const evaluationData = {
-        ...insertEvaluationSchema.parse(req.body),
-        status: req.body.status || "queued"
+        ...cleanData,
+        status: cleanData.status || "queued",
+        routeId: cleanData.routeId || null
+        // Incluir routeId (opcional para compatibilidade)
       };
       console.log("POST /api/evaluations - Parsed data:", JSON.stringify(evaluationData, null, 2));
       const evaluation = await storageNeon.createEvaluation(evaluationData);
       res.status(201).json(evaluation);
     } catch (error) {
-      console.error("POST /api/evaluations - Validation error:", error);
+      console.error("POST /api/evaluations - Error:", error);
       if (error instanceof Error) {
-        console.error("Error details:", error.message);
+        console.error("Error message:", error.message);
       }
-      res.status(400).json({ error: "Dados de avalia\xE7\xE3o inv\xE1lidos" });
+      if (error && typeof error === "object" && "issues" in error) {
+        console.error("Validation issues:", error.issues);
+      }
+      res.status(400).json({ error: "Erro ao criar avalia\xE7\xE3o" });
     }
   });
   app2.get("/api/evaluations/stats", async (req, res) => {
@@ -832,6 +1098,131 @@ async function registerRoutes(app2) {
       res.json(alerts);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar alertas" });
+    }
+  });
+  app2.get("/api/teams", async (req, res) => {
+    try {
+      const teams2 = await storageNeon.getTeams();
+      res.json(teams2);
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ error: "Erro ao buscar equipes" });
+    }
+  });
+  app2.post("/api/teams", async (req, res) => {
+    try {
+      const team = await storageNeon.createTeam(req.body);
+      res.status(201).json(team);
+    } catch (error) {
+      console.error("Error creating team:", error);
+      res.status(400).json({ error: "Erro ao criar equipe" });
+    }
+  });
+  app2.put("/api/teams/:id", async (req, res) => {
+    try {
+      const team = await storageNeon.updateTeam(req.params.id, req.body);
+      res.json(team);
+    } catch (error) {
+      console.error("Error updating team:", error);
+      res.status(400).json({ error: "Erro ao atualizar equipe" });
+    }
+  });
+  app2.delete("/api/teams/:id", async (req, res) => {
+    try {
+      await storageNeon.deleteTeam(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting team:", error);
+      res.status(400).json({ error: "Erro ao excluir equipe" });
+    }
+  });
+  app2.get("/api/routes", async (req, res) => {
+    try {
+      const routes2 = await storageNeon.getRoutes();
+      res.json(routes2);
+    } catch (error) {
+      console.error("Error fetching routes:", error);
+      res.status(500).json({ error: "Erro ao buscar rotas" });
+    }
+  });
+  app2.post("/api/routes", async (req, res) => {
+    try {
+      console.log("=== CREATING ROUTE DEBUG ===");
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      if (!req.body.city || !req.body.cities || !req.body.startDate || !req.body.status) {
+        return res.status(400).json({
+          error: "Campos obrigat\xF3rios ausentes",
+          required: ["city", "cities", "startDate", "status"]
+        });
+      }
+      if (!Array.isArray(req.body.cities)) {
+        return res.status(400).json({
+          error: "Campo 'cities' deve ser um array",
+          received: typeof req.body.cities
+        });
+      }
+      const route = await storageNeon.createRoute(req.body);
+      console.log("Route created successfully:", JSON.stringify(route, null, 2));
+      res.status(201).json(route);
+    } catch (error) {
+      console.error("Error creating route - DETAILED:", error);
+      console.error("Error message:", error instanceof Error ? error.message : "Unknown error");
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+      res.status(400).json({ error: "Erro ao criar rota", details: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+  app2.put("/api/routes/:id", async (req, res) => {
+    try {
+      const route = await storageNeon.updateRoute(req.params.id, req.body);
+      res.json(route);
+    } catch (error) {
+      console.error("Error updating route:", error);
+      res.status(400).json({ error: "Erro ao atualizar rota" });
+    }
+  });
+  app2.delete("/api/routes/:id", async (req, res) => {
+    try {
+      await storageNeon.deleteRoute(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting route:", error);
+      res.status(400).json({ error: "Erro ao excluir rota" });
+    }
+  });
+  app2.get("/api/vehicles", async (req, res) => {
+    try {
+      const vehicles2 = await storageNeon.getVehicles();
+      res.json(vehicles2);
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      res.status(500).json({ error: "Erro ao buscar ve\xEDculos" });
+    }
+  });
+  app2.post("/api/vehicles", async (req, res) => {
+    try {
+      const vehicle = await storageNeon.createVehicle(req.body);
+      res.status(201).json(vehicle);
+    } catch (error) {
+      console.error("Error creating vehicle:", error);
+      res.status(400).json({ error: "Erro ao criar ve\xEDculo" });
+    }
+  });
+  app2.put("/api/vehicles/:id", async (req, res) => {
+    try {
+      const vehicle = await storageNeon.updateVehicle(req.params.id, req.body);
+      res.json(vehicle);
+    } catch (error) {
+      console.error("Error updating vehicle:", error);
+      res.status(400).json({ error: "Erro ao atualizar ve\xEDculo" });
+    }
+  });
+  app2.delete("/api/vehicles/:id", async (req, res) => {
+    try {
+      await storageNeon.deleteVehicle(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting vehicle:", error);
+      res.status(400).json({ error: "Erro ao excluir ve\xEDculo" });
     }
   });
   app2.use("/api", (req, res, next) => {

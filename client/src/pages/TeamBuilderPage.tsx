@@ -609,18 +609,34 @@ export function TeamBuilderPage() {
     const route = routes.find(r => r.id === routeId);
     if (!route) return;
 
-    // First, remove team reference from route and mark as completed
+    // Preservar dados da equipe e veículo para exibição nas rotas finalizadas
+    const preservedTeamData = route.team ? {
+      driver: route.team.driver,
+      assistantUsers: route.team.assistantUsers
+    } : null;
+    
+    const preservedVehicleData = route.vehicle;
+
+    // First, update route to completed status with preserved end date
     await storage.updateTravelRoute(routeId, { 
       status: "completed", 
       endDate: toDateRefBR(),
-      teamId: null, // Remove team reference before deleting team
+      teamId: null, // Remove team reference to allow team deletion
       updatedAt: new Date().toISOString()
     });
 
-    // Update state
+    // Update state with preserved data for display
     const updatedRoutes = routes.map(r => 
       r.id === routeId 
-        ? { ...r, status: "completed" as const, endDate: toDateRefBR(), teamId: null }
+        ? { 
+            ...r, 
+            status: "completed" as const, 
+            endDate: toDateRefBR(), 
+            teamId: null,
+            // Preserve team and vehicle data for display in finished routes
+            team: preservedTeamData,
+            vehicle: preservedVehicleData
+          }
         : r
     );
     
@@ -721,7 +737,14 @@ export function TeamBuilderPage() {
 
   // Finished routes pagination
   const getFinishedRoutesPage = () => {
-    const finishedRoutes = routes.filter(r => r.status === "completed");
+    const finishedRoutes = routes
+      .filter(r => r.status === "completed")
+      .sort((a, b) => {
+        // Ordenar por data de finalização (endDate) ou startDate, mais recente primeiro
+        const dateA = new Date(a.endDate || a.startDate);
+        const dateB = new Date(b.endDate || b.startDate);
+        return dateB.getTime() - dateA.getTime();
+      });
     const startIndex = finishedRoutesPage * ROUTES_PER_PAGE;
     const endIndex = startIndex + ROUTES_PER_PAGE;
     return finishedRoutes.slice(startIndex, endIndex);
@@ -1511,18 +1534,18 @@ export function TeamBuilderPage() {
                   <p className="text-sm text-muted-foreground mt-2">
                     Início: {formatDateToBR(route.startDate)} - Finalizado: {formatDateToBR(route.endDate || route.startDate)}
                   </p>
-                  {route.team && (
-                    <div className="text-sm text-muted-foreground mb-3">
-                      <div>Motorista: {route.team.driver?.displayName || "N/A"}</div>
-                      <div>
-                        Ajudantes: {(route.team?.assistantUsers?.length || 0) > 0 
-                          ? route.team?.assistantUsers?.map(a => a.displayName).join(", ")
-                          : "Nenhum"
-                        }
-                      </div>
-                      <div>Veículo: {route.vehicle?.plate || "Não definido"}</div>
+                  
+                  {/* Mostrar dados da equipe (preservados da finalização) */}
+                  <div className="text-sm text-muted-foreground mb-3">
+                    <div>Motorista: {route.team?.driver?.displayName || "Não informado"}</div>
+                    <div>
+                      Ajudantes: {(route.team?.assistantUsers?.length || 0) > 0 
+                        ? route.team?.assistantUsers?.map(a => a.displayName).join(", ")
+                        : "Nenhum"
+                      }
                     </div>
-                  )}
+                    <div>Veículo: {route.vehicle?.plate || "Não informado"}</div>
+                  </div>
                   <div className="flex justify-between items-center mt-2">
                     <Badge variant="secondary">Finalizada</Badge>
                     <Button 
