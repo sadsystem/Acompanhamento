@@ -1,0 +1,47 @@
+📁 Esta pasta está pronta para receber seus novos ícones!
+
+🎯 PASTA ESPECÍFICA: /workspaces/Acompanhamento/new-icons/
+
+📋 Duas formas de usar:
+
+═══════════════════════════════════════════════════════════════
+🔥 MÉTODO SIMPLES (Recomendado)
+═══════════════════════════════════════════════════════════════
+
+1️⃣ Coloque 1 ícone PNG de alta qualidade aqui
+   (mínimo 512x512px, pode ter qualquer nome)
+
+2️⃣ Execute: npm run icons:auto nome-do-arquivo.png
+   (isso gera todos os tamanhos automaticamente)
+
+3️⃣ Execute: npm run icons:apply
+   (isso aplica todos no sistema)
+
+═══════════════════════════════════════════════════════════════
+🎨 MÉTODO MANUAL (Ícones Prontos)
+═══════════════════════════════════════════════════════════════
+
+1️⃣ Coloque os ícones aqui com os nomes EXATOS:
+   ├── favicon.ico
+   ├── icon-16.png
+   ├── icon-32.png
+   ├── icon-192.png
+   └── icon-512.png
+
+2️⃣ Execute: npm run icons:apply
+
+═══════════════════════════════════════════════════════════════
+✅ EXEMPLO PRÁTICO
+═══════════════════════════════════════════════════════════════
+
+# Cenário: Você tem "logo-empresa.png"
+1. Copie para: /workspaces/Acompanhamento/new-icons/logo-empresa.png
+2. Execute: npm run icons:auto logo-empresa.png
+3. Execute: npm run icons:apply
+4. Execute: npm run dev
+5. Teste no navegador! 🚀
+
+═══════════════════════════════════════════════════════════════
+
+Depois de aplicar, você pode deletar os arquivos desta pasta.
+Todos os backups são criados automaticamente! 💾
