@@ -609,17 +609,18 @@ export function TeamBuilderPage() {
     const route = routes.find(r => r.id === routeId);
     if (!route) return;
 
-    // Mark route as completed
+    // First, remove team reference from route and mark as completed
     await storage.updateTravelRoute(routeId, { 
       status: "completed", 
       endDate: toDateRefBR(),
+      teamId: null, // Remove team reference before deleting team
       updatedAt: new Date().toISOString()
     });
 
     // Update state
     const updatedRoutes = routes.map(r => 
       r.id === routeId 
-        ? { ...r, status: "completed" as const, endDate: toDateRefBR() }
+        ? { ...r, status: "completed" as const, endDate: toDateRefBR(), teamId: null }
         : r
     );
     
@@ -636,6 +637,8 @@ export function TeamBuilderPage() {
       
       // Remove team from teams list
       setTeams(prev => prev.filter(t => t.id !== route.teamId));
+      
+      // Now it's safe to delete team since route no longer references it
       await storage.deleteTeam(route.teamId!);
     }
 
@@ -656,8 +659,10 @@ export function TeamBuilderPage() {
       }
     }
 
-    // Remove from storage
+    // First remove from storage - route deletion will cascade properly
     await storage.deleteTravelRoute(routeId);
+    
+    // Then delete team if exists
     if (routeToDelete.team) {
       await storage.deleteTeam(routeToDelete.team.id);
     }

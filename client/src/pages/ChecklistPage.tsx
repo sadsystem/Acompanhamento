@@ -92,9 +92,8 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved, accessibili
       const brNow = nowInBrazil();
       const ref = toDateRefBR(brNow);
       
-      // Create evaluation data without ID (backend will generate it)
+      // Create evaluation data without ID and createdAt (backend will generate them)
       const evaluationData = {
-        createdAt: brNow, // Send as Date object for schema compatibility
         dateRef: ref,
         evaluator: currentUser.username,
         evaluated: evaluatedUser.username,

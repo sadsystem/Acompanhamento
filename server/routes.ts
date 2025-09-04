@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { storageNeon } from "./storageNeon";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { insertUserSchema, insertEvaluationSchema } from "@shared/schema";
+import { insertUserSchema, insertEvaluationSchema, type Role } from "@shared/schema";
 import multer from "multer";
 import * as XLSX from "xlsx";
 
@@ -29,8 +29,10 @@ const loginSchema = z.object({
 });
 
 const createUserSchema = insertUserSchema.extend({
-  cargo: z.string().optional(),
-  cpf: z.string().optional(),
+  cargo: z.string().nullable().optional(),
+  cpf: z.string().nullable().optional(), 
+  permission: z.string().default("Colaborador"), // Ensure permission is always set
+  active: z.boolean().default(true), // Ensure active is always boolean
 });
 
 // Configure multer for file uploads
@@ -324,7 +326,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     
     // Mock token validation - extract user ID
     const userId = token.replace("token-", "");
-    const user = await storageNeon.getUser(userId);
+    const user = await storageNeon.getUserById(userId);
     
     if (!user) {
       return res.status(401).json({ error: "Token inválido" });
@@ -498,11 +500,11 @@ export async function registerRoutes(app: Express): Promise<void> {
 
           const userData = {
             displayName: cleanName,
-            cpf: cleanCpf,
+            cpf: cleanCpf || null, // Handle as null instead of undefined
             phone: formattedPhone,
             password: cleanPassword,
-            cargo: cleanCargo,
-            permission: cleanCargo === 'ADM' ? 'ADM' : 'Colaborador',
+            cargo: cleanCargo || null, // Handle as null instead of undefined  
+            permission: cleanCargo === 'ADM' ? 'ADM' : 'Colaborador', // Always set permission
             role: (cleanCargo === 'ADM' ? 'admin' : 'colaborador') as Role,
             active: true,
             username: formattedPhone // Add username field that was missing
@@ -532,7 +534,13 @@ export async function registerRoutes(app: Express): Promise<void> {
           }
 
           // SAFE TO CREATE - No duplicates found
-          await storageNeon.createUser(validation.data);
+          // Transform data to match expected types
+          const cleanValidationData = {
+            ...validation.data,
+            cargo: validation.data.cargo || null,
+            cpf: validation.data.cpf || null
+          };
+          await storageNeon.createUser(cleanValidationData);
           results.success++;
           results.imported.push(`✅ ${cleanName} (${phone})`);
           console.log(`[IMPORT] Successfully created user: ${cleanName} with phone ${formattedPhone}`);
@@ -660,9 +668,21 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       console.log("POST /api/evaluations - Received data:", JSON.stringify(req.body, null, 2));
       
+      // Remove any createdAt from request body - server will generate it
+      const { createdAt, id, ...cleanData } = req.body;
+      console.log("POST /api/evaluations - Clean data:", JSON.stringify(cleanData, null, 2));
+      
+      // Manual validation instead of using insertEvaluationSchema
+      const requiredFields = ['dateRef', 'evaluator', 'evaluated', 'answers', 'score'];
+      for (const field of requiredFields) {
+        if (!(field in cleanData)) {
+          return res.status(400).json({ error: `Campo obrigatório ausente: ${field}` });
+        }
+      }
+      
       const evaluationData = {
-        ...insertEvaluationSchema.parse(req.body),
-        status: req.body.status || "queued"
+        ...cleanData,
+        status: cleanData.status || "queued"
       };
       console.log("POST /api/evaluations - Parsed data:", JSON.stringify(evaluationData, null, 2));
       
@@ -670,11 +690,14 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       res.status(201).json(evaluation);
     } catch (error) {
-      console.error("POST /api/evaluations - Validation error:", error);
+      console.error("POST /api/evaluations - Error:", error);
       if (error instanceof Error) {
-        console.error("Error details:", error.message);
+        console.error("Error message:", error.message);
       }
-      res.status(400).json({ error: "Dados de avaliação inválidos" });
+      if (error && typeof error === 'object' && 'issues' in error) {
+        console.error("Validation issues:", (error as any).issues);
+      }
+      res.status(400).json({ error: "Erro ao criar avaliação" });
     }
   });
 

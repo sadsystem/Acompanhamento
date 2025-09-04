@@ -86,7 +86,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     const evaluation: Evaluation = {
       ...evaluationData,
       id: `eval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: evaluationData.createdAt instanceof Date ? evaluationData.createdAt : new Date(evaluationData.createdAt),
+      createdAt: new Date(),
       answers: evaluationData.answers as Answer[], // Cast Json to Answer[]
       status: (evaluationData.status || "queued") as "queued" | "synced" // Ensure valid status
     };

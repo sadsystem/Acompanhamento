@@ -179,7 +179,11 @@ export class StorageNeon {
       }
       
       if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+        const result = await this.db.select()
+          .from(schema.evaluations)
+          .where(and(...conditions))
+          .orderBy(desc(schema.evaluations.createdAt));
+        return result;
       }
     }
     
@@ -187,14 +191,20 @@ export class StorageNeon {
     return result;
   }
 
-  async createEvaluation(evaluation: Omit<Evaluation, 'id'>): Promise<Evaluation> {
+  async createEvaluation(evaluation: Omit<Evaluation, 'id' | 'createdAt'>): Promise<Evaluation> {
+    console.log("=== CREATING EVALUATION DEBUG ===");
+    console.log("Input evaluation data:", JSON.stringify(evaluation, null, 2));
+    
     const evaluationData = {
       ...evaluation,
       id: randomUUID(),
       createdAt: new Date()
     };
     
+    console.log("Final evaluation data to insert:", JSON.stringify(evaluationData, null, 2));
+    
     const result = await this.db.insert(schema.evaluations).values(evaluationData).returning();
+    console.log("Evaluation created successfully:", JSON.stringify(result[0], null, 2));
     return result[0];
   }
 

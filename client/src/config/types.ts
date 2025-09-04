@@ -87,10 +87,10 @@ export type TravelRoute = {
   id: string;
   city: string;
   cities: string[]; // lista completa das cidades
-  teamId?: string;
-  vehicleId?: string;
+  teamId?: string | null;
+  vehicleId?: string | null;
   startDate: string; // YYYY-MM-DD
-  endDate?: string; // YYYY-MM-DD when completed
+  endDate?: string | null; // YYYY-MM-DD when completed
   status: "formation" | "active" | "completed";
   createdAt?: string;
   updatedAt?: string;

@@ -84,6 +84,7 @@ export const insertQuestionSchema = createInsertSchema(questions);
 
 export const insertEvaluationSchema = createInsertSchema(evaluations).omit({
   id: true,
+  createdAt: true, // Server will generate this automatically
 });
 
 export const insertTeamSchema = createInsertSchema(teams).omit({

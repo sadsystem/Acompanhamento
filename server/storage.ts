@@ -49,9 +49,11 @@ export class MemStorage implements IStorage {
       {
         id: "u1",
         username: "admin",
+        phone: "(87) 9 1234-5678",
         password: "admin123",
         displayName: "Administrador",
         role: "admin",
+        permission: "ADM",
         active: true,
         cargo: "Gestor",
         cpf: null,
@@ -60,9 +62,11 @@ export class MemStorage implements IStorage {
       {
         id: "u2",
         username: "teste",
+        phone: "(87) 9 9999-0001",
         password: "teste123",
         displayName: "Usuário Teste",
         role: "colaborador",
+        permission: "Colaborador",
         active: true,
         cargo: "Motorista",
         cpf: null,
@@ -71,9 +75,11 @@ export class MemStorage implements IStorage {
       {
         id: "u3",
         username: "maria",
+        phone: "(87) 9 9999-0002",
         password: "123456",
         displayName: "Maria Silva",
         role: "colaborador",
+        permission: "Colaborador",
         active: true,
         cargo: "Ajudante",
         cpf: null,
@@ -82,9 +88,11 @@ export class MemStorage implements IStorage {
       {
         id: "u4",
         username: "joao",
+        phone: "(87) 9 9999-0003",
         password: "123456",
         displayName: "João Santos",
         role: "colaborador",
+        permission: "Colaborador",
         active: true,
         cargo: "Motorista",
         cpf: null,
@@ -93,9 +101,11 @@ export class MemStorage implements IStorage {
       {
         id: "u5",
         username: "carlos",
+        phone: "(87) 9 9999-0004",
         password: "123456",
         displayName: "Carlos Almeida",
         role: "colaborador",
+        permission: "Colaborador",
         active: true,
         cargo: "Ajudante",
         cpf: null,
@@ -167,6 +177,7 @@ export class MemStorage implements IStorage {
       active: insertUser.active ?? true,
       cargo: insertUser.cargo ?? null,
       cpf: insertUser.cpf ?? null,
+      permission: insertUser.permission ?? "Colaborador",
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -187,6 +198,13 @@ export class MemStorage implements IStorage {
 
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    if (!this.users.has(id)) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    this.users.delete(id);
   }
 
   // Evaluation methods
@@ -228,6 +246,7 @@ export class MemStorage implements IStorage {
     const evaluation: Evaluation = {
       ...insertEvaluation,
       id,
+      createdAt: new Date(),
       status: insertEvaluation.status ?? "queued",
     };
     this.evaluations.set(id, evaluation);
@@ -298,7 +317,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation> {
-    const result = await db.insert(evaluations).values(evaluation).returning();
+    const evaluationData = {
+      ...evaluation,
+      createdAt: new Date()
+    };
+    const result = await db.insert(evaluations).values(evaluationData).returning();
     return result[0];
   }
 
