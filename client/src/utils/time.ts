@@ -12,6 +12,23 @@ export function toDateRefBR(d?: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
+// Função para calcular período de dias atrás
+export function getDateRangeBR(daysBack: number): { from: string; to: string } {
+  const today = nowInBrazil();
+  const fromDate = new Date(today);
+  fromDate.setDate(today.getDate() - daysBack);
+  
+  return {
+    from: toDateRefBR(fromDate),
+    to: toDateRefBR(today)
+  };
+}
+
+// Período padrão para dashboard (últimos 7 dias)
+export function getDefaultDashboardPeriod(): { from: string; to: string } {
+  return getDateRangeBR(7);
+}
+
 export function formatDateTimeBR(d?: Date): string {
   const x = d ?? nowInBrazil();
   const dd = String(x.getDate()).padStart(2, '0');

@@ -11,21 +11,53 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend 
 } from "recharts";
-import { TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, Award, Target, Activity } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, Award, Target, Activity, CalendarDays, CalendarRange } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { useStorage } from "../hooks/useStorage";
 import { User, Evaluation } from "../config/types";
 import { QUESTIONS } from "../config/questions";
 import { CONFIG } from "../config/constants";
-import { toDateRefBR, formatDateTimeBRdash } from "../utils/time";
+import { toDateRefBR, formatDateTimeBRdash, getDefaultDashboardPeriod, getDateRangeBR } from "../utils/time";
+
+type PeriodOption = {
+  label: string;
+  days: number;
+};
+
+const PERIOD_OPTIONS: PeriodOption[] = [
+  { label: 'Hoje', days: 0 },
+  { label: '7 Dias', days: 7 },
+  { label: '15 Dias', days: 15 },
+  { label: '30 Dias', days: 30 },
+];
 
 export function DashboardPage() {
-  const [dateFrom, setDateFrom] = useState(toDateRefBR());
-  const [dateTo, setDateTo] = useState(toDateRefBR());
+  // Período padrão: últimos 7 dias
+  const defaultPeriod = getDefaultDashboardPeriod();
+  const [dateFrom, setDateFrom] = useState(defaultPeriod.from);
+  const [dateTo, setDateTo] = useState(defaultPeriod.to);
   const [selectedUser, setSelectedUser] = useState("all");
+  const [selectedPeriod, setSelectedPeriod] = useState<number>(7); // 7 dias como padrão
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
   const storage = useStorage();
+
+  // Função para aplicar período pré-definido
+  const applyPeriod = (days: number) => {
+    if (days === 0) {
+      // Hoje
+      const today = toDateRefBR();
+      setDateFrom(today);
+      setDateTo(today);
+    } else {
+      // Período de N dias
+      const range = getDateRangeBR(days);
+      setDateFrom(range.from);
+      setDateTo(range.to);
+    }
+    setSelectedPeriod(days);
+  };
 
   useEffect(() => {
     loadData();
@@ -260,63 +292,145 @@ export function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-6">
-      {/* Header com filtros */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <Label htmlFor="date-from" className="text-sm font-medium">De</Label>
-            <Input
-              id="date-from"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              data-testid="input-date-from"
-              className="mt-1"
-            />
+      {/* Header com filtros redesenhado - Layout ultra compacto */}
+      <Card className="border-none shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+        <CardContent className="py-4">
+          {/* Layout em uma única linha com título integrado */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Título com ícone + Períodos Rápidos */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-blue-600" />
+                <Label className="text-lg font-semibold text-gray-900 whitespace-nowrap">Filtros de Análise:</Label>
+              </div>
+              <div className="flex gap-2">
+                {PERIOD_OPTIONS.map((option) => (
+                  <Button
+                    key={option.days}
+                    variant={selectedPeriod === option.days ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => applyPeriod(option.days)}
+                    className={`
+                      transition-all duration-200 
+                      ${selectedPeriod === option.days 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
+                        : 'hover:bg-blue-50 hover:border-blue-300 text-gray-700'
+                      }
+                    `}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Botão de Selecionar Período */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-2 hover:bg-blue-50 hover:border-blue-300"
+                >
+                  <CalendarRange className="h-4 w-4" />
+                  Selecionar Período
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="start">
+                <div className="space-y-4">
+                  <div className="text-sm font-medium text-gray-700 mb-3">Período Personalizado</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="date-from" className="text-xs text-gray-600">Data Inicial</Label>
+                      <Input
+                        id="date-from"
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => {
+                          setDateFrom(e.target.value);
+                          setSelectedPeriod(-1);
+                        }}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="date-to" className="text-xs text-gray-600">Data Final</Label>
+                      <Input
+                        id="date-to"
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => {
+                          setDateTo(e.target.value);
+                          setSelectedPeriod(-1);
+                        }}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2">
+                    Período atual: {dateFrom} até {dateTo}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Separador visual */}
+            <div className="h-6 w-px bg-gray-300 mx-2" />
+
+            {/* Filtro de Colaborador */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium text-gray-700 whitespace-nowrap flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                Colaborador:
+              </Label>
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger className="w-44 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {users
+                    .filter(u => u.role === "colaborador")
+                    .map(user => (
+                      <SelectItem key={user.username} value={user.username}>
+                        {user.displayName}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Separador visual */}
+            <div className="h-6 w-px bg-gray-300 mx-2" />
+
+            {/* Ações */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Ações:</Label>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={exportCSV} 
+                  variant="outline" 
+                  size="sm" 
+                  data-testid="button-export-csv"
+                  className="hover:bg-green-50 hover:border-green-300 hover:text-green-700"
+                >
+                  CSV
+                </Button>
+                <Button 
+                  onClick={simulateSync} 
+                  variant="outline" 
+                  size="sm" 
+                  data-testid="button-sync"
+                  className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                >
+                  Sync
+                </Button>
+              </div>
+            </div>
           </div>
-          
-          <div>
-            <Label htmlFor="date-to" className="text-sm font-medium">Até</Label>
-            <Input
-              id="date-to"
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              data-testid="input-date-to"
-              className="mt-1"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="user-filter" className="text-sm font-medium">Colaborador</Label>
-            <Select value={selectedUser} onValueChange={setSelectedUser}>
-              <SelectTrigger data-testid="select-user-filter" className="mt-1">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {users
-                  .filter(u => u.role === "colaborador")
-                  .map(user => (
-                    <SelectItem key={user.username} value={user.username}>
-                      {user.displayName}
-                    </SelectItem>
-                  ))
-                }
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-end gap-2">
-            <Button onClick={exportCSV} variant="outline" size="sm" data-testid="button-export-csv">
-              Exportar CSV
-            </Button>
-            <Button onClick={simulateSync} variant="outline" size="sm" data-testid="button-sync">
-              Sincronizar
-            </Button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* KPIs principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
