@@ -33,7 +33,7 @@ export type Evaluation = {
   dateRef: string;
   evaluator: string;
   evaluated: string;
-  routeId?: string; // Link com a rota (opcional para compatibilidade)
+  routeId?: string | null; // Link com a rota (opcional para compatibilidade)
   answers: Answer[];
   score: number;
   status: "queued" | "synced";

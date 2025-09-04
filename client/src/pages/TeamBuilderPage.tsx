@@ -611,9 +611,14 @@ export function TeamBuilderPage() {
 
     // Preservar dados da equipe e veículo para exibição nas rotas finalizadas
     const preservedTeamData = route.team ? {
+      id: route.team.id,
+      driverUsername: route.team.driverUsername,
+      assistants: route.team.assistants,
       driver: route.team.driver,
-      assistantUsers: route.team.assistantUsers
-    } : null;
+      assistantUsers: route.team.assistantUsers,
+      createdAt: route.team.createdAt,
+      updatedAt: route.team.updatedAt
+    } : undefined;
     
     const preservedVehicleData = route.vehicle;
 
@@ -638,7 +643,7 @@ export function TeamBuilderPage() {
             vehicle: preservedVehicleData
           }
         : r
-    );
+    ) as TravelRouteWithTeam[];
     
     setRoutes(updatedRoutes);
     
@@ -658,7 +663,7 @@ export function TeamBuilderPage() {
       await storage.deleteTeam(route.teamId!);
     }
 
-    updateAvailableUsers(drivers, assistants, teams, updatedRoutes);
+    updateAvailableUsers(drivers, assistants, teams, updatedRoutes as TravelRouteWithTeam[]);
   };
 
   const deleteRoute = async (routeId: string) => {

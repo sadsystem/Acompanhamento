@@ -248,6 +248,7 @@ export class MemStorage implements IStorage {
       id,
       createdAt: new Date(),
       status: insertEvaluation.status ?? "queued",
+      routeId: insertEvaluation.routeId || null
     };
     this.evaluations.set(id, evaluation);
     return evaluation;

@@ -113,7 +113,8 @@ export class MockStorageAdapter implements StorageAdapter {
       id: `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date(),
       answers: evaluationData.answers as Answer[], // Cast Json to Answer[]
-      status: (evaluationData.status || "queued") as "queued" | "synced"
+      status: (evaluationData.status || "queued") as "queued" | "synced",
+      routeId: evaluationData.routeId || null
     };
     this.evaluations.unshift(evaluation);
     return evaluation;
