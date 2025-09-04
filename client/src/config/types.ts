@@ -33,6 +33,7 @@ export type Evaluation = {
   dateRef: string;
   evaluator: string;
   evaluated: string;
+  routeId?: string; // Link com a rota (opcional para compatibilidade)
   answers: Answer[];
   score: number;
   status: "queued" | "synced";
@@ -49,6 +50,7 @@ export type EvaluationFilters = {
   evaluator?: string;
   evaluated?: string;
   status?: string;
+  routeId?: string; // Novo filtro por rota
 };
 
 export type LoginResult = {

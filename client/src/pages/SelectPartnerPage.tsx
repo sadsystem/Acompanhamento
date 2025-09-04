@@ -109,7 +109,20 @@ export function SelectPartnerPage({ currentUser, onSelected, accessibilityMode }
       );
       
       setUsers(partners);
-      setAlreadyEvaluated(new Set(evaluations.map(e => e.evaluated)));
+      
+      // New logic: Check evaluations by routeId directly
+      if (userRoute) {
+        const routeEvaluations = await storage.getEvaluations({
+          evaluator: currentUser.username,
+          routeId: userRoute.id, // Filtro direto por rota atual
+          dateFrom: today,
+          dateTo: today
+        });
+        
+        setAlreadyEvaluated(new Set(routeEvaluations.map(e => e.evaluated)));
+      } else {
+        setAlreadyEvaluated(new Set());
+      }
     } catch (error) {
       console.error("Error loading partner data:", error);
       setHasActiveRoute(false);

@@ -82,6 +82,7 @@ export class ApiStorageAdapter implements StorageAdapter {
     if (filters?.evaluator) params.append('evaluator', filters.evaluator);
     if (filters?.evaluated) params.append('evaluated', filters.evaluated);
     if (filters?.status) params.append('status', filters.status);
+    if (filters?.routeId) params.append('routeId', filters.routeId);
     
     const response = await fetch(`${API_BASE_URL}/evaluations?${params}`);
     if (!response.ok) throw new Error('Failed to fetch evaluations');

@@ -156,6 +156,7 @@ export class StorageNeon {
     evaluator?: string;
     evaluated?: string;
     status?: "queued" | "synced";
+    routeId?: string; // Novo filtro por rota
   }): Promise<Evaluation[]> {
     let query = this.db.select().from(schema.evaluations);
     
@@ -176,6 +177,9 @@ export class StorageNeon {
       }
       if (filters.status) {
         conditions.push(eq(schema.evaluations.status, filters.status));
+      }
+      if (filters.routeId) {
+        conditions.push(eq(schema.evaluations.routeId, filters.routeId));
       }
       
       if (conditions.length > 0) {

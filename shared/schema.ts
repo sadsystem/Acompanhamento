@@ -35,6 +35,7 @@ export const evaluations = pgTable("evaluations", {
   dateRef: text("date_ref").notNull(), // YYYY-MM-DD
   evaluator: text("evaluator").notNull(),
   evaluated: text("evaluated").notNull(),
+  routeId: varchar("route_id").references(() => routes.id), // Link direto com a rota
   answers: json("answers").notNull(), // Answer[]
   score: real("score").notNull(),
   status: text("status").notNull().default("queued"), // "queued" | "synced"

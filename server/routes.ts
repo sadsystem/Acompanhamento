@@ -648,7 +648,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Evaluations routes
   app.get("/api/evaluations", async (req, res) => {
     try {
-      const { dateFrom, dateTo, evaluator, evaluated, status } = req.query;
+      const { dateFrom, dateTo, evaluator, evaluated, status, routeId } = req.query;
       
       const filters: any = {};
       if (dateFrom) filters.dateFrom = String(dateFrom);
@@ -656,6 +656,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (evaluator) filters.evaluator = String(evaluator);
       if (evaluated) filters.evaluated = String(evaluated);
       if (status) filters.status = String(status);
+      if (routeId) filters.routeId = String(routeId);
       
       const evaluations = await storageNeon.getEvaluations(filters);
       res.json(evaluations);
@@ -682,7 +683,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const evaluationData = {
         ...cleanData,
-        status: cleanData.status || "queued"
+        status: cleanData.status || "queued",
+        routeId: cleanData.routeId || null // Incluir routeId (opcional para compatibilidade)
       };
       console.log("POST /api/evaluations - Parsed data:", JSON.stringify(evaluationData, null, 2));
       

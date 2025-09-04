@@ -30,6 +30,7 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved, accessibili
   const [phase, setPhase] = useState<"idle" | "sending" | "success">("idle");
   const [currentTime, setCurrentTime] = useState(() => nowInBrazil());
   const [invalidKeys, setInvalidKeys] = useState<Set<string>>(new Set());
+  const [currentRouteId, setCurrentRouteId] = useState<string | null>(null);
   
   const storage = useStorage();
 
@@ -37,6 +38,33 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved, accessibili
     const interval = setInterval(() => setCurrentTime(nowInBrazil()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Buscar rota ativa do usuário atual
+  useEffect(() => {
+    const fetchCurrentRoute = async () => {
+      try {
+        const [routes, teams] = await Promise.all([
+          storage.getTravelRoutes(),
+          storage.getTeams()
+        ]);
+
+        // Encontrar rota ativa do usuário
+        const activeRoutes = routes.filter(r => r.status === "active");
+        for (const route of activeRoutes) {
+          const team = teams.find(t => t.id === route.teamId);
+          if (team?.driverUsername === currentUser.username || 
+              team?.assistants.includes(currentUser.username)) {
+            setCurrentRouteId(route.id);
+            break;
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching current route:", error);
+      }
+    };
+
+    fetchCurrentRoute();
+  }, [currentUser.username, storage]);
 
   const validate = (): string[] => {
     const errors: string[] = [];
@@ -97,24 +125,28 @@ export function ChecklistPage({ currentUser, evaluatedUser, onSaved, accessibili
         dateRef: ref,
         evaluator: currentUser.username,
         evaluated: evaluatedUser.username,
+        routeId: currentRouteId, // Incluir ID da rota ativa
         answers,
         score,
         status: "queued" as const
       };
       
-      // Check for existing evaluation
-      const existingEvaluations = await storage.getEvaluations({
-        evaluator: currentUser.username,
-        evaluated: evaluatedUser.username,
-        dateFrom: ref,
-        dateTo: ref
-      });
-      
-      if (existingEvaluations.length > 0) {
-        alert("Já existe uma avaliação para este parceiro neste dia. Tente novamente amanhã.");
-        setSaving(false);
-        onSaved();
-        return;
+      // Check for existing evaluation in current route
+      if (currentRouteId) {
+        const existingEvaluations = await storage.getEvaluations({
+          evaluator: currentUser.username,
+          evaluated: evaluatedUser.username,
+          routeId: currentRouteId, // Filtrar por rota específica
+          dateFrom: ref,
+          dateTo: ref
+        });
+        
+        if (existingEvaluations.length > 0) {
+          alert("Já existe uma avaliação para este parceiro nesta rota. Você só pode avaliar uma vez por rota.");
+          setSaving(false);
+          onSaved();
+          return;
+        }
       }
       
       await storage.createEvaluation(evaluationData);
