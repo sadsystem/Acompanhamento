@@ -503,61 +503,206 @@ export function DashboardPage() {
         {/* Aba Visão Geral */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Gráfico de Tendência Semanal */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Tendência Semanal
+            {/* Tendência Diária - Design Renovado */}
+            <Card className="border-0 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                  <Activity className="h-5 w-5 text-blue-600" />
+                  Tendência Diária
                 </CardTitle>
+                <p className="text-sm text-gray-600">Evolução da performance média diária no período selecionado</p>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={stats.weeklyTrend}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip formatter={(value, name) => [`${value}%`, 'Score Médio']} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="score" 
-                      stroke="#22c55e" 
-                      strokeWidth={3}
-                      dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+              <CardContent className="space-y-4">
+                {/* Gráfico principal */}
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={stats.weeklyTrend} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="date" 
+                        axisLine={false}
+                        tickLine={false}
+                        fontSize={12}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        axisLine={false}
+                        tickLine={false}
+                        fontSize={12}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <Tooltip 
+                        formatter={(value, name) => [`${value}%`, 'Performance']}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="score" 
+                        stroke="#22c55e" 
+                        strokeWidth={3}
+                        dot={{ fill: '#22c55e', strokeWidth: 2, r: 5 }}
+                        activeDot={{ r: 6, fill: '#16a34a' }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Métricas de resumo em 3 cards lado a lado */}
+                <div className="grid grid-cols-3 gap-4 pt-4">
+                  {/* Card Maior Score - Azul */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {stats.weeklyTrend.length > 0 ? Math.max(...stats.weeklyTrend.map(d => d.score)).toFixed(1) : 0}%
+                    </div>
+                    <div className="text-sm text-blue-600 font-medium">Maior Score</div>
+                  </div>
+
+                  {/* Card Média - Verde */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {stats.weeklyTrend.length > 0 ? 
+                        (stats.weeklyTrend.reduce((sum, d) => sum + d.score, 0) / stats.weeklyTrend.length).toFixed(1) : 0}%
+                    </div>
+                    <div className="text-sm text-green-600 font-medium">Média</div>
+                  </div>
+
+                  {/* Card Menor Score - Laranja */}
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {stats.weeklyTrend.length > 0 ? Math.min(...stats.weeklyTrend.map(d => d.score)).toFixed(1) : 0}%
+                    </div>
+                    <div className="text-sm text-orange-600 font-medium">Menor Score</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Distribuição de Scores */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5" />
+            {/* Distribuição de Performance - Design Renovado */}
+            <Card className="border-0 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                  <Award className="h-5 w-5 text-purple-600" />
                   Distribuição de Performance
                 </CardTitle>
+                <p className="text-sm text-gray-600">Classificação das avaliações por faixas de pontuação no período selecionado</p>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={stats.distributionData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                      label={({ range, count }) => `${range}: ${count}`}
-                    >
-                      {stats.distributionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+              <CardContent className="space-y-6">
+                {/* Layout principal: Gráfico à esquerda, métricas à direita */}
+                <div className="grid grid-cols-2 gap-8">
+                  {/* Gráfico em formato donut - LADO ESQUERDO */}
+                  <div className="flex justify-center items-center">
+                    <ResponsiveContainer width={200} height={200}>
+                      <PieChart>
+                        <Pie
+                          data={stats.distributionData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={90}
+                          paddingAngle={2}
+                          dataKey="count"
+                        >
+                          {stats.distributionData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value, name, props) => [
+                            `${value} avaliações`, 
+                            props.payload.range
+                          ]}
+                          contentStyle={{
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Métricas e Cards - LADO DIREITO */}
+                  <div className="space-y-6">
+                    {/* Métricas principais lado a lado */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-blue-600">{stats.totalEvaluations}</div>
+                        <div className="text-sm text-gray-600 font-medium">Total</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-blue-600">{Math.round(stats.averageScore)}%</div>
+                        <div className="text-sm text-gray-600 font-medium">Média</div>
+                      </div>
+                    </div>
+
+                    {/* Cards das categorias com design neutro */}
+                    <div className="space-y-2">
+                      {[
+                        { range: '41-60%', label: 'Regular', color: '#eab308' },
+                        { range: '61-80%', label: 'Bom', color: '#84cc16' },
+                        { range: '81-100%', label: 'Excelente', color: '#22c55e' }
+                      ].map(item => {
+                        const data = stats.distributionData.find(d => d.range === item.range);
+                        const count = data?.count || 0;
+                        const percentage = stats.totalEvaluations > 0 ? (count / stats.totalEvaluations * 100).toFixed(1) : '0.0';
+                        
+                        return (
+                          <div key={item.range} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: item.color }}
+                              ></div>
+                              <span className="text-sm font-medium text-gray-900">{item.range}</span>
+                              <span className="text-sm text-gray-500">{item.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-semibold text-gray-900">{count}</span>
+                              <span className="text-xs text-gray-500">{percentage}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Análise automática com design específico */}
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mt-0.5">
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-blue-900 mb-1">Análise de Performance:</div>
+                      <div className="text-sm text-blue-800">
+                        {(() => {
+                          const excellentCount = stats.distributionData.find(d => d.range === '81-100%')?.count || 0;
+                          const goodCount = stats.distributionData.find(d => d.range === '61-80%')?.count || 0;
+                          const positiveCount = excellentCount + goodCount;
+                          const positivePercentage = stats.totalEvaluations > 0 ? (positiveCount / stats.totalEvaluations * 100) : 0;
+                          
+                          if (positivePercentage >= 80) {
+                            return 'Excelente! 80% das avaliações estão nas faixas positivas (61-100%).';
+                          } else if (positivePercentage >= 60) {
+                            return 'Boa performance! Maioria das avaliações estão nas faixas positivas.';
+                          } else if (positivePercentage >= 40) {
+                            return 'Performance moderada. Há espaço para melhorias.';
+                          } else {
+                            return 'Atenção necessária. Muitas avaliações abaixo do esperado.';
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
