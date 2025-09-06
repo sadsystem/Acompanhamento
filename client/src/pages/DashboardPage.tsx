@@ -172,8 +172,8 @@ export function DashboardPage() {
 
     // Distribuição de scores
     const scoreRanges = [
-      { range: '0-20%', min: 0, max: 20, count: 0, color: '#ef4444' },
-      { range: '21-40%', min: 21, max: 40, count: 0, color: '#f97316' },
+      { range: '0-20%', min: 0, max: 20, count: 0, color: '#dc2626' },
+      { range: '21-40%', min: 21, max: 40, count: 0, color: '#ea580c' },
       { range: '41-60%', min: 41, max: 60, count: 0, color: '#eab308' },
       { range: '61-80%', min: 61, max: 80, count: 0, color: '#84cc16' },
       { range: '81-100%', min: 81, max: 100, count: 0, color: '#22c55e' }
@@ -192,7 +192,7 @@ export function DashboardPage() {
       topPerformers,
       performanceByCategory,
       weeklyTrend,
-      distributionData: scoreRanges.filter(r => r.count > 0),
+      distributionData: scoreRanges, // Retorna todos os ranges, mesmo com count 0
       individualStats: userStats
     };
   }, [evaluations]);
@@ -583,7 +583,7 @@ export function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Distribuição de Performance - Design Renovado */}
+            {/* Distribuição de Performance - Design Compacto */}
             <Card className="border-0 shadow-lg">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
@@ -592,59 +592,144 @@ export function DashboardPage() {
                 </CardTitle>
                 <p className="text-sm text-gray-600">Classificação das avaliações por faixas de pontuação no período selecionado</p>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4">
                 {/* Layout principal: Gráfico à esquerda, métricas à direita */}
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-2 gap-6">
                   {/* Gráfico em formato donut - LADO ESQUERDO */}
-                  <div className="flex justify-center items-center">
-                    <ResponsiveContainer width={200} height={200}>
-                      <PieChart>
-                        <Pie
-                          data={stats.distributionData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={90}
-                          paddingAngle={2}
-                          dataKey="count"
-                        >
-                          {stats.distributionData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          formatter={(value, name, props) => [
-                            `${value} avaliações`, 
-                            props.payload.range
-                          ]}
-                          contentStyle={{
-                            backgroundColor: 'white',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <div className="flex justify-center items-center relative">
+                    {/* Sombra/Gradiente de fundo para o gráfico */}
+                    <div className="absolute inset-0 flex justify-center items-center">
+                      <div className="w-52 h-52 rounded-full bg-gradient-to-br from-gray-100 via-gray-50 to-white shadow-2xl"></div>
+                    </div>
+                    
+                    {/* Container do gráfico com posicionamento relativo */}
+                    <div className="relative z-10">
+                      <ResponsiveContainer width={220} height={220}>
+                        <PieChart>
+                          <defs>
+                            {/* Gradientes para cada cor */}
+                            <linearGradient id="redGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#fca5a5" />
+                              <stop offset="100%" stopColor="#dc2626" />
+                            </linearGradient>
+                            <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#fdba74" />
+                              <stop offset="100%" stopColor="#ea580c" />
+                            </linearGradient>
+                            <linearGradient id="yellowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#fde047" />
+                              <stop offset="100%" stopColor="#eab308" />
+                            </linearGradient>
+                            <linearGradient id="lightGreenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#bef264" />
+                              <stop offset="100%" stopColor="#84cc16" />
+                            </linearGradient>
+                            <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#86efac" />
+                              <stop offset="100%" stopColor="#22c55e" />
+                            </linearGradient>
+                          </defs>
+                          <Pie
+                            data={stats.distributionData.filter(d => d.count > 0)}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            paddingAngle={3}
+                            dataKey="count"
+                            stroke="rgba(255,255,255,0.8)"
+                            strokeWidth={2}
+                          >
+                            {stats.distributionData.filter(d => d.count > 0).map((entry, index) => {
+                              // Mapear cores para gradientes
+                              const gradientMap: Record<string, string> = {
+                                '#dc2626': 'url(#redGradient)',
+                                '#ea580c': 'url(#orangeGradient)', 
+                                '#eab308': 'url(#yellowGradient)',
+                                '#84cc16': 'url(#lightGreenGradient)',
+                                '#22c55e': 'url(#greenGradient)'
+                              };
+                              return (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={gradientMap[entry.color] || entry.color}
+                                  style={{
+                                    filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                />
+                              );
+                            })}
+                          </Pie>
+                          <Tooltip 
+                            formatter={(value, name, props) => [
+                              `${value} avaliação${value !== 1 ? 'ões' : ''}`, 
+                              props.payload.range
+                            ]}
+                            contentStyle={{
+                              backgroundColor: 'white',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '12px',
+                              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                              fontSize: '14px'
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      
+                      {/* Texto central com a média */}
+                      <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none">
+                        <div className={`text-3xl font-bold ${
+                          stats.averageScore >= 80 ? 'text-green-600' :
+                          stats.averageScore >= 60 ? 'text-blue-600' :
+                          stats.averageScore >= 40 ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {Math.round(stats.averageScore)}%
+                        </div>
+                        <div className="text-sm font-medium text-gray-600 mt-1">Média</div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Métricas e Cards - LADO DIREITO */}
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {/* Métricas principais lado a lado */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-600">{stats.totalEvaluations}</div>
-                        <div className="text-sm text-gray-600 font-medium">Total</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center bg-blue-50 rounded-lg p-3 border border-blue-100">
+                        <div className="text-2xl font-bold text-blue-700">{stats.totalEvaluations}</div>
+                        <div className="text-xs text-blue-600 font-medium">Total</div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-600">{Math.round(stats.averageScore)}%</div>
-                        <div className="text-sm text-gray-600 font-medium">Média</div>
+                      <div className={`text-center rounded-lg p-3 border ${
+                        stats.averageScore >= 80 ? 'bg-green-50 border-green-100' :
+                        stats.averageScore >= 60 ? 'bg-blue-50 border-blue-100' :
+                        stats.averageScore >= 40 ? 'bg-yellow-50 border-yellow-100' :
+                        'bg-red-50 border-red-100'
+                      }`}>
+                        <div className={`text-2xl font-bold ${
+                          stats.averageScore >= 80 ? 'text-green-700' :
+                          stats.averageScore >= 60 ? 'text-blue-700' :
+                          stats.averageScore >= 40 ? 'text-yellow-700' :
+                          'text-red-700'
+                        }`}>
+                          {Math.round(stats.averageScore)}%
+                        </div>
+                        <div className={`text-xs font-medium ${
+                          stats.averageScore >= 80 ? 'text-green-600' :
+                          stats.averageScore >= 60 ? 'text-blue-600' :
+                          stats.averageScore >= 40 ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          Média
+                        </div>
                       </div>
                     </div>
 
-                    {/* Cards das categorias com design neutro */}
+                    {/* Cards das categorias - Design compacto em uma linha */}
                     <div className="space-y-2">
                       {[
+                        { range: '0-20%', label: 'Crítico', color: '#dc2626' },
+                        { range: '21-40%', label: 'Ruim', color: '#ea580c' },
                         { range: '41-60%', label: 'Regular', color: '#eab308' },
                         { range: '61-80%', label: 'Bom', color: '#84cc16' },
                         { range: '81-100%', label: 'Excelente', color: '#22c55e' }
@@ -652,20 +737,37 @@ export function DashboardPage() {
                         const data = stats.distributionData.find(d => d.range === item.range);
                         const count = data?.count || 0;
                         const percentage = stats.totalEvaluations > 0 ? (count / stats.totalEvaluations * 100).toFixed(1) : '0.0';
+                        const hasData = count > 0;
                         
                         return (
-                          <div key={item.range} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                          <div 
+                            key={item.range} 
+                            className={`flex items-center justify-between p-2.5 rounded-lg border transition-all duration-200 ${
+                              hasData 
+                                ? 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm' 
+                                : 'bg-gray-50/50 border-gray-100 opacity-70'
+                            }`}
+                          >
                             <div className="flex items-center gap-3">
                               <div 
-                                className="w-3 h-3 rounded-full" 
+                                className={`w-3 h-3 rounded-full flex-shrink-0 ${hasData ? 'shadow-sm' : ''}`}
                                 style={{ backgroundColor: item.color }}
                               ></div>
-                              <span className="text-sm font-medium text-gray-900">{item.range}</span>
-                              <span className="text-sm text-gray-500">{item.label}</span>
+                              <span className={`text-sm font-medium ${hasData ? 'text-gray-900' : 'text-gray-500'}`}>
+                                {item.range} {item.label}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-lg font-semibold text-gray-900">{count}</span>
-                              <span className="text-xs text-gray-500">{percentage}%</span>
+                              <span className={`text-lg font-bold ${hasData ? 'text-gray-900' : 'text-gray-400'}`}>
+                                {count}
+                              </span>
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                hasData 
+                                  ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                                  : 'bg-gray-100 text-gray-400 border border-gray-200'
+                              }`}>
+                                {percentage}%
+                              </span>
                             </div>
                           </div>
                         );
@@ -674,29 +776,55 @@ export function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Análise automática com design específico */}
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mt-0.5">
-                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                {/* Análise inteligente compacta */}
+                <div className={`p-3 rounded-lg border-l-4 ${
+                  stats.averageScore >= 80 ? 'bg-green-50 border-green-400' :
+                  stats.averageScore >= 60 ? 'bg-blue-50 border-blue-400' :
+                  stats.averageScore >= 40 ? 'bg-yellow-50 border-yellow-400' :
+                  'bg-red-50 border-red-400'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
+                      stats.averageScore >= 80 ? 'bg-green-500' :
+                      stats.averageScore >= 60 ? 'bg-blue-500' :
+                      stats.averageScore >= 40 ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`}>
+                      <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-blue-900 mb-1">Análise de Performance:</div>
-                      <div className="text-sm text-blue-800">
+                      <div className={`text-xs font-semibold ${
+                        stats.averageScore >= 80 ? 'text-green-900' :
+                        stats.averageScore >= 60 ? 'text-blue-900' :
+                        stats.averageScore >= 40 ? 'text-yellow-900' :
+                        'text-red-900'
+                      }`}>
+                        Análise de Performance:
+                      </div>
+                      <div className={`text-xs ${
+                        stats.averageScore >= 80 ? 'text-green-800' :
+                        stats.averageScore >= 60 ? 'text-blue-800' :
+                        stats.averageScore >= 40 ? 'text-yellow-800' :
+                        'text-red-800'
+                      }`}>
                         {(() => {
-                          const excellentCount = stats.distributionData.find(d => d.range === '81-100%')?.count || 0;
-                          const goodCount = stats.distributionData.find(d => d.range === '61-80%')?.count || 0;
-                          const positiveCount = excellentCount + goodCount;
-                          const positivePercentage = stats.totalEvaluations > 0 ? (positiveCount / stats.totalEvaluations * 100) : 0;
+                          const positive = (stats.distributionData.find(d => d.range === '81-100%')?.count || 0) + 
+                                         (stats.distributionData.find(d => d.range === '61-80%')?.count || 0);
+                          const critical = (stats.distributionData.find(d => d.range === '0-20%')?.count || 0) + 
+                                         (stats.distributionData.find(d => d.range === '21-40%')?.count || 0);
+                          const positivePercentage = stats.totalEvaluations > 0 ? (positive / stats.totalEvaluations * 100) : 0;
+                          const avgScore = Math.round(stats.averageScore);
                           
-                          if (positivePercentage >= 80) {
-                            return 'Excelente! 80% das avaliações estão nas faixas positivas (61-100%).';
-                          } else if (positivePercentage >= 60) {
-                            return 'Boa performance! Maioria das avaliações estão nas faixas positivas.';
-                          } else if (positivePercentage >= 40) {
-                            return 'Performance moderada. Há espaço para melhorias.';
+                          if (avgScore >= 80) {
+                            return `Excelente! Média de ${avgScore}% com ${positivePercentage.toFixed(0)}% das avaliações positivas.`;
+                          } else if (avgScore >= 60) {
+                            return `Boa performance! Média de ${avgScore}% com ${positivePercentage.toFixed(0)}% das avaliações nas faixas positivas.`;
+                          } else if (avgScore >= 40) {
+                            return `Performance moderada (${avgScore}%). Foque em melhorar os pontos críticos.`;
+                          } else if (critical > 0) {
+                            return `Atenção! Média baixa (${avgScore}%) com ${critical} avaliação${critical > 1 ? 'ões' : ''} crítica${critical > 1 ? 's' : ''}.`;
                           } else {
-                            return 'Atenção necessária. Muitas avaliações abaixo do esperado.';
+                            return `Performance abaixo do esperado (${avgScore}%). Análise necessária.`;
                           }
                         })()}
                       </div>
