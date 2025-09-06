@@ -11,13 +11,18 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend 
 } from "recharts";
-import { TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, Award, Target, Activity, CalendarDays, CalendarRange, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, Award, Target, Activity, CalendarDays, CalendarRange, BarChart3, Download, FileText, FileSpreadsheet, Search } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../components/ui/command";
 import { useStorage } from "../hooks/useStorage";
 import { User, Evaluation } from "../config/types";
 import { QUESTIONS } from "../config/questions";
 import { CONFIG } from "../config/constants";
-import { toDateRefBR, formatDateTimeBRdash, getDefaultDashboardPeriod, getDateRangeBR } from "../utils/time";
+import { toDateRefBR, formatDateTimeBRdash, getDefaultDashboardPeriod, getDateRangeBR, formatDateBR } from "../utils/time";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 type PeriodOption = {
   label: string;
@@ -40,6 +45,8 @@ export function DashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<number>(7); // 7 dias como padrão
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [userSearchOpen, setUserSearchOpen] = useState(false);
   
   const storage = useStorage();
 
@@ -348,42 +355,170 @@ export function DashboardPage() {
     alert(`Sincronizados: ${evaluations.length} registros`);
   };
 
+  const exportToXLSX = () => {
+    try {
+      const headers = [
+        "ID", "Data Criação", "Data Referência", "Avaliador", "Avaliado", "Score (%)",
+        ...QUESTIONS.flatMap(q => [`${q.text} - Resposta`, `${q.text} - Justificativa`])
+      ];
+      
+      const rows = evaluations.map(evaluation => {
+        const row: any[] = [
+          evaluation.id,
+          formatDateTimeBRdash(new Date(evaluation.createdAt)),
+          evaluation.dateRef,
+          getUserDisplayName(evaluation.evaluator),
+          getUserDisplayName(evaluation.evaluated),
+          formatPercentage((evaluation.score || 0) * 100)
+        ];
+        
+        QUESTIONS.forEach(question => {
+          const answer = evaluation.answers.find(a => a.questionId === question.id);
+          row.push(answer ? (answer.value ? "SIM" : "NÃO") : "");
+          row.push(answer?.reason || "");
+        });
+        
+        return row;
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX.utils.book_new();
+      
+      // Configurar largura das colunas
+      const colWidths = [
+        { wch: 36 }, // ID
+        { wch: 18 }, // Data Criação
+        { wch: 15 }, // Data Referência
+        { wch: 20 }, // Avaliador
+        { wch: 20 }, // Avaliado
+        { wch: 10 }, // Score
+        ...QUESTIONS.flatMap(() => [{ wch: 15 }, { wch: 30 }]) // Respostas e justificativas
+      ];
+      ws['!cols'] = colWidths;
+      
+      XLSX.utils.book_append_sheet(wb, ws, "Avaliações");
+      
+      const fileName = `avaliacoes_${dateFrom.replace(/-/g, '')}_${dateTo.replace(/-/g, '')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      setExportDialogOpen(false);
+    } catch (error) {
+      console.error('Erro ao exportar XLSX:', error);
+      alert('Erro ao exportar planilha. Verifique o console para mais detalhes.');
+    }
+  };
+
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // Título do relatório
+      doc.setFontSize(16);
+      doc.text('Relatório de Performance - Dashboard', 20, 20);
+      
+      // Período
+      doc.setFontSize(12);
+      doc.text(`Período: ${formatDateBR(dateFrom)} até ${formatDateBR(dateTo)}`, 20, 35);
+      
+      if (selectedUser !== "all") {
+        doc.text(`Colaborador: ${getUserDisplayName(selectedUser)}`, 20, 45);
+      }
+      
+      let yPosition = 60;
+      
+      // Métricas principais
+      doc.setFontSize(14);
+      doc.text('Métricas Principais', 20, yPosition);
+      yPosition += 15;
+      
+      doc.setFontSize(10);
+      const metrics = [
+        [`Total de Avaliações: ${stats.totalEvaluations}`],
+        [`Colaboradores Únicos: ${stats.uniqueUsers}`],
+        [`Score Médio: ${formatPercentage((stats.averageScore || 0) * 100)}`],
+        [`Alertas Ativos: ${stats.topPerformers.filter(p => (p.average || 0) < 0.3).length}`]
+      ];
+      
+      autoTable(doc, {
+        head: [['Métricas']],
+        body: metrics,
+        startY: yPosition,
+        theme: 'grid',
+        styles: { fontSize: 10 }
+      });
+      
+      yPosition = (doc as any).lastAutoTable.finalY + 20;
+      
+      // Performance por Categoria
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.text('Performance por Categoria', 20, yPosition);
+      yPosition += 10;
+      
+      const categoryData = stats.performanceByCategory.map(item => [
+        item.fullName,
+        `${formatPercentage(item.percentage || 0)}`,
+        `${item.good}/${item.total}`
+      ]);
+      
+      autoTable(doc, {
+        head: [['Categoria', 'Performance', 'Positivas/Total']],
+        body: categoryData,
+        startY: yPosition,
+        theme: 'striped',
+        styles: { fontSize: 9 }
+      });
+      
+      const fileName = `relatorio_dashboard_${dateFrom.replace(/-/g, '')}_${dateTo.replace(/-/g, '')}.pdf`;
+      doc.save(fileName);
+      setExportDialogOpen(false);
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      alert('Erro ao exportar PDF. Verifique o console para mais detalhes.');
+    }
+  };
+
   const getUserDisplayName = (username: string) => {
     return users.find(u => u.username === username)?.displayName || username;
   };
 
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-6">
-      {/* Header com filtros redesenhado - Layout ultra compacto */}
+      {/* Header com filtros redesenhado */}
       <Card className="border-none shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
         <CardContent className="py-4">
-          {/* Layout em uma única linha com título integrado */}
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Título com ícone + Períodos Rápidos */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-blue-600" />
-                <Label className="text-lg font-semibold text-gray-900 whitespace-nowrap">Filtros de Análise:</Label>
-              </div>
-              <div className="flex gap-2">
-                {PERIOD_OPTIONS.map((option) => (
-                  <Button
-                    key={option.days}
-                    variant={selectedPeriod === option.days ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => applyPeriod(option.days)}
-                    className={`
-                      transition-all duration-200 
-                      ${selectedPeriod === option.days 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
-                        : 'hover:bg-blue-50 hover:border-blue-300 text-gray-700'
-                      }
-                    `}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
+          {/* Título centralizado */}
+          <div className="text-center mb-4">
+            <div className="flex items-center justify-center gap-2">
+              <CalendarDays className="h-5 w-5 text-blue-600" />
+              <Label className="text-lg font-semibold text-gray-900">Filtros de Análise</Label>
+            </div>
+          </div>
+
+          {/* Conteúdo dos filtros */}
+          <div className="flex flex-wrap items-center gap-4 justify-center">
+            {/* Períodos Rápidos */}
+            <div className="flex gap-2">
+              {PERIOD_OPTIONS.map((option) => (
+                <Button
+                  key={option.days}
+                  variant={selectedPeriod === option.days ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => applyPeriod(option.days)}
+                  className={`
+                    transition-all duration-200 
+                    ${selectedPeriod === option.days 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
+                      : 'hover:bg-blue-50 hover:border-blue-300 text-gray-700'
+                    }
+                  `}
+                >
+                  {option.label}
+                </Button>
+              ))}
             </div>
 
             {/* Botão de Selecionar Período */}
@@ -398,7 +533,7 @@ export function DashboardPage() {
                   Selecionar Período
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-4" align="start">
+              <PopoverContent className="w-80 p-4" align="center">
                 <div className="space-y-4">
                   <div className="text-sm font-medium text-gray-700 mb-3">Período Personalizado</div>
                   <div className="grid grid-cols-2 gap-3">
@@ -430,7 +565,7 @@ export function DashboardPage() {
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-2">
-                    Período atual: {dateFrom} até {dateTo}
+                    Período atual: {formatDateBR(dateFrom)} até {formatDateBR(dateTo)}
                   </div>
                 </div>
               </PopoverContent>
@@ -439,56 +574,130 @@ export function DashboardPage() {
             {/* Separador visual */}
             <div className="h-6 w-px bg-gray-300 mx-2" />
 
-            {/* Filtro de Colaborador */}
+            {/* Filtro de Colaborador com busca */}
             <div className="flex items-center gap-2">
               <Label className="text-sm font-medium text-gray-700 whitespace-nowrap flex items-center gap-1">
                 <Users className="h-4 w-4" />
                 Colaborador:
               </Label>
-              <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger className="w-44 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {users
-                    .filter(u => u.role === "colaborador")
-                    .map(user => (
-                      <SelectItem key={user.username} value={user.username}>
-                        {user.displayName}
-                      </SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
+              <Popover open={userSearchOpen} onOpenChange={setUserSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={userSearchOpen}
+                    className="w-48 justify-between hover:bg-blue-50 hover:border-blue-300"
+                  >
+                    {selectedUser === "all" 
+                      ? "Todos" 
+                      : getUserDisplayName(selectedUser)
+                    }
+                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar colaborador..." className="h-9" />
+                    <CommandList>
+                      <CommandEmpty>Nenhum colaborador encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          key="all"
+                          value="all"
+                          onSelect={() => {
+                            setSelectedUser("all");
+                            setUserSearchOpen(false);
+                          }}
+                        >
+                          Todos
+                        </CommandItem>
+                        {users
+                          .filter(u => u.role === "colaborador")
+                          .map(user => (
+                            <CommandItem
+                              key={user.username}
+                              value={user.displayName}
+                              onSelect={() => {
+                                setSelectedUser(user.username);
+                                setUserSearchOpen(false);
+                              }}
+                            >
+                              {user.displayName}
+                            </CommandItem>
+                          ))
+                        }
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Separador visual */}
             <div className="h-6 w-px bg-gray-300 mx-2" />
 
-            {/* Ações */}
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Ações:</Label>
-              <div className="flex gap-2">
-                <Button 
-                  onClick={exportCSV} 
-                  variant="outline" 
-                  size="sm" 
-                  data-testid="button-export-csv"
-                  className="hover:bg-green-50 hover:border-green-300 hover:text-green-700"
-                >
-                  CSV
-                </Button>
-                <Button 
-                  onClick={simulateSync} 
-                  variant="outline" 
-                  size="sm" 
-                  data-testid="button-sync"
-                  className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
-                >
-                  Sync
-                </Button>
-              </div>
+            {/* Botões de Ação */}
+            <div className="flex gap-2">
+              <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="hover:bg-green-50 hover:border-green-300 hover:text-green-700 flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exportar
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Download className="h-5 w-5" />
+                      Exportar Relatório
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="text-sm text-gray-600 mb-4">
+                      Selecione o formato de exportação para o período de {formatDateBR(dateFrom)} até {formatDateBR(dateTo)}
+                      {selectedUser !== "all" && ` - Colaborador: ${getUserDisplayName(selectedUser)}`}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button 
+                        onClick={exportToXLSX}
+                        variant="outline"
+                        className="h-20 flex flex-col items-center gap-2 hover:bg-green-50 hover:border-green-300"
+                      >
+                        <FileSpreadsheet className="h-8 w-8 text-green-600" />
+                        <div className="text-center">
+                          <div className="font-medium">XLSX</div>
+                          <div className="text-xs text-gray-500">Planilha de dados</div>
+                        </div>
+                      </Button>
+                      <Button 
+                        onClick={exportToPDF}
+                        variant="outline"
+                        className="h-20 flex flex-col items-center gap-2 hover:bg-red-50 hover:border-red-300"
+                      >
+                        <FileText className="h-8 w-8 text-red-600" />
+                        <div className="text-center">
+                          <div className="font-medium">PDF</div>
+                          <div className="text-xs text-gray-500">Relatório gráfico</div>
+                        </div>
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Button 
+                onClick={simulateSync} 
+                variant="outline" 
+                size="sm" 
+                className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 flex items-center gap-2"
+              >
+                <Activity className="h-4 w-4" />
+                Sync
+              </Button>
             </div>
           </div>
         </CardContent>

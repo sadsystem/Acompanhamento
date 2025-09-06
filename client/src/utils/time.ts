@@ -45,3 +45,10 @@ export function formatDateTimeBRdash(d?: Date): string {
   const [date, time] = dt.split(' ');
   return `${date} - ${time}`;
 }
+
+// Converter data YYYY-MM-DD para DD-MM-YYYY
+export function formatDateBR(dateString: string): string {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  return `${day}-${month}-${year}`;
+}
