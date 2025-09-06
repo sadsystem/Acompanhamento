@@ -23,6 +23,7 @@ import { toDateRefBR, formatDateTimeBRdash, getDefaultDashboardPeriod, getDateRa
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import html2canvas from 'html2canvas';
 
 type PeriodOption = {
   label: string;
@@ -407,77 +408,98 @@ export function DashboardPage() {
     }
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     try {
-      const doc = new jsPDF();
+      setExportDialogOpen(false); // Fechar o dialog primeiro para não aparecer na captura
+      
+      // Aguardar um pouco para o dialog fechar
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const margin = 15;
+      const contentWidth = pageWidth - (margin * 2);
       
       // Título do relatório
-      doc.setFontSize(16);
-      doc.text('Relatório de Performance - Dashboard', 20, 20);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Relatório de Performance - Dashboard', margin, 20);
       
       // Período
       doc.setFontSize(12);
-      doc.text(`Período: ${formatDateBR(dateFrom)} até ${formatDateBR(dateTo)}`, 20, 35);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Período: ${formatDateBR(dateFrom)} até ${formatDateBR(dateTo)}`, margin, 30);
       
       if (selectedUser !== "all") {
-        doc.text(`Colaborador: ${getUserDisplayName(selectedUser)}`, 20, 45);
+        doc.text(`Colaborador: ${getUserDisplayName(selectedUser)}`, margin, 38);
       }
       
-      let yPosition = 60;
+      let yPosition = 50;
       
-      // Métricas principais
-      doc.setFontSize(14);
-      doc.text('Métricas Principais', 20, yPosition);
-      yPosition += 15;
+      // Função para capturar e adicionar elemento ao PDF
+      const captureAndAddElement = async (elementId: string, title: string) => {
+        const element = document.getElementById(elementId);
+        if (!element) {
+          console.warn(`Elemento ${elementId} não encontrado`);
+          return yPosition;
+        }
+        
+        try {
+          // Capturar o elemento como imagem
+          const canvas = await html2canvas(element, {
+            scale: 2, // Maior qualidade
+            backgroundColor: '#ffffff',
+            logging: false,
+            allowTaint: true,
+            useCORS: true,
+            width: element.offsetWidth,
+            height: element.offsetHeight
+          });
+          
+          // Converter para base64
+          const imgData = canvas.toDataURL('image/png');
+          
+          // Calcular dimensões para o PDF
+          const imgWidth = contentWidth;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          // Verificar se precisa de nova página
+          if (yPosition + imgHeight + 20 > pageHeight - margin) {
+            doc.addPage();
+            yPosition = margin + 10;
+          }
+          
+          // Adicionar título da seção
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text(title, margin, yPosition);
+          yPosition += 10;
+          
+          // Adicionar a imagem
+          doc.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+          yPosition += imgHeight + 15;
+          
+          return yPosition;
+        } catch (error) {
+          console.error(`Erro ao capturar ${elementId}:`, error);
+          return yPosition;
+        }
+      };
       
-      doc.setFontSize(10);
-      const metrics = [
-        [`Total de Avaliações: ${stats.totalEvaluations}`],
-        [`Colaboradores Únicos: ${stats.uniqueUsers}`],
-        [`Score Médio: ${formatPercentage((stats.averageScore || 0) * 100)}`],
-        [`Alertas Ativos: ${stats.topPerformers.filter(p => (p.average || 0) < 0.3).length}`]
-      ];
+      // Capturar cada bloco do dashboard
+      yPosition = await captureAndAddElement('tendencia-diaria-block', 'Tendência Diária');
+      yPosition = await captureAndAddElement('distribuicao-performance-block', 'Distribuição de Performance');
+      yPosition = await captureAndAddElement('performance-categoria-block', 'Performance por Categoria');
       
-      autoTable(doc, {
-        head: [['Métricas']],
-        body: metrics,
-        startY: yPosition,
-        theme: 'grid',
-        styles: { fontSize: 10 }
-      });
-      
-      yPosition = (doc as any).lastAutoTable.finalY + 20;
-      
-      // Performance por Categoria
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      doc.setFontSize(14);
-      doc.text('Performance por Categoria', 20, yPosition);
-      yPosition += 10;
-      
-      const categoryData = stats.performanceByCategory.map(item => [
-        item.fullName,
-        `${formatPercentage(item.percentage || 0)}`,
-        `${item.good}/${item.total}`
-      ]);
-      
-      autoTable(doc, {
-        head: [['Categoria', 'Performance', 'Positivas/Total']],
-        body: categoryData,
-        startY: yPosition,
-        theme: 'striped',
-        styles: { fontSize: 9 }
-      });
-      
+      // Salvar o PDF
       const fileName = `relatorio_dashboard_${dateFrom.replace(/-/g, '')}_${dateTo.replace(/-/g, '')}.pdf`;
       doc.save(fileName);
-      setExportDialogOpen(false);
+      
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
       alert('Erro ao exportar PDF. Verifique o console para mais detalhes.');
+      setExportDialogOpen(false);
     }
   };
 
@@ -775,7 +797,7 @@ export function DashboardPage() {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Tendência Diária - Design Renovado */}
-            <Card className="border-0 shadow-lg">
+            <Card className="border-0 shadow-lg" id="tendencia-diaria-block">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Activity className="h-5 w-5 text-blue-600" />
@@ -867,7 +889,7 @@ export function DashboardPage() {
             </Card>
 
             {/* Distribuição de Performance - Design Compacto */}
-            <Card className="border-0 shadow-lg">
+            <Card className="border-0 shadow-lg" id="distribuicao-performance-block">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Award className="h-5 w-5 text-blue-600" />
@@ -1048,7 +1070,7 @@ export function DashboardPage() {
           </div>
 
           {/* Performance por Categoria - Design Renovado */}
-          <Card className="border-0 shadow-lg">
+          <Card className="border-0 shadow-lg" id="performance-categoria-block">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <BarChart3 className="h-5 w-5 text-blue-600" />
