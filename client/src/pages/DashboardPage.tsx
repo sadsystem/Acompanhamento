@@ -11,7 +11,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend 
 } from "recharts";
-import { TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, Award, Target, Activity, CalendarDays, CalendarRange } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Calendar, AlertTriangle, Award, Target, Activity, CalendarDays, CalendarRange, BarChart3 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { useStorage } from "../hooks/useStorage";
 import { User, Evaluation } from "../config/types";
@@ -75,6 +75,13 @@ export function DashboardPage() {
     
     setEvaluations(allEvaluations);
     setUsers(allUsers);
+  };
+
+  // Função helper para formatação inteligente de porcentagens
+  const formatPercentage = (value: number): string => {
+    const rounded = Math.round(value);
+    const hasDecimal = Math.abs(value - rounded) > 0.05;
+    return hasDecimal ? `${value.toFixed(1)}%` : `${rounded}%`;
   };
 
   const stats = useMemo(() => {
@@ -615,8 +622,9 @@ export function DashboardPage() {
                     <div className="text-2xl font-bold text-blue-600">
                       {(() => {
                         const daysWithData = stats.weeklyTrend.filter(d => d.score > 0);
-                        return daysWithData.length > 0 ? Math.max(...daysWithData.map(d => d.score)).toFixed(1) : 0;
-                      })()}%
+                        const maxScore = daysWithData.length > 0 ? Math.max(...daysWithData.map(d => d.score)) : 0;
+                        return maxScore > 0 ? formatPercentage(maxScore) : '0%';
+                      })()}
                     </div>
                     <div className="text-sm text-blue-600 font-medium">Maior Score</div>
                   </div>
@@ -626,9 +634,10 @@ export function DashboardPage() {
                     <div className="text-2xl font-bold text-green-600">
                       {(() => {
                         const daysWithData = stats.weeklyTrend.filter(d => d.score > 0);
-                        return daysWithData.length > 0 ? 
-                          (daysWithData.reduce((sum, d) => sum + d.score, 0) / daysWithData.length).toFixed(1) : 0;
-                      })()}%
+                        const avgScore = daysWithData.length > 0 ? 
+                          (daysWithData.reduce((sum, d) => sum + d.score, 0) / daysWithData.length) : 0;
+                        return avgScore > 0 ? formatPercentage(avgScore) : '0%';
+                      })()}
                     </div>
                     <div className="text-sm text-green-600 font-medium">Média</div>
                   </div>
@@ -638,8 +647,9 @@ export function DashboardPage() {
                     <div className="text-2xl font-bold text-orange-600">
                       {(() => {
                         const daysWithData = stats.weeklyTrend.filter(d => d.score > 0);
-                        return daysWithData.length > 0 ? Math.min(...daysWithData.map(d => d.score)).toFixed(1) : 0;
-                      })()}%
+                        const minScore = daysWithData.length > 0 ? Math.min(...daysWithData.map(d => d.score)) : 0;
+                        return minScore > 0 ? formatPercentage(minScore) : '0%';
+                      })()}
                     </div>
                     <div className="text-sm text-orange-600 font-medium">Menor Score</div>
                   </div>
@@ -749,7 +759,7 @@ export function DashboardPage() {
                           stats.averageScore >= 40 ? 'text-yellow-600' :
                           'text-red-600'
                         }`}>
-                          {Math.round(stats.averageScore)}%
+                          {formatPercentage(stats.averageScore)}
                         </div>
                         <div className="text-sm font-medium text-gray-600 mt-1">Média</div>
                       </div>
@@ -818,8 +828,8 @@ export function DashboardPage() {
                         const positive = (stats.distributionData.find(d => d.range === '81-100%')?.count || 0) + 
                                        (stats.distributionData.find(d => d.range === '61-80%')?.count || 0);
                         const positivePercentage = stats.totalEvaluations > 0 ? (positive / stats.totalEvaluations * 100) : 0;
-                        return Math.round(positivePercentage);
-                      })()}%
+                        return formatPercentage(positivePercentage);
+                      })()}
                     </div>
                     <div className="text-xs text-green-600 font-medium">Avaliações Positivas</div>
                   </div>
@@ -828,27 +838,107 @@ export function DashboardPage() {
             </Card>
           </div>
 
-          {/* Performance por Categoria */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance por Categoria</CardTitle>
+          {/* Performance por Categoria - Design Renovado */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+                Performance por Categoria
+              </CardTitle>
+              <p className="text-sm text-gray-600">Análise detalhada da performance em cada categoria de avaliação</p>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={stats.performanceByCategory} margin={{ left: 20, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip 
-                    formatter={(value, name) => [`${Number(value).toFixed(1)}%`, 'Performance']}
-                    labelFormatter={(label) => {
-                      const category = stats.performanceByCategory.find(c => c.name === label);
-                      return category?.fullName || label;
-                    }}
-                  />
-                  <Bar dataKey="percentage" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {/* Grid 2x2 para layout compacto */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {stats.performanceByCategory.map((category, index) => {
+                  const isGoodCategory = category.percentage >= 75;
+                  const isAverageCategory = category.percentage >= 50 && category.percentage < 75;
+                  const isCriticalCategory = category.percentage < 50;
+                  
+                  return (
+                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all duration-200">
+                      {/* Header compacto da categoria */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 pr-2">
+                          <h3 className="font-semibold text-gray-900 leading-tight text-sm">
+                            {category.fullName}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500">
+                              {category.good} de {category.total} positivas
+                            </span>
+                            <div className={`w-1.5 h-1.5 rounded-full ${
+                              isGoodCategory ? 'bg-green-500' :
+                              isAverageCategory ? 'bg-yellow-500' :
+                              'bg-red-500'
+                            }`}></div>
+                          </div>
+                        </div>
+                        
+                        {/* Score visual compacto */}
+                        <div className={`text-right px-2 py-1 rounded-md text-xs border ${
+                          isGoodCategory ? 'bg-green-50 border-green-200 text-green-700' :
+                          isAverageCategory ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+                          'bg-red-50 border-red-200 text-red-700'
+                        }`}>
+                          <div className="text-lg font-bold leading-tight">
+                            {formatPercentage(category.percentage)}
+                          </div>
+                          <div className="text-xs font-medium">
+                            {isGoodCategory ? 'Excelente' :
+                             isAverageCategory ? 'Regular' :
+                             'Crítico'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Barra de progresso compacta */}
+                      <div className="space-y-1">
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isGoodCategory ? 'bg-gradient-to-r from-green-400 to-green-600' :
+                              isAverageCategory ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                              'bg-gradient-to-r from-red-400 to-red-600'
+                            }`}
+                            style={{ width: `${Math.max(category.percentage, 3)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* Detalhes simplificados */}
+                      {category.total > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <div className="text-sm font-semibold text-green-600">
+                                {category.good}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {category.good === 1 ? 'Excelente' : 'Excelentes'}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-sm font-semibold text-red-600">
+                                {category.total - category.good}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {(category.total - category.good) === 1 ? 'Problema' : 'Problemas'}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-sm font-semibold text-blue-600">
+                                {category.total}
+                              </div>
+                              <div className="text-xs text-gray-500">Total</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -927,7 +1017,7 @@ export function DashboardPage() {
                           </div>
                           <div className="text-right">
                             <div className="text-2xl font-bold text-gray-900">
-                              {Math.round(alert.percentage * 100)}%
+                              {formatPercentage(alert.percentage * 100)}
                             </div>
                             <div className="text-xs text-gray-500">
                               {alert.total} avaliações
@@ -1022,7 +1112,7 @@ export function DashboardPage() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-lg font-bold">{Math.round(percentage)}%</div>
+                              <div className="text-lg font-bold">{formatPercentage(percentage)}</div>
                               <Progress value={percentage} className="w-20" />
                             </div>
                           </div>
