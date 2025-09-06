@@ -150,24 +150,79 @@ export function DashboardPage() {
       };
     });
 
-    // Trend semanal
+    // Trend baseado no período real (datas selecionadas)
     const weeklyTrend = [];
-    const today = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
+    
+    // Calcular período real baseado nas datas selecionadas
+    const startDate = dateFrom ? new Date(dateFrom + 'T00:00:00') : new Date();
+    const endDate = dateTo ? new Date(dateTo + 'T00:00:00') : new Date();
+    
+    // Se não há datas definidas, usar período padrão
+    if (!dateFrom || !dateTo) {
+      const today = new Date();
+      const daysToShow = selectedPeriod === 0 ? 1 : selectedPeriod;
       
-      const dayEvaluations = evaluations.filter(e => e.dateRef === dateStr);
-      const avgScore = dayEvaluations.length > 0 
-        ? (dayEvaluations.reduce((sum, e) => sum + e.score, 0) / dayEvaluations.length) * 100
-        : 0;
+      for (let i = daysToShow - 1; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        const dayEvaluations = evaluations.filter(e => e.dateRef === dateStr);
+        const avgScore = dayEvaluations.length > 0 
+          ? (dayEvaluations.reduce((sum, e) => sum + e.score, 0) / dayEvaluations.length) * 100
+          : 0;
+        
+        weeklyTrend.push({
+          date: date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }),
+          score: Number(avgScore.toFixed(2)),
+          count: dayEvaluations.length
+        });
+      }
+    } else {
+      // Usar período baseado nas datas selecionadas
+      const currentDate = new Date(startDate);
+      const tempTrend = [];
       
-      weeklyTrend.push({
-        date: date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }),
-        score: Number(avgScore.toFixed(2)),
-        count: dayEvaluations.length
-      });
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        
+        const dayEvaluations = evaluations.filter(e => e.dateRef === dateStr);
+        const avgScore = dayEvaluations.length > 0 
+          ? (dayEvaluations.reduce((sum, e) => sum + e.score, 0) / dayEvaluations.length) * 100
+          : 0;
+        
+        tempTrend.push({
+          date: currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }),
+          score: Number(avgScore.toFixed(2)),
+          count: dayEvaluations.length,
+          fullDate: new Date(currentDate)
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      // Se período muito longo (>45 dias), agregar por semana para melhor visualização
+      if (tempTrend.length > 45) {
+        const weeklyData = [];
+        for (let i = 0; i < tempTrend.length; i += 7) {
+          const weekData = tempTrend.slice(i, i + 7);
+          const daysWithData = weekData.filter(d => d.count > 0);
+          const avgWeekScore = daysWithData.length > 0 
+            ? daysWithData.reduce((sum, d) => sum + d.score, 0) / daysWithData.length
+            : 0;
+          
+          const startOfWeek = weekData[0].fullDate;
+          weeklyData.push({
+            date: startOfWeek.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
+            score: Number(avgWeekScore.toFixed(2)),
+            count: weekData.reduce((sum, d) => sum + d.count, 0)
+          });
+        }
+        weeklyTrend.push(...weeklyData);
+      } else {
+        // Usar dados diários para períodos menores
+        weeklyTrend.push(...tempTrend.map(({ fullDate, ...rest }) => rest));
+      }
     }
 
     // Distribuição de scores
@@ -195,7 +250,7 @@ export function DashboardPage() {
       distributionData: scoreRanges, // Retorna todos os ranges, mesmo com count 0
       individualStats: userStats
     };
-  }, [evaluations]);
+  }, [evaluations, selectedPeriod, dateFrom, dateTo]);
 
   const alerts = useMemo(() => {
     const problemsByUserAndQuestion = new Map<string, { bad: number; total: number }>();
@@ -558,7 +613,10 @@ export function DashboardPage() {
                   {/* Card Maior Score - Azul */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                     <div className="text-2xl font-bold text-blue-600">
-                      {stats.weeklyTrend.length > 0 ? Math.max(...stats.weeklyTrend.map(d => d.score)).toFixed(1) : 0}%
+                      {(() => {
+                        const daysWithData = stats.weeklyTrend.filter(d => d.score > 0);
+                        return daysWithData.length > 0 ? Math.max(...daysWithData.map(d => d.score)).toFixed(1) : 0;
+                      })()}%
                     </div>
                     <div className="text-sm text-blue-600 font-medium">Maior Score</div>
                   </div>
@@ -566,8 +624,11 @@ export function DashboardPage() {
                   {/* Card Média - Verde */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                     <div className="text-2xl font-bold text-green-600">
-                      {stats.weeklyTrend.length > 0 ? 
-                        (stats.weeklyTrend.reduce((sum, d) => sum + d.score, 0) / stats.weeklyTrend.length).toFixed(1) : 0}%
+                      {(() => {
+                        const daysWithData = stats.weeklyTrend.filter(d => d.score > 0);
+                        return daysWithData.length > 0 ? 
+                          (daysWithData.reduce((sum, d) => sum + d.score, 0) / daysWithData.length).toFixed(1) : 0;
+                      })()}%
                     </div>
                     <div className="text-sm text-green-600 font-medium">Média</div>
                   </div>
@@ -575,7 +636,10 @@ export function DashboardPage() {
                   {/* Card Menor Score - Laranja */}
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
                     <div className="text-2xl font-bold text-orange-600">
-                      {stats.weeklyTrend.length > 0 ? Math.min(...stats.weeklyTrend.map(d => d.score)).toFixed(1) : 0}%
+                      {(() => {
+                        const daysWithData = stats.weeklyTrend.filter(d => d.score > 0);
+                        return daysWithData.length > 0 ? Math.min(...daysWithData.map(d => d.score)).toFixed(1) : 0;
+                      })()}%
                     </div>
                     <div className="text-sm text-orange-600 font-medium">Menor Score</div>
                   </div>
